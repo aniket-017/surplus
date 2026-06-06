@@ -1,25 +1,21 @@
-import Navbar from './components/Navbar'
-import Hero from './components/Hero'
-import Problem from './components/Problem'
-import HowItWorks from './components/HowItWorks'
-import Categories from './components/Categories'
-import Features from './components/Features'
-import Testimonials from './components/Testimonials'
-import CtaSection from './components/CtaSection'
-import Footer from './components/Footer'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+import AuthCallbackPage from './pages/AuthCallbackPage'
+import AuthPage from './pages/AuthPage'
+import LandingPage from './pages/LandingPage'
 
 export default function App() {
   return (
-    <>
-      <Navbar />
-      <Hero />
-      <Problem />
-      <HowItWorks />
-      <Categories />
-      <Features />
-      <Testimonials />
-      <CtaSection />
-      <Footer />
-    </>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/signin" element={<AuthPage />} />
+          <Route path="/signup" element={<AuthPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   )
 }

@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  BUYER
+  SELLER
+}
+
+enum PriceType {
+  FIXED
+  NEGOTIABLE
+  PER_KG
+  PER_UNIT
+  PER_LOT
+}
+
+enum ProductCondition {
+  NEW
+  USED
+  SCRAP
+  REFURBISHED
+}
+
+type ProductAttribute {
+  key   String
+  value String
+}
+
+type ProductLocation {
+  address String?
+  city    String
+  state   String
+  pincode String
+}
+
+model User {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  googleId  String?   @unique @map("google_id")
+  email     String    @unique
+  name      String?
+  avatarUrl String?   @map("avatar_url")
+  role      UserRole?
+  products  Product[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Otp {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String
+  code      String
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@map("otps")
+}
+
+model Product {
+  id           String             @id @default(auto()) @map("_id") @db.ObjectId
+  sellerId     String             @map("seller_id") @db.ObjectId
+  seller       User               @relation(fields: [sellerId], references: [id])
+
+  title        String
+  category     String
+  subCategory  String             @map("sub_category")
+  description  String
+
+  quantity     Float
+  quantityUnit String             @map("quantity_unit")
+
+  price        Float
+  priceType    PriceType          @map("price_type")
+  condition    ProductCondition
+
+  images       String[]
+
+  attributes   ProductAttribute[]
+  location     ProductLocation
+
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  @@index([sellerId])
+  @@index([category, subCategory])
+  @@map("products")
+}

@@ -1,0 +1,144 @@
+import * as SecureStore from 'expo-secure-store';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+
+import {
+  getCurrentUser,
+  logoutRequest,
+  updateRole,
+  verifyOtp,
+} from '@/src/lib/api';
+import type { User, UserRole } from '@/src/types/auth';
+
+const TOKEN_KEY = 'surplus_auth_token';
+
+type AuthContextValue = {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  signIn: (email: string, otp: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  setRole: (role: UserRole) => Promise<User>;
+  refreshUser: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+async function loadToken() {
+  return SecureStore.getItemAsync(TOKEN_KEY);
+}
+
+async function saveToken(token: unknown) {
+  if (typeof token !== 'string' || !token.trim()) {
+    throw new Error(
+      'Sign-in succeeded but no auth token was returned. Restart the backend server and try again.',
+    );
+  }
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
+}
+
+async function clearToken() {
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refreshUser = useCallback(async () => {
+    const storedToken = await loadToken();
+
+    if (!storedToken) {
+      setToken(null);
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const data = await getCurrentUser(storedToken);
+      setToken(storedToken);
+      setUser(data.user);
+    } catch {
+      await clearToken();
+      setToken(null);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
+
+  const signIn = useCallback(async (email: string, otp: string) => {
+    const data = await verifyOtp(email, otp);
+
+    if (!data.user) {
+      throw new Error('Sign-in failed. Please try again.');
+    }
+
+    await saveToken(data.token);
+    setToken(data.token);
+    setUser(data.user);
+  }, []);
+
+  const signOut = useCallback(async () => {
+    if (token) {
+      try {
+        await logoutRequest(token);
+      } catch {
+        // Ignore logout API errors and clear local session anyway.
+      }
+    }
+
+    await clearToken();
+    setToken(null);
+    setUser(null);
+  }, [token]);
+
+  const setRole = useCallback(
+    async (role: UserRole) => {
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const data = await updateRole(token, role);
+      setUser(data.user);
+      return data.user;
+    },
+    [token],
+  );
+
+  const value = useMemo(
+    () => ({
+      user,
+      token,
+      loading,
+      signIn,
+      signOut,
+      setRole,
+      refreshUser,
+    }),
+    [user, token, loading, signIn, signOut, setRole, refreshUser],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+}

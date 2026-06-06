@@ -57,7 +57,7 @@ if (isOtpAuthEnabled()) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 5396;
+const PORT = process.env.PORT || 4369;
 
 app.use(
   cors({

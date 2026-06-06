@@ -173,6 +173,13 @@ if (isOtpAuthEnabled()) {
       });
     } catch (error) {
       console.error("OTP verify failed:", error);
+
+      if (error.code === "P2002") {
+        return res.status(409).json({
+          error: "An account with this email already exists. Sign in instead.",
+        });
+      }
+
       res.status(500).json({ error: "Failed to verify OTP" });
     }
   });

@@ -17,6 +17,14 @@ export function configurePassport() {
             return done(new Error("Google account has no email"), null);
           }
 
+          const existingByGoogle = await prisma.user.findFirst({
+            where: { googleId: profile.id },
+          });
+
+          if (existingByGoogle && existingByGoogle.email !== email) {
+            return done(new Error("Google account already linked to another user"), null);
+          }
+
           const user = await prisma.user.upsert({
             where: { email },
             update: {

@@ -85,6 +85,9 @@ jobs:
            npm run build
 
            cd ../backend
+           echo "🗄️ Syncing database schema"
+           npm run db:push
+
            echo "🚀 Starting or restarting PM2 process"
            if pm2 list | grep -q "surplus"; then
              echo "🔁 Restarting surplus"

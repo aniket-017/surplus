@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,8 @@ import { colors, spacing } from '@/src/constants/theme';
 import { analyzeProductImages, createProduct } from '@/src/lib/productsApi';
 import {
   emptyProductForm,
+  isCompleteLocation,
+  profileAddressToLocation,
   type LocalImage,
   type ProductFormValues,
 } from '@/src/types/product';
@@ -27,12 +29,21 @@ import {
 const MAX_IMAGES = 5;
 
 export default function AddProductScreen() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [images, setImages] = useState<LocalImage[]>([]);
   const [form, setForm] = useState<ProductFormValues>(emptyProductForm());
   const [analyzing, setAnalyzing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (user?.address && isCompleteLocation(user.address)) {
+      setForm((current) => ({
+        ...current,
+        location: profileAddressToLocation(user.address!),
+      }));
+    }
+  }, [user?.address]);
 
   async function pickImages() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -106,6 +117,11 @@ export default function AddProductScreen() {
       return;
     }
 
+    if (!isCompleteLocation(form.location)) {
+      setError('City, state, and pincode are required for the pickup location.');
+      return;
+    }
+
     setSubmitting(true);
     setError('');
 
@@ -166,7 +182,7 @@ export default function AddProductScreen() {
         </View>
 
         <View style={styles.card}>
-          <ProductForm values={form} onChange={setForm} />
+          <ProductForm values={form} onChange={setForm} profileAddress={user?.address} />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 

@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -9,18 +11,41 @@ import {
 
 import { colors, spacing } from '@/src/constants/theme';
 import { ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
+import type { UserAddress } from '@/src/types/auth';
 import {
   CONDITION_OPTIONS,
+  isCompleteLocation,
   PRICE_TYPE_OPTIONS,
+  profileAddressToLocation,
   type ProductFormValues,
 } from '@/src/types/product';
 
 type ProductFormProps = {
   values: ProductFormValues;
   onChange: (values: ProductFormValues) => void;
+  profileAddress?: UserAddress | null;
 };
 
-export function ProductForm({ values, onChange }: ProductFormProps) {
+export function ProductForm({ values, onChange, profileAddress }: ProductFormProps) {
+  const hasProfileAddress = Boolean(profileAddress && isCompleteLocation(profileAddress));
+  const [useProfileAddress, setUseProfileAddress] = useState(hasProfileAddress);
+
+  useEffect(() => {
+    if (hasProfileAddress) {
+      setUseProfileAddress(true);
+    }
+  }, [hasProfileAddress]);
+
+  function handleUseProfileAddressToggle(enabled: boolean) {
+    setUseProfileAddress(enabled);
+
+    if (enabled && profileAddress && isCompleteLocation(profileAddress)) {
+      onChange({
+        ...values,
+        location: profileAddressToLocation(profileAddress),
+      });
+    }
+  }
   function updateField<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) {
     onChange({ ...values, [key]: value });
   }
@@ -270,60 +295,97 @@ export function ProductForm({ values, onChange }: ProductFormProps) {
 
       <SectionHeader title="Location" subtitle="Where is this material available for pickup?" />
 
-      <Field label="Address">
-        <ScrollIntoView>
-          <TextInput
-            style={styles.input}
-            value={values.location.address || ''}
-            onChangeText={(text) => updateLocation('address', text)}
-            placeholder="Street address (optional)"
-            placeholderTextColor={colors.muted}
+      {hasProfileAddress ? (
+        <View style={styles.profileToggleRow}>
+          <View style={styles.profileToggleCopy}>
+            <Text style={styles.profileToggleLabel}>Use my profile address</Text>
+            <Text style={styles.profileToggleHint}>
+              Reuse the address saved in your seller profile
+            </Text>
+          </View>
+          <Switch
+            value={useProfileAddress}
+            onValueChange={handleUseProfileAddressToggle}
+            trackColor={{ false: colors.border, true: 'rgba(92, 179, 53, 0.35)' }}
+            thumbColor={useProfileAddress ? colors.accent : colors.surface}
           />
-        </ScrollIntoView>
-      </Field>
+        </View>
+      ) : (
+        <View style={styles.profileHintBox}>
+          <Text style={styles.profileHintText}>
+            Add an address in your profile to reuse it here, or enter a pickup location below.
+          </Text>
+        </View>
+      )}
 
-      <View style={styles.row}>
-        <View style={styles.rowItem}>
-          <Field label="City">
+      {useProfileAddress && hasProfileAddress && profileAddress ? (
+        <View style={styles.profileAddressCard}>
+          {profileAddress.address?.trim() ? (
+            <Text style={styles.profileAddressLine}>{profileAddress.address.trim()}</Text>
+          ) : null}
+          <Text style={styles.profileAddressLine}>
+            {[profileAddress.city, profileAddress.state].filter(Boolean).join(', ')}
+            {profileAddress.pincode ? ` - ${profileAddress.pincode}` : ''}
+          </Text>
+        </View>
+      ) : (
+        <>
+          <Field label="Address">
             <ScrollIntoView>
               <TextInput
                 style={styles.input}
-                value={values.location.city}
-                onChangeText={(text) => updateLocation('city', text)}
-                placeholder="City"
+                value={values.location.address || ''}
+                onChangeText={(text) => updateLocation('address', text)}
+                placeholder="Street address (optional)"
                 placeholderTextColor={colors.muted}
               />
             </ScrollIntoView>
           </Field>
-        </View>
-        <View style={styles.rowItem}>
-          <Field label="State">
+
+          <View style={styles.row}>
+            <View style={styles.rowItem}>
+              <Field label="City">
+                <ScrollIntoView>
+                  <TextInput
+                    style={styles.input}
+                    value={values.location.city}
+                    onChangeText={(text) => updateLocation('city', text)}
+                    placeholder="City"
+                    placeholderTextColor={colors.muted}
+                  />
+                </ScrollIntoView>
+              </Field>
+            </View>
+            <View style={styles.rowItem}>
+              <Field label="State">
+                <ScrollIntoView>
+                  <TextInput
+                    style={styles.input}
+                    value={values.location.state}
+                    onChangeText={(text) => updateLocation('state', text)}
+                    placeholder="State"
+                    placeholderTextColor={colors.muted}
+                  />
+                </ScrollIntoView>
+              </Field>
+            </View>
+          </View>
+
+          <Field label="Pincode">
             <ScrollIntoView>
               <TextInput
-                style={styles.input}
-                value={values.location.state}
-                onChangeText={(text) => updateLocation('state', text)}
-                placeholder="State"
+                style={[styles.input, styles.pincodeInput]}
+                value={values.location.pincode}
+                onChangeText={(text) => updateLocation('pincode', text.replace(/\D/g, '').slice(0, 6))}
+                placeholder="6-digit pincode"
                 placeholderTextColor={colors.muted}
+                keyboardType="number-pad"
+                maxLength={6}
               />
             </ScrollIntoView>
           </Field>
-        </View>
-      </View>
-
-      <Field label="Pincode">
-        <ScrollIntoView>
-          <TextInput
-            style={[styles.input, styles.pincodeInput]}
-            value={values.location.pincode}
-            onChangeText={(text) => updateLocation('pincode', text.replace(/\D/g, '').slice(0, 6))}
-            placeholder="6-digit pincode"
-            placeholderTextColor={colors.muted}
-            keyboardType="number-pad"
-            maxLength={6}
-          />
-        </ScrollIntoView>
-      </Field>
+        </>
+      )}
     </View>
   );
 }
@@ -551,5 +613,55 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: colors.accent,
     fontWeight: '700',
+  },
+  profileToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    backgroundColor: colors.bgSubtle,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  profileToggleCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  profileToggleLabel: {
+    color: colors.textStrong,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  profileToggleHint: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  profileHintBox: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  profileHintText: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  profileAddressCard: {
+    backgroundColor: colors.bgSubtle,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.borderAccent,
+    padding: spacing.md,
+    gap: 4,
+  },
+  profileAddressLine: {
+    color: colors.textStrong,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

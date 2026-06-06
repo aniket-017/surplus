@@ -1,3 +1,5 @@
+import type { UserAddress } from '@/src/types/auth';
+
 export type ProductAttribute = {
   key: string;
   value: string;
@@ -119,3 +121,16 @@ export const emptyProductForm = (): ProductFormValues => ({
     pincode: '',
   },
 });
+
+export function isCompleteLocation(location: Pick<ProductLocation, 'city' | 'state' | 'pincode'>) {
+  return Boolean(location.city?.trim() && location.state?.trim() && location.pincode?.trim());
+}
+
+export function profileAddressToLocation(address: UserAddress): ProductLocation {
+  return {
+    address: address.address?.trim() || '',
+    city: address.city.trim(),
+    state: address.state.trim(),
+    pincode: address.pincode.trim(),
+  };
+}

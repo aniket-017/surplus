@@ -104,8 +104,13 @@ if (FRONTEND_DIST_EXISTS) {
   });
 }
 
-app.use((err, _req, res, _next) => {
-  console.error(err);
+app.use((err, req, res, _next) => {
+  console.error("[express-error]", {
+    method: req.method,
+    path: req.originalUrl,
+    message: err?.message || String(err),
+    stack: err?.stack,
+  });
   res.status(500).json({ error: "Internal server error" });
 });
 
@@ -117,6 +122,9 @@ app.listen(PORT, () => {
 
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Auth methods: ${methods.join(", ")}`);
+  console.log(
+    `[startup] Gemini: ${process.env.GEMINI_API_KEY ? "configured" : "MISSING GEMINI_API_KEY"}`,
+  );
   if (FRONTEND_DIST_EXISTS) {
     console.log(`Serving frontend from ${FRONTEND_DIST}`);
   }

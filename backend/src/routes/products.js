@@ -17,14 +17,22 @@ import {
 } from "../lib/product.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireSeller } from "../middleware/requireSeller.js";
+import { createLogger, describeUploadFile } from "../lib/logger.js";
 
 const router = Router();
+const analyzeLog = createLogger("product-analyze");
 
 function handleUpload(req, res, next) {
   uploadProductImages(req, res, (error) => {
     if (error) {
+      analyzeLog.error("Multer upload failed", error);
       return res.status(400).json({ error: error.message || "Invalid image upload" });
     }
+
+    analyzeLog.info("Images received by multer", {
+      count: req.files?.length ?? 0,
+      images: req.files?.map((file, index) => describeUploadFile(file, index)) ?? [],
+    });
     next();
   });
 }
@@ -32,25 +40,42 @@ function handleUpload(req, res, next) {
 async function optimizeUploadedImages(req, res, next) {
   try {
     if (req.files?.length) {
-      req.files = await Promise.all(req.files.map(optimizeProductImage));
+      req.files = await Promise.all(
+        req.files.map((file, index) => optimizeProductImage(file, index)),
+      );
+      analyzeLog.info("Images ready after optimization", {
+        count: req.files.length,
+        images: req.files.map((file, index) => describeUploadFile(file, index)),
+      });
     }
     next();
   } catch (error) {
-    console.error("Image optimization failed:", error);
+    analyzeLog.error("Image optimization middleware failed", error);
     res.status(400).json({ error: error.message || "Failed to process images" });
   }
 }
 
 router.post("/analyze", requireSeller, handleUpload, optimizeUploadedImages, async (req, res) => {
+  analyzeLog.info("Analyze request received", {
+    sellerId: req.sellerId,
+    imageCount: req.files?.length ?? 0,
+  });
+
   if (!req.files?.length) {
+    analyzeLog.warn("Analyze request rejected: no images uploaded");
     return res.status(400).json({ error: "At least one image is required" });
   }
 
   try {
     const analysis = await analyzeProductImages(req.files);
+    analyzeLog.info("Analyze request completed successfully", {
+      sellerId: req.sellerId,
+      title: analysis.title,
+      category: analysis.category,
+    });
     res.json({ analysis });
   } catch (error) {
-    console.error("Product analyze failed:", error);
+    analyzeLog.error("Analyze request failed", error);
     res.status(500).json({
       error: error.message || "Failed to analyze product images",
     });

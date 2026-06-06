@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { analyzeProductImages } from "../lib/gemini.js";
+import { optimizeProductImage } from "../lib/imageOptimize.js";
 import {
   deleteProductImages as deleteProductImagesFromS3,
   uploadProductImages as uploadProductImagesToS3,
@@ -28,7 +29,19 @@ function handleUpload(req, res, next) {
   });
 }
 
-router.post("/analyze", requireSeller, handleUpload, async (req, res) => {
+async function optimizeUploadedImages(req, res, next) {
+  try {
+    if (req.files?.length) {
+      req.files = await Promise.all(req.files.map(optimizeProductImage));
+    }
+    next();
+  } catch (error) {
+    console.error("Image optimization failed:", error);
+    res.status(400).json({ error: error.message || "Failed to process images" });
+  }
+}
+
+router.post("/analyze", requireSeller, handleUpload, optimizeUploadedImages, async (req, res) => {
   if (!req.files?.length) {
     return res.status(400).json({ error: "At least one image is required" });
   }
@@ -44,7 +57,7 @@ router.post("/analyze", requireSeller, handleUpload, async (req, res) => {
   }
 });
 
-router.post("/", requireSeller, handleUpload, async (req, res) => {
+router.post("/", requireSeller, handleUpload, optimizeUploadedImages, async (req, res) => {
   if (!req.files?.length) {
     return res.status(400).json({ error: "At least one image is required" });
   }
@@ -203,7 +216,7 @@ router.get("/:id", requireSeller, async (req, res) => {
   }
 });
 
-router.patch("/:id", requireSeller, handleUpload, async (req, res) => {
+router.patch("/:id", requireSeller, handleUpload, optimizeUploadedImages, async (req, res) => {
   try {
     const existing = await prisma.product.findFirst({
       where: { id: req.params.id, sellerId: req.sellerId },

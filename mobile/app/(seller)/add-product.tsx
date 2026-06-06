@@ -111,7 +111,7 @@ export default function AddProductScreen() {
 
     try {
       await createProduct(token, images, form);
-      router.replace('/(seller)/dashboard');
+      router.replace('/(seller)/(tabs)');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to publish product');
     } finally {

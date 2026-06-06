@@ -1,8 +1,11 @@
 import type {
+  BrowseProductsParams,
   LocalImage,
   Product,
   ProductAnalysis,
+  ProductCategory,
   ProductFormValues,
+  ProductListing,
 } from '@/src/types/product';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
@@ -86,7 +89,61 @@ export async function getMyProducts(token: string) {
   return parseResponse<{ products: Product[] }>(res);
 }
 
+export async function getProduct(token: string, id: string) {
+  const res = await fetch(`${API_BASE}/api/products/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return parseResponse<{ product: Product }>(res);
+}
+
+function buildBrowseQuery(params: BrowseProductsParams = {}) {
+  const query = new URLSearchParams();
+
+  if (params.search) query.set('search', params.search);
+  if (params.category) query.set('category', params.category);
+  if (params.sort) query.set('sort', params.sort);
+  if (params.limit) query.set('limit', String(params.limit));
+  if (params.skip) query.set('skip', String(params.skip));
+
+  const qs = query.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export async function browseProducts(token: string, params: BrowseProductsParams = {}) {
+  const res = await fetch(`${API_BASE}/api/products/browse${buildBrowseQuery(params)}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return parseResponse<{ products: ProductListing[] }>(res);
+}
+
+export async function getBrowseProduct(token: string, id: string) {
+  const res = await fetch(`${API_BASE}/api/products/browse/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return parseResponse<{ product: ProductListing }>(res);
+}
+
+export async function getProductCategories(token: string) {
+  const res = await fetch(`${API_BASE}/api/products/categories`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return parseResponse<{ categories: ProductCategory[] }>(res);
+}
+
 export function getImageUrl(path: string) {
-  if (path.startsWith('http')) return path;
-  return `${API_BASE}${path}`;
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
 }

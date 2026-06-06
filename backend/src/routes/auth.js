@@ -2,7 +2,14 @@ import { Router } from "express";
 import passport from "../config/passport.js";
 import { isGoogleAuthEnabled, isOtpAuthEnabled, getAuthMethods } from "../config/auth.js";
 import { prisma } from "../lib/prisma.js";
-import { setAuthCookie, clearAuthCookie, formatUser, signToken, userSelect } from "../lib/auth.js";
+import {
+  setAuthCookie,
+  clearAuthCookie,
+  formatUser,
+  parseUserAddress,
+  signToken,
+  userSelect,
+} from "../lib/auth.js";
 import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -141,6 +148,36 @@ router.get("/me", requireAuth, async (req, res) => {
   }
 
   res.json({ user: formatUser(user) });
+});
+
+router.patch("/profile", requireAuth, async (req, res) => {
+  try {
+    const updateData = {};
+
+    if (req.body.name !== undefined) {
+      const name = String(req.body.name || "").trim();
+      updateData.name = name || null;
+    }
+
+    if (req.body.address !== undefined) {
+      updateData.address = parseUserAddress(req.body.address);
+    }
+
+    if (!Object.keys(updateData).length) {
+      return res.status(400).json({ error: "No profile fields to update" });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: updateData,
+      select: userSelect,
+    });
+
+    res.json({ user: formatUser(user) });
+  } catch (error) {
+    console.error("Profile update failed:", error);
+    res.status(400).json({ error: error.message || "Failed to update profile" });
+  }
 });
 
 router.patch("/role", requireAuth, async (req, res) => {

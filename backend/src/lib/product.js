@@ -1,3 +1,5 @@
+import { resolveProductImageUrls } from "./s3.js";
+
 const PRICE_TYPES = ["FIXED", "NEGOTIABLE", "PER_KG", "PER_UNIT", "PER_LOT"];
 const CONDITIONS = ["NEW", "USED", "SCRAP", "REFURBISHED"];
 
@@ -109,7 +111,9 @@ export function parseProductPayload(body) {
   };
 }
 
-export function formatProduct(product) {
+export async function formatProduct(product) {
+  const images = await resolveProductImageUrls(product.images);
+
   return {
     id: product.id,
     sellerId: product.sellerId,
@@ -122,12 +126,73 @@ export function formatProduct(product) {
     price: product.price,
     priceType: product.priceType.toLowerCase(),
     condition: product.condition.toLowerCase(),
-    images: product.images,
+    images,
     attributes: product.attributes,
     location: product.location,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   };
+}
+
+function formatSellerSummary(seller) {
+  if (!seller) {
+    return null;
+  }
+
+  return {
+    id: seller.id,
+    name: seller.name || seller.email.split("@")[0],
+    email: seller.email,
+  };
+}
+
+export async function formatProductListing(product, seller) {
+  const formatted = await formatProduct(product);
+
+  return {
+    ...formatted,
+    seller: formatSellerSummary(seller),
+  };
+}
+
+export function parseBrowseSort(value) {
+  const sort = String(value || "recent").trim().toLowerCase();
+  if (sort === "price_asc" || sort === "price_desc" || sort === "recent") {
+    return sort;
+  }
+
+  return "recent";
+}
+
+export function buildBrowseOrderBy(sort) {
+  if (sort === "price_asc") {
+    return { price: "asc" };
+  }
+
+  if (sort === "price_desc") {
+    return { price: "desc" };
+  }
+
+  return { createdAt: "desc" };
+}
+
+export function buildBrowseWhere({ search, category }) {
+  const where = {};
+
+  if (category) {
+    where.category = category;
+  }
+
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: "insensitive" } },
+      { category: { contains: search, mode: "insensitive" } },
+      { subCategory: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  return where;
 }
 
 export { PRICE_TYPES, CONDITIONS };

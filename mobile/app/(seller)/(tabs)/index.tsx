@@ -4,20 +4,26 @@ import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { DashboardShell } from '@/src/components/DashboardShell';
+import { DashboardScreen, DashboardShell } from '@/src/components/DashboardShell';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
 import { getImageUrl, getMyProducts } from '@/src/lib/productsApi';
 import type { Product } from '@/src/types/product';
 
-export default function SellerDashboardScreen() {
+function formatPrice(value: number) {
+  return `₹${value.toLocaleString('en-IN')}`;
+}
+
+function formatCondition(condition: string) {
+  return condition.charAt(0).toUpperCase() + condition.slice(1);
+}
+
+export default function SellerListingsTab() {
   const { token } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -46,18 +52,17 @@ export default function SellerDashboardScreen() {
   );
 
   return (
-    <DashboardShell
-      role="seller"
-      title="Seller Dashboard"
-      subtitle="Manage your surplus listings, track inquiries, and grow your sales."
-      stats={[
-        { label: 'Active Listings', value: String(products.length) },
-        { label: 'Inquiries', value: '0' },
-        { label: 'Views', value: '0' },
-        { label: 'Revenue', value: '₹0' },
-      ]}
-      footer={
-        <View style={styles.footer}>
+    <DashboardScreen>
+      <DashboardShell
+        role="seller"
+        title="Seller Dashboard"
+        subtitle="Manage your surplus listings and track listing performance."
+        stats={[
+          { label: 'Active Listings', value: String(products.length) },
+          { label: 'Views', value: '0' },
+        ]}
+      >
+        <View style={styles.content}>
           <Pressable
             style={styles.addButton}
             onPress={() => router.push('/(seller)/add-product')}
@@ -65,12 +70,22 @@ export default function SellerDashboardScreen() {
             <Text style={styles.addButtonText}>Add Product</Text>
           </Pressable>
 
-          <Text style={styles.sectionTitle}>My listings</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My listings</Text>
+            <Text style={styles.sectionCount}>{products.length} total</Text>
+          </View>
 
           {loadingProducts ? (
-            <ActivityIndicator color={colors.accent} />
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator color={colors.accent} />
+            </View>
           ) : products.length === 0 ? (
-            <Text style={styles.emptyText}>No products listed yet. Add your first surplus item.</Text>
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>No listings yet</Text>
+              <Text style={styles.emptyText}>
+                Add your first surplus item to start reaching buyers on Surplus.
+              </Text>
+            </View>
           ) : (
             products.map((product) => (
               <Pressable
@@ -79,13 +94,7 @@ export default function SellerDashboardScreen() {
                 onPress={() =>
                   router.push({
                     pathname: '/(seller)/products/[id]',
-                    params: {
-                      id: product.id,
-                      title: product.title,
-                      category: `${product.category} / ${product.subCategory}`,
-                      price: String(product.price),
-                      image: product.images[0] || '',
-                    },
+                    params: { id: product.id },
                   })
                 }
               >
@@ -99,31 +108,40 @@ export default function SellerDashboardScreen() {
                   <View style={[styles.productImage, styles.productImageFallback]} />
                 )}
                 <View style={styles.productInfo}>
-                  <Text style={styles.productTitle}>{product.title}</Text>
-                  <Text style={styles.productMeta}>
+                  <View style={styles.productTopRow}>
+                    <Text style={styles.productTitle} numberOfLines={2}>
+                      {product.title}
+                    </Text>
+                    <View style={styles.conditionChip}>
+                      <Text style={styles.conditionChipText}>
+                        {formatCondition(product.condition)}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.productMeta} numberOfLines={1}>
                     {product.category} / {product.subCategory}
                   </Text>
                   <Text style={styles.productPrice}>
-                    ₹{product.price} · {product.quantity} {product.quantityUnit}
+                    {formatPrice(product.price)} · {product.quantity} {product.quantityUnit}
                   </Text>
                 </View>
               </Pressable>
             ))
           )}
         </View>
-      }
-    />
+      </DashboardShell>
+    </DashboardScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  footer: {
+  content: {
     gap: spacing.md,
   },
   addButton: {
     backgroundColor: colors.accent,
-    borderRadius: 8,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 15,
     alignItems: 'center',
   },
   addButtonText: {
@@ -133,9 +151,36 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   sectionTitle: {
     color: colors.textStrong,
     fontSize: 18,
+    fontWeight: '800',
+  },
+  sectionCount: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  loadingWrap: {
+    paddingVertical: spacing.lg,
+  },
+  emptyCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    padding: spacing.lg,
+    gap: spacing.xs,
+  },
+  emptyTitle: {
+    color: colors.textStrong,
+    fontSize: 16,
     fontWeight: '800',
   },
   emptyText: {
@@ -147,28 +192,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: 10,
+    borderRadius: 14,
     padding: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
   },
   productImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
+    width: 84,
+    height: 84,
+    borderRadius: 10,
   },
   productImageFallback: {
     backgroundColor: colors.surfaceMuted,
   },
   productInfo: {
     flex: 1,
-    gap: 4,
+    gap: 6,
     justifyContent: 'center',
   },
+  productTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+  },
   productTitle: {
+    flex: 1,
     color: colors.textStrong,
     fontWeight: '700',
     fontSize: 15,
+    lineHeight: 20,
+  },
+  conditionChip: {
+    backgroundColor: colors.bgSubtle,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  conditionChipText: {
+    color: colors.muted,
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   productMeta: {
     color: colors.muted,

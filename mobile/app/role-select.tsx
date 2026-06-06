@@ -25,7 +25,7 @@ export default function RoleSelectScreen() {
 
     try {
       await setRole(role);
-      router.replace(role === 'buyer' ? '/(buyer)/dashboard' : '/(seller)/dashboard');
+      router.replace(role === 'buyer' ? '/(buyer)/(tabs)' : '/(seller)/(tabs)');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to set role');
     } finally {
@@ -41,7 +41,7 @@ export default function RoleSelectScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>How will you use Surplus?</Text>
           <Text style={styles.subtitle}>
-            Choose your role to get started. You can switch anytime from your dashboard.
+            Choose your role to get started. You can switch anytime from your profile.
           </Text>
         </View>
 

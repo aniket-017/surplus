@@ -13,23 +13,21 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
-import { getImageUrl, getProduct } from '@/src/lib/productsApi';
+import { formatPrice } from '@/src/lib/productFormat';
+import { getBrowseProduct, getImageUrl } from '@/src/lib/productsApi';
 import {
   CONDITION_OPTIONS,
   PRICE_TYPE_OPTIONS,
-  type Product,
-  type ProductCondition,
   type PriceType,
+  type ProductCondition,
+  type ProductListing,
 } from '@/src/types/product';
 
 const IMAGE_WIDTH = Dimensions.get('window').width - spacing.lg * 2;
-
-function formatPrice(value: number) {
-  return `₹${value.toLocaleString('en-IN')}`;
-}
 
 function formatLabel(value: string) {
   return value
@@ -52,10 +50,10 @@ function formatAttributeKey(key: string) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export default function ProductDetailScreen() {
+export default function BuyerProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { token } = useAuth();
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<ProductListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeImage, setActiveImage] = useState(0);
@@ -66,6 +64,8 @@ export default function ProductDetailScreen() {
       return;
     }
 
+    const authToken = token;
+    const productId = id;
     let cancelled = false;
 
     async function loadProduct() {
@@ -73,7 +73,7 @@ export default function ProductDetailScreen() {
       setError('');
 
       try {
-        const data = await getProduct(token, id);
+        const data = await getBrowseProduct(authToken, productId);
         if (!cancelled) {
           setProduct(data.product);
           setActiveImage(0);
@@ -127,6 +127,7 @@ export default function ProductDetailScreen() {
     );
   }
 
+  const sellerName = product.seller?.name || 'Seller';
   const locationPrimary = product.location.address
     ? product.location.address
     : `${product.location.city}, ${product.location.state} — ${product.location.pincode}`;
@@ -216,6 +217,23 @@ export default function ProductDetailScreen() {
             </View>
           </View>
         </View>
+
+        <SectionCard title="Seller" subtitle="Listed by verified seller">
+          <View style={styles.sellerRow}>
+            <View style={styles.sellerAvatar}>
+              <Text style={styles.sellerInitial}>{sellerName[0]?.toUpperCase()}</Text>
+            </View>
+            <View style={styles.sellerInfo}>
+              <View style={styles.sellerNameRow}>
+                <Text style={styles.sellerName}>{sellerName}</Text>
+                <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
+              </View>
+              {product.seller?.email ? (
+                <Text style={styles.sellerEmail}>{product.seller.email}</Text>
+              ) : null}
+            </View>
+          </View>
+        </SectionCard>
 
         <SectionCard title="Description" subtitle="Product overview">
           <Text style={styles.bodyText}>{product.description}</Text>
@@ -458,6 +476,42 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
     fontSize: 15,
     fontWeight: '700',
+  },
+  sellerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  sellerAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sellerInitial: {
+    color: colors.textStrong,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  sellerInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  sellerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sellerName: {
+    color: colors.textStrong,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  sellerEmail: {
+    color: colors.muted,
+    fontSize: 13,
   },
   sectionCard: {
     backgroundColor: colors.surface,

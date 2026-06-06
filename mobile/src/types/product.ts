@@ -41,6 +41,31 @@ export type Product = {
   updatedAt: string;
 };
 
+export type ProductSeller = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+export type ProductListing = Product & {
+  seller: ProductSeller | null;
+};
+
+export type ProductCategory = {
+  name: string;
+  count: number;
+};
+
+export type BrowseSort = 'recent' | 'price_asc' | 'price_desc';
+
+export type BrowseProductsParams = {
+  search?: string;
+  category?: string;
+  sort?: BrowseSort;
+  limit?: number;
+  skip?: number;
+};
+
 export type ProductFormValues = {
   title: string;
   category: string;

@@ -1,4 +1,4 @@
-import type { User, UserRole } from '@/src/types/auth';
+import type { UpdateProfilePayload, User, UserRole } from '@/src/types/auth';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -53,6 +53,14 @@ export function updateRole(token: string, role: UserRole) {
     method: 'PATCH',
     token,
     body: JSON.stringify({ role }),
+  });
+}
+
+export function updateProfile(token: string, payload: UpdateProfilePayload) {
+  return apiFetch<{ user: User }>('/api/auth/profile', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(payload),
   });
 }
 

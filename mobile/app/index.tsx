@@ -24,10 +24,10 @@ export default function Index() {
   }
 
   if (user.role === 'buyer') {
-    return <Redirect href="/(buyer)/dashboard" />;
+    return <Redirect href="/(buyer)/(tabs)" />;
   }
 
-  return <Redirect href="/(seller)/dashboard" />;
+  return <Redirect href="/(seller)/(tabs)" />;
 }
 
 const styles = StyleSheet.create({

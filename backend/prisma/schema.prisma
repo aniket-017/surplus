@@ -39,6 +39,13 @@ type ProductLocation {
   pincode String
 }
 
+type UserAddress {
+  address String?
+  city    String
+  state   String
+  pincode String
+}
+
 model User {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   googleId  String?   @unique @map("google_id")
@@ -46,6 +53,7 @@ model User {
   name      String?
   avatarUrl String?   @map("avatar_url")
   role      UserRole?
+  address   UserAddress?
   products  Product[]
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")

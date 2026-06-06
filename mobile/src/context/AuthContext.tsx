@@ -12,10 +12,11 @@ import {
 import {
   getCurrentUser,
   logoutRequest,
+  updateProfile as updateProfileRequest,
   updateRole,
   verifyOtp,
 } from '@/src/lib/api';
-import type { User, UserRole } from '@/src/types/auth';
+import type { UpdateProfilePayload, User, UserRole } from '@/src/types/auth';
 
 const TOKEN_KEY = 'surplus_auth_token';
 
@@ -26,6 +27,7 @@ type AuthContextValue = {
   signIn: (email: string, otp: string) => Promise<void>;
   signOut: () => Promise<void>;
   setRole: (role: UserRole) => Promise<User>;
+  updateProfile: (payload: UpdateProfilePayload) => Promise<User>;
   refreshUser: () => Promise<void>;
 };
 
@@ -119,6 +121,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [token],
   );
 
+  const updateProfile = useCallback(
+    async (payload: UpdateProfilePayload) => {
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const data = await updateProfileRequest(token, payload);
+      setUser(data.user);
+      return data.user;
+    },
+    [token],
+  );
+
   const value = useMemo(
     () => ({
       user,
@@ -127,9 +142,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signOut,
       setRole,
+      updateProfile,
       refreshUser,
     }),
-    [user, token, loading, signIn, signOut, setRole, refreshUser],
+    [user, token, loading, signIn, signOut, setRole, updateProfile, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

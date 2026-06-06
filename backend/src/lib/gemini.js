@@ -14,10 +14,13 @@ function getModel() {
 }
 
 function fileToPart(file) {
-  const data = fs.readFileSync(file.path);
+  if (!file.buffer) {
+    throw new Error("Uploaded image buffer is missing");
+  }
+
   return {
     inlineData: {
-      data: data.toString("base64"),
+      data: file.buffer.toString("base64"),
       mimeType: file.mimetype,
     },
   };

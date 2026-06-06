@@ -10,7 +10,7 @@ import { isGoogleAuthEnabled, isOtpAuthEnabled } from "./config/auth.js";
 import { verifySmtpConnection } from "./lib/mail.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
-import { UPLOAD_ROOT } from "./lib/upload.js";
+import { assertS3Config } from "./lib/s3.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND_DIST = path.resolve(__dirname, "../../frontend/dist");
@@ -56,6 +56,14 @@ if (isOtpAuthEnabled()) {
   }
 }
 
+try {
+  assertS3Config();
+  console.log("AWS S3 configuration verified");
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 4369;
 
@@ -67,7 +75,6 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
-app.use("/uploads/products", express.static(UPLOAD_ROOT));
 
 if (isGoogleAuthEnabled()) {
   app.use(passport.initialize());
@@ -89,7 +96,7 @@ app.use("/api/products", productRoutes);
 if (FRONTEND_DIST_EXISTS) {
   app.use(express.static(FRONTEND_DIST));
 
-  app.get(/^(?!\/api|\/uploads).*/, (req, res, next) => {
+  app.get(/^(?!\/api).*/, (req, res, next) => {
     if (req.method !== "GET") return next();
     res.sendFile(path.join(FRONTEND_DIST, "index.html"), (err) => {
       if (err) next(err);

@@ -6,6 +6,7 @@ const userSelect = {
   name: true,
   avatarUrl: true,
   role: true,
+  address: true,
   createdAt: true,
 };
 
@@ -16,8 +17,41 @@ export function formatUser(user) {
     name: user.name,
     avatarUrl: user.avatarUrl,
     role: user.role ? user.role.toLowerCase() : null,
+    address: user.address ?? null,
     createdAt: user.createdAt,
   };
+}
+
+export function parseUserAddress(raw) {
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  if (raw === null) {
+    return null;
+  }
+
+  let parsed = raw;
+  if (typeof raw === "string") {
+    parsed = JSON.parse(raw);
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("Invalid address");
+  }
+
+  const address = {
+    address: parsed.address ? String(parsed.address).trim() : null,
+    city: String(parsed.city || "").trim(),
+    state: String(parsed.state || "").trim(),
+    pincode: String(parsed.pincode || "").trim(),
+  };
+
+  if (!address.city || !address.state || !address.pincode) {
+    throw new Error("City, state, and pincode are required");
+  }
+
+  return address;
 }
 
 export function signToken(user) {

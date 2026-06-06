@@ -2,12 +2,19 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { analyzeProductImages } from "../lib/gemini.js";
 import {
-  cleanupTempFiles,
-  deleteProductImages,
-  moveImagesToProductFolder,
-  uploadProductImages,
-} from "../lib/upload.js";
-import { formatProduct, parseProductPayload } from "../lib/product.js";
+  deleteProductImages as deleteProductImagesFromS3,
+  uploadProductImages as uploadProductImagesToS3,
+} from "../lib/s3.js";
+import { uploadProductImages } from "../lib/upload.js";
+import {
+  buildBrowseOrderBy,
+  buildBrowseWhere,
+  formatProduct,
+  formatProductListing,
+  parseBrowseSort,
+  parseProductPayload,
+} from "../lib/product.js";
+import { requireAuth } from "../middleware/auth.js";
 import { requireSeller } from "../middleware/requireSeller.js";
 
 const router = Router();
@@ -34,8 +41,6 @@ router.post("/analyze", requireSeller, handleUpload, async (req, res) => {
     res.status(500).json({
       error: error.message || "Failed to analyze product images",
     });
-  } finally {
-    cleanupTempFiles(req.files);
   }
 });
 
@@ -43,6 +48,8 @@ router.post("/", requireSeller, handleUpload, async (req, res) => {
   if (!req.files?.length) {
     return res.status(400).json({ error: "At least one image is required" });
   }
+
+  let uploadedImageUrls = [];
 
   try {
     const payload = parseProductPayload(req.body);
@@ -55,16 +62,28 @@ router.post("/", requireSeller, handleUpload, async (req, res) => {
       },
     });
 
-    const imageUrls = moveImagesToProductFolder(product.id, req.files);
+    uploadedImageUrls = await uploadProductImagesToS3(
+      payload.category,
+      payload.subCategory,
+      product.id,
+      req.files,
+    );
 
     const updated = await prisma.product.update({
       where: { id: product.id },
-      data: { images: imageUrls },
+      data: { images: uploadedImageUrls },
     });
 
-    res.status(201).json({ product: formatProduct(updated) });
+    res.status(201).json({ product: await formatProduct(updated) });
   } catch (error) {
-    cleanupTempFiles(req.files);
+    if (uploadedImageUrls.length) {
+      try {
+        await deleteProductImagesFromS3(uploadedImageUrls);
+      } catch (cleanupError) {
+        console.error("Failed to clean up S3 images after create error:", cleanupError);
+      }
+    }
+
     console.error("Create product failed:", error);
     res.status(400).json({ error: error.message || "Failed to create product" });
   }
@@ -77,10 +96,93 @@ router.get("/mine", requireSeller, async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    res.json({ products: products.map(formatProduct) });
+    res.json({ products: await Promise.all(products.map(formatProduct)) });
   } catch (error) {
     console.error("List products failed:", error);
     res.status(500).json({ error: "Failed to fetch products" });
+  }
+});
+
+router.get("/categories", requireAuth, async (_req, res) => {
+  try {
+    const grouped = await prisma.product.groupBy({
+      by: ["category"],
+      _count: { category: true },
+      orderBy: { category: "asc" },
+    });
+
+    res.json({
+      categories: grouped.map((item) => ({
+        name: item.category,
+        count: item._count.category,
+      })),
+    });
+  } catch (error) {
+    console.error("List categories failed:", error);
+    res.status(500).json({ error: "Failed to fetch categories" });
+  }
+});
+
+router.get("/browse", requireAuth, async (req, res) => {
+  try {
+    const search = String(req.query.search || "").trim();
+    const category = String(req.query.category || "").trim();
+    const sort = parseBrowseSort(req.query.sort);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
+    const skip = Math.max(Number(req.query.skip) || 0, 0);
+
+    const where = buildBrowseWhere({ search, category });
+
+    const products = await prisma.product.findMany({
+      where,
+      include: {
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: buildBrowseOrderBy(sort),
+      take: limit,
+      skip,
+    });
+
+    res.json({
+      products: await Promise.all(
+        products.map((product) => formatProductListing(product, product.seller)),
+      ),
+    });
+  } catch (error) {
+    console.error("Browse products failed:", error);
+    res.status(500).json({ error: "Failed to fetch products" });
+  }
+});
+
+router.get("/browse/:id", requireAuth, async (req, res) => {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: req.params.id },
+      include: {
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.json({ product: await formatProductListing(product, product.seller) });
+  } catch (error) {
+    console.error("Browse product failed:", error);
+    res.status(500).json({ error: "Failed to fetch product" });
   }
 });
 
@@ -94,7 +196,7 @@ router.get("/:id", requireSeller, async (req, res) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    res.json({ product: formatProduct(product) });
+    res.json({ product: await formatProduct(product) });
   } catch (error) {
     console.error("Get product failed:", error);
     res.status(500).json({ error: "Failed to fetch product" });
@@ -108,7 +210,6 @@ router.patch("/:id", requireSeller, handleUpload, async (req, res) => {
     });
 
     if (!existing) {
-      cleanupTempFiles(req.files);
       return res.status(404).json({ error: "Product not found" });
     }
 
@@ -128,8 +229,13 @@ router.patch("/:id", requireSeller, handleUpload, async (req, res) => {
     const updateData = { ...payload };
 
     if (req.files?.length) {
-      deleteProductImages(existing.images);
-      updateData.images = moveImagesToProductFolder(existing.id, req.files);
+      await deleteProductImagesFromS3(existing.images);
+      updateData.images = await uploadProductImagesToS3(
+        payload.category,
+        payload.subCategory,
+        existing.id,
+        req.files,
+      );
     }
 
     const updated = await prisma.product.update({
@@ -137,9 +243,8 @@ router.patch("/:id", requireSeller, handleUpload, async (req, res) => {
       data: updateData,
     });
 
-    res.json({ product: formatProduct(updated) });
+    res.json({ product: await formatProduct(updated) });
   } catch (error) {
-    cleanupTempFiles(req.files);
     console.error("Update product failed:", error);
     res.status(400).json({ error: error.message || "Failed to update product" });
   }
@@ -155,7 +260,7 @@ router.delete("/:id", requireSeller, async (req, res) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    deleteProductImages(existing.images);
+    await deleteProductImagesFromS3(existing.images);
 
     await prisma.product.delete({ where: { id: existing.id } });
 

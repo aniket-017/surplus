@@ -5,6 +5,6 @@ backend/uploads
 
 mobile/node_modules
 
-mobile/.env
+# mobile/.env
 mobile/.expo-test-bundle
 mobile/.expo-test-bundle2

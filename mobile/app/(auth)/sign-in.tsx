@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -21,8 +21,17 @@ import { colors, spacing } from '@/src/constants/theme';
 type AuthMode = 'signin' | 'signup';
 type Step = 'email' | 'otp';
 
+function navigateAfterAuth(user: { role: 'buyer' | 'seller' | null }) {
+  if (!user.role) {
+    router.replace('/role-select');
+    return;
+  }
+
+  router.replace(user.role === 'buyer' ? '/(buyer)/(tabs)' : '/(seller)/(tabs)');
+}
+
 export default function SignInScreen() {
-  const { signIn } = useAuth();
+  const { signIn, token, user } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signin');
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -31,13 +40,19 @@ export default function SignInScreen() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
 
+  useEffect(() => {
+    if (token && user) {
+      navigateAfterAuth(user);
+    }
+  }, [token, user]);
+
   async function handleSendOtp() {
     setError('');
     setInfo('');
     setLoading(true);
 
     try {
-      await sendOtp(email.trim().toLowerCase());
+      await sendOtp(email.trim().toLowerCase(), mode);
       setStep('otp');
       setInfo('We sent a 6-digit code to your email.');
     } catch (err) {
@@ -53,8 +68,8 @@ export default function SignInScreen() {
     setLoading(true);
 
     try {
-      await signIn(email.trim().toLowerCase(), otp.trim());
-      router.replace('/');
+      const signedInUser = await signIn(email.trim().toLowerCase(), otp.trim(), mode);
+      navigateAfterAuth(signedInUser);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to verify OTP');
     } finally {

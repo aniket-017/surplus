@@ -25,17 +25,17 @@ export function getAuthMethods() {
   return apiFetch('/api/auth/methods')
 }
 
-export function sendOtp(email) {
+export function sendOtp(email, intent = 'signin') {
   return apiFetch('/api/auth/otp/send', {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, intent }),
   })
 }
 
-export function verifyOtp(email, otp) {
+export function verifyOtp(email, otp, intent = 'signin') {
   return apiFetch('/api/auth/otp/verify', {
     method: 'POST',
-    body: JSON.stringify({ email, otp }),
+    body: JSON.stringify({ email, otp, intent }),
   })
 }
 

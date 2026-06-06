@@ -23,6 +23,10 @@ function parseRole(role) {
   return null;
 }
 
+function parseAuthIntent(raw) {
+  return raw === "signup" ? "signup" : "signin";
+}
+
 router.get("/methods", (_req, res) => {
   res.json(getAuthMethods());
 });
@@ -49,12 +53,30 @@ if (isGoogleAuthEnabled()) {
 if (isOtpAuthEnabled()) {
   router.post("/otp/send", async (req, res) => {
     const email = req.body.email?.trim().toLowerCase();
+    const intent = parseAuthIntent(req.body.intent);
 
     if (!email || !isValidEmail(email)) {
       return res.status(400).json({ error: "Valid email is required" });
     }
 
     try {
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+
+      if (intent === "signin" && !existingUser) {
+        return res.status(404).json({
+          error: "No account found with this email. Create an account first.",
+        });
+      }
+
+      if (intent === "signup" && existingUser) {
+        return res.status(409).json({
+          error: "An account with this email already exists. Sign in instead.",
+        });
+      }
+
       const otp = generateOtp();
 
       await prisma.otp.deleteMany({ where: { email } });
@@ -86,6 +108,7 @@ if (isOtpAuthEnabled()) {
   router.post("/otp/verify", async (req, res) => {
     const email = req.body.email?.trim().toLowerCase();
     const code = req.body.otp?.trim();
+    const intent = parseAuthIntent(req.body.intent);
 
     if (!email || !isValidEmail(email)) {
       return res.status(400).json({ error: "Valid email is required" });
@@ -96,6 +119,23 @@ if (isOtpAuthEnabled()) {
     }
 
     try {
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+        select: userSelect,
+      });
+
+      if (intent === "signin" && !existingUser) {
+        return res.status(404).json({
+          error: "No account found with this email. Create an account first.",
+        });
+      }
+
+      if (intent === "signup" && existingUser) {
+        return res.status(409).json({
+          error: "An account with this email already exists. Sign in instead.",
+        });
+      }
+
       const record = await prisma.otp.findFirst({
         where: { email },
         orderBy: { createdAt: "desc" },
@@ -114,12 +154,13 @@ if (isOtpAuthEnabled()) {
         return res.status(400).json({ error: "Invalid OTP" });
       }
 
-      const user = await prisma.user.upsert({
-        where: { email },
-        update: {},
-        create: { email },
-        select: userSelect,
-      });
+      const user =
+        intent === "signin"
+          ? existingUser
+          : await prisma.user.create({
+              data: { email },
+              select: userSelect,
+            });
 
       await prisma.otp.deleteMany({ where: { email } });
 

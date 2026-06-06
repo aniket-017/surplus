@@ -16,6 +16,7 @@ import {
   updateRole,
   verifyOtp,
 } from '@/src/lib/api';
+import type { AuthIntent } from '@/src/lib/api';
 import type { UpdateProfilePayload, User, UserRole } from '@/src/types/auth';
 
 const TOKEN_KEY = 'surplus_auth_token';
@@ -24,7 +25,7 @@ type AuthContextValue = {
   user: User | null;
   token: string | null;
   loading: boolean;
-  signIn: (email: string, otp: string) => Promise<void>;
+  signIn: (email: string, otp: string, intent?: AuthIntent) => Promise<User>;
   signOut: () => Promise<void>;
   setRole: (role: UserRole) => Promise<User>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<User>;
@@ -82,8 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
-  const signIn = useCallback(async (email: string, otp: string) => {
-    const data = await verifyOtp(email, otp);
+  const signIn = useCallback(async (email: string, otp: string, intent: AuthIntent = 'signin') => {
+    const data = await verifyOtp(email, otp, intent);
 
     if (!data.user) {
       throw new Error('Sign-in failed. Please try again.');
@@ -92,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await saveToken(data.token);
     setToken(data.token);
     setUser(data.user);
+    return data.user;
   }, []);
 
   const signOut = useCallback(async () => {

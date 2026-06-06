@@ -49,7 +49,7 @@ export default function AuthPage() {
     setLoading(true)
 
     try {
-      await sendOtp(email.trim().toLowerCase())
+      await sendOtp(email.trim().toLowerCase(), mode)
       setStep('otp')
       setInfo('We sent a 6-digit code to your email.')
     } catch (err) {
@@ -66,7 +66,7 @@ export default function AuthPage() {
     setLoading(true)
 
     try {
-      const data = await verifyOtp(email.trim().toLowerCase(), otp.trim())
+      const data = await verifyOtp(email.trim().toLowerCase(), otp.trim(), mode)
       setUser(data.user)
       navigate('/', { replace: true })
     } catch (err) {

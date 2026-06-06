@@ -30,17 +30,19 @@ export async function apiFetch<T>(
   return parseResponse<T>(res);
 }
 
-export function sendOtp(email: string) {
+export type AuthIntent = 'signin' | 'signup';
+
+export function sendOtp(email: string, intent: AuthIntent = 'signin') {
   return apiFetch<{ message: string }>('/api/auth/otp/send', {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, intent }),
   });
 }
 
-export function verifyOtp(email: string, otp: string) {
+export function verifyOtp(email: string, otp: string, intent: AuthIntent = 'signin') {
   return apiFetch<{ message: string; token: string; user: User }>('/api/auth/otp/verify', {
     method: 'POST',
-    body: JSON.stringify({ email, otp }),
+    body: JSON.stringify({ email, otp, intent }),
   });
 }
 

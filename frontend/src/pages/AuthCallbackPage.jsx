@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { getPostAuthPath } from '../lib/authRedirect'
 
 export default function AuthCallbackPage() {
   const navigate = useNavigate()
@@ -18,8 +19,8 @@ export default function AuthCallbackPage() {
       }
 
       if (success) {
-        await refreshUser()
-        navigate('/', { replace: true })
+        const user = await refreshUser()
+        navigate(user ? getPostAuthPath(user) : '/', { replace: true })
         return
       }
 

@@ -48,3 +48,17 @@ export async function getCurrentUser() {
 export function logout() {
   return apiFetch('/api/auth/logout', { method: 'POST' })
 }
+
+export function updateProfile(payload) {
+  return apiFetch('/api/auth/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateRole(role) {
+  return apiFetch('/api/auth/role', {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  })
+}

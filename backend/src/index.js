@@ -14,9 +14,7 @@ import { assertS3Config } from "./lib/s3.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND_DIST = path.resolve(__dirname, "../../frontend/dist");
-const FRONTEND_DIST_EXISTS =
-  fs.existsSync(FRONTEND_DIST) &&
-  fs.existsSync(path.join(FRONTEND_DIST, "index.html"));
+const FRONTEND_DIST_EXISTS = fs.existsSync(FRONTEND_DIST) && fs.existsSync(path.join(FRONTEND_DIST, "index.html"));
 
 const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "FRONTEND_URL"];
 
@@ -30,7 +28,7 @@ for (const key of requiredEnv) {
 if (!isGoogleAuthEnabled() && !isOtpAuthEnabled()) {
   console.error(
     "Configure either Google OAuth (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET) " +
-      "or SMTP email OTP (SMTP_MAIL, SMTP_PASSWORD, SMTP_HOST, SMTP_PORT)"
+      "or SMTP email OTP (SMTP_MAIL, SMTP_PASSWORD, SMTP_HOST, SMTP_PORT)",
   );
   process.exit(1);
 }
@@ -49,9 +47,7 @@ if (isOtpAuthEnabled()) {
     console.log("SMTP connection verified");
   } catch (error) {
     console.error("SMTP verification failed:", error.message);
-    console.error(
-      "Use a Gmail App Password (not your regular password): https://myaccount.google.com/apppasswords"
-    );
+    console.error("Use a Gmail App Password (not your regular password): https://myaccount.google.com/apppasswords");
     process.exit(1);
   }
 }
@@ -71,7 +67,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 app.use(cookieParser());
@@ -115,16 +111,11 @@ app.use((err, req, res, _next) => {
 });
 
 app.listen(PORT, () => {
-  const methods = [
-    isGoogleAuthEnabled() && "Google",
-    isOtpAuthEnabled() && "Email OTP",
-  ].filter(Boolean);
+  const methods = [isGoogleAuthEnabled() && "Google", isOtpAuthEnabled() && "Email OTP"].filter(Boolean);
 
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Auth methods: ${methods.join(", ")}`);
-  console.log(
-    `[startup] Gemini: ${process.env.GEMINI_API_KEY ? "configured" : "MISSING GEMINI_API_KEY"}`,
-  );
+  console.log(`[startup] Gemini: ${process.env.GEMINI_API_KEY ? "configured" : "MISSING GEMINI_API_KEY"}`);
   if (FRONTEND_DIST_EXISTS) {
     console.log(`Serving frontend from ${FRONTEND_DIST}`);
   }

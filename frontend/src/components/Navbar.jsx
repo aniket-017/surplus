@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
 import surplusLogo from '../assets/logo/surplus.png'
 import { useAuth } from '../context/AuthContext'
+import { getPostAuthPath } from '../lib/authRedirect'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
 
   return (
-    <nav>
+    <nav className="landing-nav">
       <Link to="/" className="logo nav-logo">
         <img
           src={surplusLogo}
@@ -31,6 +32,9 @@ export default function Navbar() {
       <div className="nav-cta">
         {user ? (
           <>
+            <Link to={getPostAuthPath(user)} className="btn btn-primary">
+              Dashboard
+            </Link>
             <span className="nav-user">
               {user.avatarUrl ? (
                 <img src={user.avatarUrl} alt="" className="nav-user-avatar" />

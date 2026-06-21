@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import surplusLogo from '../assets/logo/surplus.png'
 import { useAuth } from '../context/AuthContext'
 import { getAuthMethods, sendOtp, verifyOtp } from '../lib/api'
+import { getPostAuthPath } from '../lib/authRedirect'
 
 export default function AuthPage() {
   const location = useLocation()
@@ -32,7 +33,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true })
+      navigate(getPostAuthPath(user), { replace: true })
     }
   }, [user, navigate])
 
@@ -68,7 +69,7 @@ export default function AuthPage() {
     try {
       const data = await verifyOtp(email.trim().toLowerCase(), otp.trim(), mode)
       setUser(data.user)
-      navigate('/', { replace: true })
+      navigate(getPostAuthPath(data.user), { replace: true })
     } catch (err) {
       setError(err.message)
     } finally {

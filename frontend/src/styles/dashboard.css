@@ -133,6 +133,93 @@
   color: var(--text-strong);
 }
 
+.app-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.app-sidebar-role-switch {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.role-switch-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-accent);
+  background: rgba(92, 179, 53, 0.08);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  font-family: 'Barlow Condensed', sans-serif;
+}
+
+.role-switch-btn:hover:not(:disabled) {
+  background: rgba(92, 179, 53, 0.16);
+  border-color: var(--accent);
+}
+
+.role-switch-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.role-switch-btn-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.role-switch-btn-compact {
+  width: auto;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.role-switch-btn-compact .role-switch-btn-text {
+  display: inline;
+}
+
+.app-nav-link-switch {
+  border: none;
+  background: rgba(92, 179, 53, 0.12);
+  color: var(--accent);
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.app-nav-link-switch:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.app-topbar-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .app-topbar-name {
+    display: none;
+  }
+}
+
 .app-topbar-user {
   display: flex;
   align-items: center;
@@ -1196,6 +1283,10 @@
     display: none;
   }
 
+  .app-sidebar-role-switch {
+    display: none;
+  }
+
   .app-main {
     grid-column: 1;
   }
@@ -1230,6 +1321,12 @@
   .app-bottom-nav .app-nav-link.active {
     background: none;
     border: none;
+  }
+
+  .app-bottom-nav .app-nav-link-switch {
+    background: rgba(92, 179, 53, 0.12);
+    border: 1px solid var(--border-accent);
+    border-radius: 10px;
   }
 
   .app-content {

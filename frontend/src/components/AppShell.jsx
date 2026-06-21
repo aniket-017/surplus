@@ -1,6 +1,7 @@
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import surplusLogo from '../assets/logo/surplus.png'
 import { useAuth } from '../context/AuthContext'
+import RoleSwitchButton from './RoleSwitchButton'
 
 const BUYER_NAV = [
   { to: '/buyer', label: 'Home', end: true },
@@ -41,6 +42,10 @@ export default function AppShell({ role, title, children }) {
           ))}
         </nav>
 
+        <div className="app-sidebar-role-switch">
+          <RoleSwitchButton role={role} />
+        </div>
+
         {role === 'seller' && (
           <div className="app-sidebar-cta">
             <Link to="/seller/add-product" className="btn btn-primary btn-block">
@@ -53,15 +58,18 @@ export default function AppShell({ role, title, children }) {
       <div className="app-main">
         <header className="app-topbar">
           <h1 className="app-topbar-title">{title}</h1>
-          <div className="app-topbar-user">
-            <div className="app-topbar-avatar">
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" />
-              ) : (
-                displayName[0]?.toUpperCase()
-              )}
+          <div className="app-topbar-actions">
+            <RoleSwitchButton role={role} variant="compact" />
+            <div className="app-topbar-user">
+              <div className="app-topbar-avatar">
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="" />
+                ) : (
+                  displayName[0]?.toUpperCase()
+                )}
+              </div>
+              <span className="app-topbar-name">{displayName}</span>
             </div>
-            <span>{displayName}</span>
           </div>
         </header>
 
@@ -78,6 +86,7 @@ export default function AppShell({ role, title, children }) {
               {item.label}
             </NavLink>
           ))}
+          <RoleSwitchButton role={role} variant="bottom-nav" />
           {role === 'seller' && !isAddProduct && (
             <NavLink
               to="/seller/add-product"

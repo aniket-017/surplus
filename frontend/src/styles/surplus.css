@@ -1006,7 +1006,91 @@ footer {
   transform: translateY(0);
 }
 
-.hamburger { display: none; }
+.hamburger {
+  display: none;
+  min-width: 44px;
+  padding: 10px 14px;
+}
+
+.hamburger-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.landing-mobile-menu {
+  display: none;
+}
+
+.landing-mobile-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  border: none;
+  background: rgba(15, 27, 45, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.landing-mobile-menu-panel {
+  position: fixed;
+  top: 72px;
+  right: 0;
+  bottom: 0;
+  z-index: 101;
+  width: min(320px, 88vw);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  padding: 1.25rem 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  overflow-y: auto;
+}
+
+.landing-mobile-menu-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.landing-mobile-menu-links a {
+  display: block;
+  padding: 0.85rem 0.75rem;
+  border-radius: 8px;
+  color: var(--text-strong);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 0.15s, color 0.15s;
+}
+
+.landing-mobile-menu-links a:hover {
+  background: var(--bg-subtle);
+  color: var(--accent);
+}
+
+.landing-mobile-menu-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: auto;
+}
+
+.landing-mobile-menu.is-open .landing-mobile-menu-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.landing-mobile-menu.is-open .landing-mobile-menu-panel {
+  transform: translateX(0);
+}
 
 .nav-user {
   display: inline-flex;
@@ -1253,7 +1337,8 @@ footer {
 
 @media (max-width: 768px) {
   .nav-links, .nav-cta { display: none; }
-  .hamburger { display: block; }
+  .hamburger { display: inline-flex; align-items: center; justify-content: center; }
+  .landing-mobile-menu { display: block; }
   .problem-grid { grid-template-columns: 1fr; }
   .testimonial-grid { grid-template-columns: 1fr; }
   .footer-inner { grid-template-columns: 1fr; gap: 40px; }

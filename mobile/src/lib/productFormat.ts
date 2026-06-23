@@ -4,6 +4,26 @@ export function formatPrice(value: number) {
   return `₹${value.toLocaleString('en-IN')}`;
 }
 
+export function getProductTotalValue(
+  product: Pick<ProductListing, 'price' | 'priceType' | 'quantity'>,
+) {
+  if (
+    product.priceType === 'per_kg' ||
+    product.priceType === 'per_unit' ||
+    product.priceType === 'per_lot'
+  ) {
+    return product.price * product.quantity;
+  }
+
+  return product.price;
+}
+
+export function getSellerEstimatedValue(
+  products: Pick<ProductListing, 'price' | 'priceType' | 'quantity'>[],
+) {
+  return products.reduce((sum, product) => sum + getProductTotalValue(product), 0);
+}
+
 export function formatListingPrice(product: Pick<ProductListing, 'price' | 'priceType' | 'quantityUnit'>) {
   const amount = formatPrice(product.price);
 

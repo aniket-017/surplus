@@ -1,17 +1,21 @@
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DashboardScreen } from '@/src/components/DashboardShell';
 import { Logo } from '@/src/components/Logo';
-import { SellerWelcomeBanner } from '@/src/components/seller';
+import { SellerAddProductCard, SellerWelcomeBanner } from '@/src/components/seller';
 import { useAuth } from '@/src/context/AuthContext';
 import { useMyProducts } from '@/src/hooks/useMyProducts';
 import { colors, spacing } from '@/src/constants/theme';
+import { formatPrice, getSellerEstimatedValue } from '@/src/lib/productFormat';
 
 export default function SellerDashboardTab() {
   const { user } = useAuth();
   const { products } = useMyProducts();
+
+  const estimatedValue = useMemo(() => getSellerEstimatedValue(products), [products]);
 
   return (
     <DashboardScreen>
@@ -23,24 +27,32 @@ export default function SellerDashboardTab() {
         <SellerWelcomeBanner name={user?.name} />
 
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{products.length}</Text>
-            <Text style={styles.statLabel}>Active Listings</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{products.length}</Text>
+              <Text style={styles.statLabel}>Active Listings</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>0</Text>
+              <Text style={styles.statLabel}>Views</Text>
+            </View>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>0</Text>
-            <Text style={styles.statLabel}>Views</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>0</Text>
+              <Text style={styles.statLabel}>Inquiries</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={[styles.statValue, styles.statValueCompact]} numberOfLines={1}>
+                {formatPrice(estimatedValue)}
+              </Text>
+              <Text style={styles.statLabel}>Est. Value</Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.actions}>
-          <Pressable
-            style={styles.primaryAction}
-            onPress={() => router.push('/(seller)/add-product')}
-          >
-            <Ionicons name="add-circle" size={20} color={colors.white} />
-            <Text style={styles.primaryActionText}>Add Product</Text>
-          </Pressable>
+          <SellerAddProductCard onPress={() => router.push('/(seller)/add-product')} />
 
           <Pressable
             style={styles.secondaryAction}
@@ -78,6 +90,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statsGrid: {
+    gap: spacing.sm,
+  },
+  statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
@@ -89,12 +104,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: 4,
+    minHeight: 88,
+    justifyContent: 'center',
   },
   statValue: {
     color: colors.textStrong,
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.5,
+  },
+  statValueCompact: {
+    fontSize: 22,
   },
   statLabel: {
     color: colors.muted,
@@ -103,21 +123,6 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: spacing.sm,
-  },
-  primaryAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.accent,
-    borderRadius: 14,
-    paddingVertical: 16,
-  },
-  primaryActionText: {
-    color: colors.white,
-    fontWeight: '700',
-    fontSize: 15,
-    letterSpacing: 0.3,
   },
   secondaryAction: {
     flexDirection: 'row',

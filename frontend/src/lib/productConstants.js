@@ -13,15 +13,25 @@ export const CONDITION_OPTIONS = [
   { label: 'Refurbished', value: 'refurbished' },
 ]
 
-export const PRODUCT_CATEGORY_OPTIONS = [
-  'Metals',
-  'Polymers',
-  'Pipes & Tubes',
-  'Machinery',
-  'Electrical',
-  'Chemicals',
-  'Other',
+export const PRODUCT_CATEGORIES = [
+  { name: 'Metals', icon: 'construct-outline' },
+  { name: 'Plastics', icon: 'cube-outline' },
+  { name: 'Piping', icon: 'git-branch-outline' },
+  { name: 'Machinery', icon: 'cog-outline' },
+  { name: 'Electronics', icon: 'hardware-chip-outline' },
+  { name: 'Chemicals', icon: 'flask-outline' },
+  { name: 'Rubber', icon: 'ellipse-outline' },
+  { name: 'Packaging', icon: 'albums-outline' },
+  { name: 'Construction', icon: 'home-outline' },
+  { name: 'Textiles', icon: 'grid-outline' },
+  { name: 'Wood & Agro', icon: 'leaf-outline' },
+  { name: 'Minerals', icon: 'barbell-outline' },
+  { name: 'Energy', icon: 'flash-outline' },
+  { name: 'Safety', icon: 'shield-outline' },
+  { name: 'Others', icon: 'layers-outline' },
 ]
+
+export const PRODUCT_CATEGORY_OPTIONS = PRODUCT_CATEGORIES.map((item) => item.name)
 
 export function isAllowedProductCategory(value) {
   return PRODUCT_CATEGORY_OPTIONS.includes(value)

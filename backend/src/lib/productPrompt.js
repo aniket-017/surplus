@@ -12,14 +12,17 @@ Return ONLY valid JSON with this exact shape:
 }
 
 Rules:
-- category must be one of: Metals, Polymers, Pipes & Tubes, Machinery, Electrical, Chemicals, Other
-- subCategory should be specific (e.g. Copper Scrap, HDPE Granules, MS Pipe)
+- category must be exactly one of: Metals, Plastics, Piping, Machinery, Electronics, Chemicals, Rubber, Packaging, Construction, Textiles, Wood & Agro, Minerals, Energy, Safety, Others
+- subCategory should be specific (e.g. Copper Scrap, HDPE Granules, MS Pipe, Industrial Solenoid Valve)
 - description: 2-3 sentences, factual, suitable for a B2B listing
 - quantityUnit: use kg, ton, meter, piece, lot, bag, drum, or similar
 - attributes: 3-10 material-relevant key/value pairs using camelCase keys
 - For metals include purity, grade, scrapType, insulation, color when visible
-- For pipes include diameter, length, thickness, material, coating when visible
-- For polymers include polymerType, color, mfi, density, virginOrRecycled when relevant
+- For plastics include polymerType, color, mfi, density, virginOrRecycled when relevant
+- For piping include diameter, length, thickness, material, coating when visible
+- For machinery include make, model, capacity, powerRating when visible
+- For electronics include voltage, phase, brand, condition when visible
+- For chemicals include grade, purity, packaging, hazardClass when relevant
 - Do not invent precise numbers unless reasonably visible or inferable
 - Do not include markdown or extra text outside JSON`;
 

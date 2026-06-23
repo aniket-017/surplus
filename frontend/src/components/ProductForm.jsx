@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
+import CategoryIcon from './CategoryIcon'
 import {
   CONDITION_OPTIONS,
   isCompleteLocation,
   PRICE_TYPE_OPTIONS,
   profileAddressToLocation,
-  PRODUCT_CATEGORY_OPTIONS,
+  PRODUCT_CATEGORIES,
 } from '../lib/productConstants'
 
 export default function ProductForm({ values, onChange, profileAddress }) {
@@ -73,34 +74,40 @@ export default function ProductForm({ values, onChange, profileAddress }) {
           />
         </div>
 
-        <div className="form-row">
-          <div className="form-field">
-            <label className="form-label" htmlFor="category">Category</label>
-            <select
-              id="category"
-              className="form-input"
-              value={values.category}
-              onChange={(e) => updateField('category', e.target.value)}
-              required
-            >
-              <option value="">Select category</option>
-              {PRODUCT_CATEGORY_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+        <div className="form-field">
+          <label className="form-label">Category</label>
+          <div className="category-picker-grid">
+            {PRODUCT_CATEGORIES.map((option) => {
+              const selected = values.category === option.name
+
+              return (
+                <button
+                  key={option.name}
+                  type="button"
+                  className={`category-picker-chip${selected ? ' active' : ''}`}
+                  onClick={() => updateField('category', option.name)}
+                >
+                  <CategoryIcon
+                    name={option.icon}
+                    size={18}
+                    className="category-picker-chip-icon"
+                  />
+                  <span>{option.name}</span>
+                </button>
+              )
+            })}
           </div>
-          <div className="form-field">
-            <label className="form-label" htmlFor="subCategory">Sub-category</label>
-            <input
-              id="subCategory"
-              className="form-input"
-              value={values.subCategory}
-              onChange={(e) => updateField('subCategory', e.target.value)}
-              placeholder="Copper Scrap"
-            />
-          </div>
+        </div>
+
+        <div className="form-field">
+          <label className="form-label" htmlFor="subCategory">Sub-category</label>
+          <input
+            id="subCategory"
+            className="form-input"
+            value={values.subCategory}
+            onChange={(e) => updateField('subCategory', e.target.value)}
+            placeholder="Copper Scrap"
+          />
         </div>
 
         <div className="form-field">

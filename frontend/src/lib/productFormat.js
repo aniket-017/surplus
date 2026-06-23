@@ -1,4 +1,8 @@
-import { CONDITION_OPTIONS, PRICE_TYPE_OPTIONS } from './productConstants'
+import { CONDITION_OPTIONS, PRICE_TYPE_OPTIONS, PRODUCT_CATEGORIES } from './productConstants'
+
+const CATEGORY_ICON_BY_NAME = new Map(
+  PRODUCT_CATEGORIES.map((item) => [item.name, item.icon]),
+)
 
 export function formatPrice(value) {
   return `₹${value.toLocaleString('en-IN')}`
@@ -41,16 +45,26 @@ export function formatAttributeKey(key) {
 }
 
 export function getCategoryIcon(category) {
+  const exact = CATEGORY_ICON_BY_NAME.get(category)
+  if (exact) return exact
+
   const key = String(category || '').toLowerCase()
 
   if (key.includes('metal')) return 'construct-outline'
-  if (key.includes('polymer') || key.includes('plastic')) return 'cube-outline'
-  if (key.includes('paper')) return 'document-text-outline'
-  if (key.includes('electronic') || key.includes('electrical')) return 'hardware-chip-outline'
+  if (key.includes('plastic') || key.includes('polymer')) return 'cube-outline'
+  if (key.includes('pipe') || key.includes('tube') || key.includes('piping')) return 'git-branch-outline'
   if (key.includes('machin')) return 'cog-outline'
-  if (key.includes('pipe') || key.includes('tube')) return 'git-branch-outline'
+  if (key.includes('electronic') || key.includes('electrical')) return 'hardware-chip-outline'
   if (key.includes('chemical')) return 'flask-outline'
   if (key.includes('rubber')) return 'ellipse-outline'
+  if (key.includes('packag')) return 'albums-outline'
+  if (key.includes('construct') || key.includes('cement')) return 'home-outline'
+  if (key.includes('textile') || key.includes('fabric')) return 'grid-outline'
+  if (key.includes('wood') || key.includes('agro')) return 'leaf-outline'
+  if (key.includes('mineral') || key.includes('ore')) return 'barbell-outline'
+  if (key.includes('energy') || key.includes('solar') || key.includes('fuel')) return 'flash-outline'
+  if (key.includes('safety') || key.includes('ppe')) return 'shield-outline'
+  if (key.includes('paper')) return 'document-text-outline'
 
   return 'layers-outline'
 }
@@ -78,6 +92,13 @@ export function getCategoryEmoji(category) {
     'git-branch-outline': '🔧',
     'flask-outline': '🧪',
     'ellipse-outline': '⭕',
+    'albums-outline': '📦',
+    'home-outline': '🏗️',
+    'grid-outline': '🧵',
+    'leaf-outline': '🌿',
+    'barbell-outline': '⛏️',
+    'flash-outline': '⚡',
+    'shield-outline': '🦺',
     'layers-outline': '📦',
   }
 

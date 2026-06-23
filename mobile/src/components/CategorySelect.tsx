@@ -10,7 +10,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, spacing } from '@/src/constants/theme';
-import { PRODUCT_CATEGORY_OPTIONS } from '@/src/types/product';
+import { getCategoryIcon } from '@/src/lib/productFormat';
+import { PRODUCT_CATEGORIES } from '@/src/types/product';
 
 type CategorySelectProps = {
   value: string;
@@ -19,13 +20,25 @@ type CategorySelectProps = {
 
 export function CategorySelect({ value, onChange }: CategorySelectProps) {
   const [open, setOpen] = useState(false);
+  const selectedIcon = value ? getCategoryIcon(value) : null;
 
   return (
     <>
       <Pressable style={styles.trigger} onPress={() => setOpen(true)}>
-        <Text style={[styles.triggerText, !value && styles.placeholder]}>
-          {value || 'Select category'}
-        </Text>
+        <View style={styles.triggerContent}>
+          {selectedIcon ? (
+            <View style={styles.triggerIconWrap}>
+              <Ionicons
+                name={selectedIcon as keyof typeof Ionicons.glyphMap}
+                size={18}
+                color={colors.accent}
+              />
+            </View>
+          ) : null}
+          <Text style={[styles.triggerText, !value && styles.placeholder]}>
+            {value || 'Select category'}
+          </Text>
+        </View>
         <Ionicons name="chevron-down" size={18} color={colors.muted} />
       </Pressable>
 
@@ -34,21 +47,30 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
           <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
             <Text style={styles.sheetTitle}>Select category</Text>
             <ScrollView style={styles.optionsList}>
-              {PRODUCT_CATEGORY_OPTIONS.map((option) => {
-                const selected = value === option;
+              {PRODUCT_CATEGORIES.map((option) => {
+                const selected = value === option.name;
 
                 return (
                   <Pressable
-                    key={option}
+                    key={option.name}
                     style={[styles.option, selected && styles.optionSelected]}
                     onPress={() => {
-                      onChange(option);
+                      onChange(option.name);
                       setOpen(false);
                     }}
                   >
-                    <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
-                      {option}
-                    </Text>
+                    <View style={styles.optionContent}>
+                      <View style={[styles.optionIconWrap, selected && styles.optionIconWrapSelected]}>
+                        <Ionicons
+                          name={option.icon as keyof typeof Ionicons.glyphMap}
+                          size={18}
+                          color={selected ? colors.white : colors.accent}
+                        />
+                      </View>
+                      <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
+                        {option.name}
+                      </Text>
+                    </View>
                     {selected ? (
                       <Ionicons name="checkmark" size={18} color={colors.accent} />
                     ) : null}
@@ -75,6 +97,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  triggerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  triggerIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(92, 179, 53, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   triggerText: {
     color: colors.textStrong,
     fontSize: 15,
@@ -94,7 +130,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 18,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
-    maxHeight: '70%',
+    maxHeight: '75%',
   },
   sheetTitle: {
     color: colors.textStrong,
@@ -110,12 +146,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   optionSelected: {
     backgroundColor: 'rgba(92, 179, 53, 0.06)',
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  optionIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(92, 179, 53, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionIconWrapSelected: {
+    backgroundColor: colors.accent,
   },
   optionText: {
     color: colors.textStrong,

@@ -28,15 +28,6 @@ export default function BuyerTabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="post-requirement"
-        options={{
-          title: 'Post Requirement',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="messages"
         options={{
           title: 'Messages',

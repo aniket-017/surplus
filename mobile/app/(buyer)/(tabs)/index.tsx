@@ -12,7 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { BuyerHeroBanner } from '@/src/components/buyer/BuyerHeroBanner';
 import { BuyerHomeHeader } from '@/src/components/buyer/BuyerHomeHeader';
 import { BuyerSearchBar } from '@/src/components/buyer/BuyerSearchBar';
 import { CategoryCarousel } from '@/src/components/buyer/CategoryCarousel';
@@ -115,7 +114,6 @@ export default function BuyerHomeTab() {
       <View style={styles.headerContent}>
         <BuyerHomeHeader />
         <BuyerSearchBar value={search} onChangeText={setSearch} />
-        <BuyerHeroBanner />
         <CategoryCarousel
           categories={categories}
           activeCategory={activeCategory}

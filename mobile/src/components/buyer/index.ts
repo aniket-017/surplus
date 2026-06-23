@@ -1,4 +1,3 @@
-export { BuyerHeroBanner } from './BuyerHeroBanner';
 export { BuyerHomeHeader } from './BuyerHomeHeader';
 export { BuyerPlaceholderTab } from './BuyerPlaceholderTab';
 export { BuyerSearchBar } from './BuyerSearchBar';

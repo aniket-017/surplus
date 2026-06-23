@@ -78,3 +78,57 @@ export function resolveCategoryIcon(category: ProductCategory | string, icon?: s
   if (typeof category !== 'string' && category.icon) return category.icon;
   return getCategoryIcon(typeof category === 'string' ? category : category.name);
 }
+
+export function formatRelativeDate(iso: string) {
+  const date = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) return 'Today';
+  if (diffDays === 1) return '1 day ago';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+  return `${Math.floor(diffDays / 365)} years ago`;
+}
+
+export function formatListedDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+export function formatMemberSince(iso: string) {
+  return new Date(iso).toLocaleDateString('en-IN', {
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+export function splitDescriptionBullets(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  const byNewline = trimmed
+    .split(/\n+/)
+    .map((line) => line.replace(/^[-•*]\s*/, '').trim())
+    .filter(Boolean);
+
+  if (byNewline.length > 1) return byNewline;
+
+  const sentences = trimmed
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 10);
+
+  return sentences.length > 1 ? sentences : [trimmed];
+}
+
+export function formatAttributeKey(key: string) {
+  return key
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}

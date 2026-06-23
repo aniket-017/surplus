@@ -10,6 +10,8 @@ import { isGoogleAuthEnabled, isOtpAuthEnabled } from "./config/auth.js";
 import { verifySmtpConnection } from "./lib/mail.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
+import conversationRoutes from "./routes/conversations.js";
+import savedRoutes from "./routes/saved.js";
 import { backfillCategoryMeta } from "./lib/category.js";
 import { CATEGORY_ASSETS_DIR, getCategoryImageManifest } from "./lib/categoryAssets.js";
 import { assertS3Config } from "./lib/s3.js";
@@ -106,6 +108,8 @@ app.use(
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/conversations", conversationRoutes);
+app.use("/api/saved", savedRoutes);
 
 if (FRONTEND_DIST_EXISTS) {
   app.use(express.static(FRONTEND_DIST));

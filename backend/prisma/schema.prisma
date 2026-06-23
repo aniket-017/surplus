@@ -55,6 +55,10 @@ model User {
   role      UserRole?
   address   UserAddress?
   products  Product[]
+  buyerConversations  Conversation[] @relation("BuyerConversations")
+  sellerConversations Conversation[] @relation("SellerConversations")
+  messages            Message[]
+  savedListings       SavedListing[]
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
@@ -92,8 +96,13 @@ model Product {
 
   images       String[]
 
+  viewCount    Int                @default(0) @map("view_count")
+
   attributes   ProductAttribute[]
   location     ProductLocation
+
+  conversations Conversation[]
+  savedBy       SavedListing[]
 
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @updatedAt @map("updated_at")
@@ -101,6 +110,51 @@ model Product {
   @@index([sellerId])
   @@index([category, subCategory])
   @@map("products")
+}
+
+model Conversation {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  buyerId       String    @map("buyer_id") @db.ObjectId
+  sellerId      String    @map("seller_id") @db.ObjectId
+  productId     String    @map("product_id") @db.ObjectId
+  buyer         User      @relation("BuyerConversations", fields: [buyerId], references: [id])
+  seller        User      @relation("SellerConversations", fields: [sellerId], references: [id])
+  product       Product   @relation(fields: [productId], references: [id])
+  messages      Message[]
+  lastMessageAt DateTime  @default(now()) @map("last_message_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@unique([buyerId, productId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([productId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId String       @map("conversation_id") @db.ObjectId
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String       @map("sender_id") @db.ObjectId
+  sender         User         @relation(fields: [senderId], references: [id])
+  body           String?
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+model SavedListing {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @map("user_id") @db.ObjectId
+  productId String   @map("product_id") @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("saved_listings")
 }
 
 model CategoryMeta {

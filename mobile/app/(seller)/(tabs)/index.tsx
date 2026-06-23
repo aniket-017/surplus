@@ -18,7 +18,7 @@ import { getSellerEstimatedValue } from '@/src/lib/productFormat';
 
 export default function SellerDashboardTab() {
   const { user, setRole } = useAuth();
-  const { products } = useMyProducts();
+  const { products, stats } = useMyProducts();
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState('');
 
@@ -48,7 +48,9 @@ export default function SellerDashboardTab() {
         <SellerWelcomeBanner name={user?.name} />
 
         <SellerDashboardStats
-          activeListings={products.length}
+          activeListings={stats.activeListings}
+          views={stats.totalViews}
+          inquiries={stats.totalInquiries}
           estimatedValue={estimatedValue}
         />
 

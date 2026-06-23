@@ -17,6 +17,7 @@ import {
   buildBrowseWhere,
   formatProduct,
   formatProductListing,
+  formatSellerProducts,
   parseBrowseSort,
   parseProductPayload,
 } from "../lib/product.js";
@@ -141,7 +142,36 @@ router.get("/mine", requireSeller, async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    res.json({ products: await Promise.all(products.map(formatProduct)) });
+    const productIds = products.map((product) => product.id);
+    const inquiryCountByProductId = new Map();
+
+    if (productIds.length) {
+      const inquiryGroups = await prisma.conversation.groupBy({
+        by: ["productId"],
+        where: { productId: { in: productIds } },
+        _count: { _all: true },
+      });
+
+      for (const group of inquiryGroups) {
+        inquiryCountByProductId.set(group.productId, group._count._all);
+      }
+    }
+
+    const formattedProducts = await formatSellerProducts(products, inquiryCountByProductId);
+    const totalViews = products.reduce((sum, product) => sum + (product.viewCount ?? 0), 0);
+    const totalInquiries = [...inquiryCountByProductId.values()].reduce(
+      (sum, count) => sum + count,
+      0,
+    );
+
+    res.json({
+      products: formattedProducts,
+      stats: {
+        activeListings: products.length,
+        totalViews,
+        totalInquiries,
+      },
+    });
   } catch (error) {
     console.error("List products failed:", error);
     res.status(500).json({ error: "Failed to fetch products" });
@@ -168,6 +198,14 @@ router.get("/category-options", requireAuth, async (_req, res) => {
   }
 });
 
+const sellerSelect = {
+  id: true,
+  name: true,
+  email: true,
+  avatarUrl: true,
+  createdAt: true,
+};
+
 router.get("/browse", requireAuth, async (req, res) => {
   try {
     const search = String(req.query.search || "").trim();
@@ -182,11 +220,7 @@ router.get("/browse", requireAuth, async (req, res) => {
       where,
       include: {
         seller: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+          select: sellerSelect,
         },
       },
       orderBy: buildBrowseOrderBy(sort),
@@ -205,23 +239,86 @@ router.get("/browse", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/browse/:id/stats", requireAuth, async (req, res) => {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    const [inquiryCount, savedCount] = await Promise.all([
+      prisma.conversation.count({ where: { productId: req.params.id } }),
+      prisma.savedListing.count({ where: { productId: req.params.id } }),
+    ]);
+
+    res.json({ inquiryCount, savedCount });
+  } catch (error) {
+    console.error("Product stats failed:", error);
+    res.status(500).json({ error: "Failed to fetch product stats" });
+  }
+});
+
+router.get("/browse/:id/similar", requireAuth, async (req, res) => {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    const limit = Math.min(Math.max(Number(req.query.limit) || 6, 1), 12);
+
+    const similar = await prisma.product.findMany({
+      where: {
+        category: product.category,
+        subCategory: product.subCategory,
+        id: { not: product.id },
+      },
+      include: {
+        seller: { select: sellerSelect },
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+
+    res.json({
+      products: await Promise.all(
+        similar.map((item) => formatProductListing(item, item.seller)),
+      ),
+    });
+  } catch (error) {
+    console.error("Similar products failed:", error);
+    res.status(500).json({ error: "Failed to fetch similar products" });
+  }
+});
+
 router.get("/browse/:id", requireAuth, async (req, res) => {
   try {
     const product = await prisma.product.findUnique({
       where: { id: req.params.id },
       include: {
         seller: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+          select: sellerSelect,
         },
       },
     });
 
     if (!product) {
       return res.status(404).json({ error: "Product not found" });
+    }
+
+    if (req.user.id !== product.sellerId) {
+      const updated = await prisma.product.update({
+        where: { id: product.id },
+        data: { viewCount: { increment: 1 } },
+      });
+      product.viewCount = updated.viewCount;
     }
 
     res.json({ product: await formatProductListing(product, product.seller) });

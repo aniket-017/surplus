@@ -11,14 +11,17 @@ function formatCondition(condition) {
 export default function SellerDashboardPage() {
   const navigate = useNavigate()
   const [products, setProducts] = useState([])
+  const [stats, setStats] = useState({ activeListings: 0, totalViews: 0, totalInquiries: 0 })
   const [loading, setLoading] = useState(true)
 
   const loadProducts = useCallback(async () => {
     try {
       const data = await getMyProducts()
       setProducts(data.products)
+      setStats(data.stats ?? { activeListings: data.products.length, totalViews: 0, totalInquiries: 0 })
     } catch {
       setProducts([])
+      setStats({ activeListings: 0, totalViews: 0, totalInquiries: 0 })
     } finally {
       setLoading(false)
     }
@@ -38,12 +41,16 @@ export default function SellerDashboardPage() {
 
       <div className="dash-stats">
         <div className="dash-stat">
-          <div className="dash-stat-value">{products.length}</div>
+          <div className="dash-stat-value">{stats.activeListings}</div>
           <div className="dash-stat-label">Active Listings</div>
         </div>
         <div className="dash-stat">
-          <div className="dash-stat-value">0</div>
+          <div className="dash-stat-value">{stats.totalViews}</div>
           <div className="dash-stat-label">Views</div>
+        </div>
+        <div className="dash-stat">
+          <div className="dash-stat-value">{stats.totalInquiries}</div>
+          <div className="dash-stat-label">Inquiries</div>
         </div>
       </div>
 

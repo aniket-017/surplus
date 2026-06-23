@@ -40,6 +40,8 @@ export type Product = {
   images: string[];
   attributes: ProductAttribute[];
   location: ProductLocation;
+  viewCount?: number;
+  inquiryCount?: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -48,6 +50,8 @@ export type ProductSeller = {
   id: string;
   name: string;
   email: string;
+  avatarUrl?: string | null;
+  memberSince?: string | null;
 };
 
 export type ProductListing = Product & {

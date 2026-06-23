@@ -22,3 +22,11 @@ export const spacing = {
   lg: 24,
   xl: 32,
 } as const;
+
+export const cardShadow = {
+  shadowColor: '#0F1B2D',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.06,
+  shadowRadius: 8,
+  elevation: 2,
+} as const;

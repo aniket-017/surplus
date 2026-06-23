@@ -5,6 +5,7 @@ export default function BuyerLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="products/[id]" />
+      <Stack.Screen name="messages/[id]" />
     </Stack>
   );
 }

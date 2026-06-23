@@ -1,105 +1,142 @@
-import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  Pressable,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  DescriptionOverview,
+  DetailHeader,
+  InquiryModal,
+  InquiryUrgency,
+  LocationSection,
+  MarketRateCard,
+  ProductGallery,
+  ProductHero,
+  QuickStatsRow,
+  SellerTrustCard,
+  SimilarListings,
+  SpecsGrid,
+  StickyActionBar,
+  WhyBuySection,
+} from '@/src/components/buyer/product-detail';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
-import { formatPrice } from '@/src/lib/productFormat';
-import { getBrowseProduct, getImageUrl } from '@/src/lib/productsApi';
 import {
-  CONDITION_OPTIONS,
-  PRICE_TYPE_OPTIONS,
-  type PriceType,
-  type ProductCondition,
-  type ProductListing,
-} from '@/src/types/product';
+  computeMarketRange,
+  getProductStats,
+  getSavedStatus,
+  getSimilarProducts,
+  startInquiry,
+  toggleSavedListing,
+} from '@/src/lib/conversationsApi';
+import { formatListingPrice } from '@/src/lib/productFormat';
+import { browseProducts, getBrowseProduct } from '@/src/lib/productsApi';
+import type { ProductListing } from '@/src/types/product';
 
-const IMAGE_WIDTH = Dimensions.get('window').width - spacing.lg * 2;
-
-function formatLabel(value: string) {
-  return value
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function getPriceTypeLabel(priceType: PriceType) {
-  return PRICE_TYPE_OPTIONS.find((option) => option.value === priceType)?.label ?? formatLabel(priceType);
-}
-
-function getConditionLabel(condition: ProductCondition) {
-  return CONDITION_OPTIONS.find((option) => option.value === condition)?.label ?? formatLabel(condition);
-}
-
-function formatAttributeKey(key: string) {
-  return key
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
+const STICKY_BAR_HEIGHT = 88;
 
 export default function BuyerProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { token } = useAuth();
+  const insets = useSafeAreaInsets();
+
   const [product, setProduct] = useState<ProductListing | null>(null);
+  const [similar, setSimilar] = useState<ProductListing[]>([]);
+  const [marketRange, setMarketRange] = useState<{ min: number; max: number } | null>(null);
+  const [inquiryCount, setInquiryCount] = useState(0);
+  const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeImage, setActiveImage] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [inquiryVisible, setInquiryVisible] = useState(false);
+  const [inquiryMessage, setInquiryMessage] = useState('');
+  const [inquiryTitle, setInquiryTitle] = useState('Send Inquiry');
 
-  useEffect(() => {
+  const loadProduct = useCallback(async () => {
     if (!token || !id) {
       setLoading(false);
       return;
     }
 
-    const authToken = token;
-    const productId = id;
-    let cancelled = false;
+    setLoading(true);
+    setError('');
 
-    async function loadProduct() {
-      setLoading(true);
-      setError('');
+    try {
+      const [detail, stats, similarData, savedStatus] = await Promise.all([
+        getBrowseProduct(token, id),
+        getProductStats(token, id).catch(() => ({ inquiryCount: 0, savedCount: 0 })),
+        getSimilarProducts(token, id).catch(() => ({ products: [] as ProductListing[] })),
+        getSavedStatus(token, id).catch(() => ({ saved: false })),
+      ]);
 
-      try {
-        const data = await getBrowseProduct(authToken, productId);
-        if (!cancelled) {
-          setProduct(data.product);
-          setActiveImage(0);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load product');
-          setProduct(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
+      setProduct(detail.product);
+      setInquiryCount(stats.inquiryCount);
+      setSimilar(similarData.products);
+      setSaved(savedStatus.saved);
+
+      const categoryProducts = await browseProducts(token, {
+        category: detail.product.category,
+        limit: 20,
+      }).catch(() => ({ products: [] as ProductListing[] }));
+
+      setMarketRange(computeMarketRange(categoryProducts.products, detail.product.priceType));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load product');
+      setProduct(null);
+    } finally {
+      setLoading(false);
     }
-
-    loadProduct();
-
-    return () => {
-      cancelled = true;
-    };
   }, [token, id]);
 
-  function handleImageScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const index = Math.round(event.nativeEvent.contentOffset.x / IMAGE_WIDTH);
-    setActiveImage(index);
+  useEffect(() => {
+    loadProduct();
+  }, [loadProduct]);
+
+  async function handleToggleSave() {
+    if (!token || !product) return;
+
+    setSaving(true);
+    try {
+      const result = await toggleSavedListing(token, product.id);
+      setSaved(result.saved);
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update bookmark');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openInquiryModal(title = 'Send Inquiry', preset = '') {
+    setInquiryTitle(title);
+    setInquiryMessage(preset);
+    setInquiryVisible(true);
+  }
+
+  async function handleSubmitInquiry() {
+    if (!token || !product) return;
+
+    setSubmitting(true);
+    try {
+      const result = await startInquiry(token, product.id, inquiryMessage || undefined);
+      setInquiryVisible(false);
+      setInquiryMessage('');
+      router.push({
+        pathname: '/messages/[id]',
+        params: { id: result.conversationId },
+      });
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to send inquiry');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (loading) {
@@ -115,11 +152,13 @@ export default function BuyerProductDetailScreen() {
   if (error || !product) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-        </View>
+        <DetailHeader
+          onBack={() => router.back()}
+          saved={false}
+          onToggleSave={() => {}}
+          shareTitle=""
+          shareMessage=""
+        />
         <View style={styles.centered}>
           <Text style={styles.error}>{error || 'Product not found'}</Text>
         </View>
@@ -127,179 +166,66 @@ export default function BuyerProductDetailScreen() {
     );
   }
 
-  const sellerName = product.seller?.name || 'Seller';
-  const locationPrimary = product.location.address
-    ? product.location.address
-    : `${product.location.city}, ${product.location.state} — ${product.location.pincode}`;
-
-  const locationSecondary = product.location.address
-    ? `${product.location.city}, ${product.location.state} — ${product.location.pincode}`
-    : null;
+  const shareMessage = `${product.title}\n${formatListingPrice(product)}\n${product.quantity} ${product.quantityUnit} available`;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.backText}>Back</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>Listing details</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <DetailHeader
+        onBack={() => router.back()}
+        saved={saved}
+        onToggleSave={handleToggleSave}
+        shareTitle={product.title}
+        shareMessage={shareMessage}
+      />
 
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.galleryCard}>
-          {product.images.length > 0 ? (
-            <>
-              <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onScroll={handleImageScroll}
-                scrollEventThrottle={16}
-              >
-                {product.images.map((image, index) => (
-                  <Image
-                    key={`${image}-${index}`}
-                    source={{ uri: getImageUrl(image) }}
-                    style={styles.heroImage}
-                    contentFit="cover"
-                  />
-                ))}
-              </ScrollView>
-              {product.images.length > 1 ? (
-                <View style={styles.dotsRow}>
-                  {product.images.map((_, index) => (
-                    <View
-                      key={`dot-${index}`}
-                      style={[styles.dot, index === activeImage && styles.dotActive]}
-                    />
-                  ))}
-                </View>
-              ) : null}
-            </>
-          ) : (
-            <View style={styles.imageFallback}>
-              <Text style={styles.imageFallbackText}>No image</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.summaryCard}>
-          <View style={styles.chipRow}>
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>{product.category}</Text>
-            </View>
-            <View style={[styles.chip, styles.chipMuted]}>
-              <Text style={styles.chipTextMuted}>{product.subCategory}</Text>
-            </View>
-          </View>
-
-          <Text style={styles.title}>{product.title}</Text>
-
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>{formatPrice(product.price)}</Text>
-            <View style={styles.priceTypeBadge}>
-              <Text style={styles.priceTypeText}>{getPriceTypeLabel(product.priceType)}</Text>
-            </View>
-          </View>
-
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Condition</Text>
-              <Text style={styles.statValue}>{getConditionLabel(product.condition)}</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Available</Text>
-              <Text style={styles.statValue}>
-                {product.quantity} {product.quantityUnit}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <SectionCard title="Seller" subtitle="Listed by verified seller">
-          <View style={styles.sellerRow}>
-            <View style={styles.sellerAvatar}>
-              <Text style={styles.sellerInitial}>{sellerName[0]?.toUpperCase()}</Text>
-            </View>
-            <View style={styles.sellerInfo}>
-              <View style={styles.sellerNameRow}>
-                <Text style={styles.sellerName}>{sellerName}</Text>
-                <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
-              </View>
-              {product.seller?.email ? (
-                <Text style={styles.sellerEmail}>{product.seller.email}</Text>
-              ) : null}
-            </View>
-          </View>
-        </SectionCard>
-
-        <SectionCard title="Description" subtitle="Product overview">
-          <Text style={styles.bodyText}>{product.description}</Text>
-        </SectionCard>
-
-        <SectionCard
-          title="Specifications"
-          subtitle={
-            product.attributes.length
-              ? `${product.attributes.length} material-specific properties`
-              : 'No specifications listed'
-          }
-        >
-          {product.attributes.length === 0 ? (
-            <Text style={styles.emptyText}>No attributes were added for this listing.</Text>
-          ) : (
-            product.attributes.map((attribute, index) => (
-              <View
-                key={`${attribute.key}-${index}`}
-                style={[
-                  styles.attributeRow,
-                  index < product.attributes.length - 1 && styles.attributeRowBorder,
-                ]}
-              >
-                <View style={styles.attributeBadge}>
-                  <Text style={styles.attributeBadgeText}>{index + 1}</Text>
-                </View>
-                <View style={styles.attributeContent}>
-                  <Text style={styles.attributeKey}>{formatAttributeKey(attribute.key)}</Text>
-                  <Text style={styles.attributeValue}>{attribute.value}</Text>
-                </View>
-              </View>
-            ))
-          )}
-        </SectionCard>
-
-        <SectionCard title="Location" subtitle="Pickup availability">
-          <View style={styles.locationBlock}>
-            <Text style={styles.locationPrimary}>{locationPrimary}</Text>
-            {locationSecondary ? (
-              <Text style={styles.locationSecondary}>{locationSecondary}</Text>
-            ) : null}
-          </View>
-        </SectionCard>
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          { paddingBottom: STICKY_BAR_HEIGHT + insets.bottom + spacing.lg },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <ProductGallery images={product.images} title={product.title} />
+        <ProductHero product={product} />
+        <QuickStatsRow product={product} />
+        <SellerTrustCard seller={product.seller} />
+        <MarketRateCard product={product} range={marketRange} />
+        <InquiryUrgency inquiryCount={inquiryCount} />
+        <DescriptionOverview description={product.description} />
+        <SpecsGrid attributes={product.attributes} />
+        <WhyBuySection product={product} />
+        <LocationSection location={product.location} />
+        <SimilarListings products={similar} category={product.category} />
       </ScrollView>
-    </SafeAreaView>
-  );
-}
 
-function SectionCard({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: ReactNode;
-}) {
-  return (
-    <View style={styles.sectionCard}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
-      </View>
-      {children}
-    </View>
+      <StickyActionBar
+        product={product}
+        saved={saved}
+        saving={saving}
+        submitting={submitting}
+        onSave={handleToggleSave}
+        onInquiry={() => openInquiryModal()}
+        onRequestBestPrice={() =>
+          openInquiryModal(
+            'Request Best Price',
+            'Hi, I am interested in this listing. Could you share your best price?',
+          )
+        }
+      />
+
+      <InquiryModal
+        visible={inquiryVisible}
+        title={inquiryTitle}
+        submitting={submitting}
+        message={inquiryMessage}
+        onChangeMessage={setInquiryMessage}
+        onClose={() => {
+          setInquiryVisible(false);
+          setInquiryMessage('');
+        }}
+        onSubmit={handleSubmitInquiry}
+      />
+    </SafeAreaView>
   );
 }
 
@@ -307,27 +233,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.bgSubtle,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  backText: {
-    color: colors.accent,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  headerTitle: {
-    color: colors.textStrong,
-    fontWeight: '800',
-    fontSize: 16,
-    letterSpacing: -0.2,
-  },
-  headerSpacer: {
-    width: 40,
   },
   centered: {
     flex: 1,
@@ -338,268 +243,7 @@ const styles = StyleSheet.create({
   container: {
     padding: spacing.lg,
     paddingTop: 0,
-    gap: spacing.md,
-    paddingBottom: spacing.xl,
-  },
-  galleryCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  heroImage: {
-    width: IMAGE_WIDTH,
-    height: 260,
-  },
-  imageFallback: {
-    height: 260,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
-  },
-  imageFallbackText: {
-    color: colors.muted,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: spacing.sm,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: colors.border,
-  },
-  dotActive: {
-    backgroundColor: colors.accent,
-    width: 18,
-  },
-  summaryCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  chip: {
-    backgroundColor: 'rgba(92, 179, 53, 0.12)',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: colors.borderAccent,
-  },
-  chipMuted: {
-    backgroundColor: colors.surfaceMuted,
-    borderColor: colors.border,
-  },
-  chipText: {
-    color: colors.accent,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  chipTextMuted: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  title: {
-    color: colors.textStrong,
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-    lineHeight: 30,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: 4,
-  },
-  price: {
-    color: colors.accent,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  priceTypeBadge: {
-    backgroundColor: colors.bgSubtle,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  priceTypeText: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  statItem: {
-    flex: 1,
-    gap: 4,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: colors.border,
-    marginHorizontal: spacing.sm,
-  },
-  statLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  statValue: {
-    color: colors.textStrong,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  sellerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  sellerAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.surfaceMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sellerInitial: {
-    color: colors.textStrong,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  sellerInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  sellerNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sellerName: {
-    color: colors.textStrong,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  sellerEmail: {
-    color: colors.muted,
-    fontSize: 13,
-  },
-  sectionCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  sectionHeader: {
-    gap: 4,
-    marginBottom: 4,
-  },
-  sectionTitle: {
-    color: colors.textStrong,
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  sectionSubtitle: {
-    color: colors.muted,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  bodyText: {
-    color: colors.textStrong,
-    fontSize: 15,
-    lineHeight: 24,
-  },
-  emptyText: {
-    color: colors.muted,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  attributeRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  attributeRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  attributeBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  attributeBadgeText: {
-    color: colors.white,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  attributeContent: {
-    flex: 1,
-    gap: 2,
-  },
-  attributeKey: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  attributeValue: {
-    color: colors.textStrong,
-    fontSize: 15,
-    fontWeight: '600',
-    lineHeight: 22,
-  },
-  locationBlock: {
-    gap: 6,
-  },
-  locationPrimary: {
-    color: colors.textStrong,
-    fontSize: 15,
-    fontWeight: '600',
-    lineHeight: 22,
-  },
-  locationSecondary: {
-    color: colors.muted,
-    fontSize: 14,
-    lineHeight: 20,
+    gap: spacing.lg,
   },
   error: {
     color: colors.error,

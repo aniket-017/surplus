@@ -79,6 +79,12 @@ export async function createProduct(
   return parseResponse<{ product: Product }>(res);
 }
 
+export type SellerDashboardStats = {
+  activeListings: number;
+  totalViews: number;
+  totalInquiries: number;
+};
+
 export async function getMyProducts(token: string) {
   const res = await fetch(`${API_BASE}/api/products/mine`, {
     headers: {
@@ -86,7 +92,7 @@ export async function getMyProducts(token: string) {
     },
   });
 
-  return parseResponse<{ products: Product[] }>(res);
+  return parseResponse<{ products: Product[]; stats: SellerDashboardStats }>(res);
 }
 
 export async function getProduct(token: string, id: string) {

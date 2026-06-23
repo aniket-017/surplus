@@ -175,7 +175,12 @@ export function SellerListingCard({ product, onPress, onEdit }: SellerListingCar
 
             <View style={styles.priceBlock}>
               <Text style={styles.totalPrice}>{formatPrice(totalPrice)}</Text>
-              <Text style={styles.views}>Views 0</Text>
+              <Text style={styles.views}>
+                Views {product.viewCount ?? 0}
+                {(product.inquiryCount ?? 0) > 0
+                  ? ` · ${product.inquiryCount} inquir${product.inquiryCount === 1 ? 'y' : 'ies'}`
+                  : ''}
+              </Text>
             </View>
           </View>
         </View>

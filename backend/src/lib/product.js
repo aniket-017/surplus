@@ -134,9 +134,19 @@ export async function formatProduct(product) {
     images,
     attributes: product.attributes,
     location: product.location,
+    viewCount: product.viewCount ?? 0,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   };
+}
+
+export async function formatSellerProducts(products, inquiryCountByProductId = new Map()) {
+  return Promise.all(
+    products.map(async (product) => ({
+      ...(await formatProduct(product)),
+      inquiryCount: inquiryCountByProductId.get(product.id) ?? 0,
+    })),
+  );
 }
 
 function formatSellerSummary(seller) {
@@ -148,6 +158,8 @@ function formatSellerSummary(seller) {
     id: seller.id,
     name: seller.name || seller.email.split("@")[0],
     email: seller.email,
+    avatarUrl: seller.avatarUrl || null,
+    memberSince: seller.createdAt ? seller.createdAt.toISOString() : null,
   };
 }
 

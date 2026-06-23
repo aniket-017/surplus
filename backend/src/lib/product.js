@@ -1,4 +1,5 @@
 import { resolveProductImageUrls } from "./s3.js";
+import { parseCategory } from "./category.js";
 
 const PRICE_TYPES = ["FIXED", "NEGOTIABLE", "PER_KG", "PER_UNIT", "PER_LOT"];
 const CONDITIONS = ["NEW", "USED", "SCRAP", "REFURBISHED"];
@@ -87,12 +88,16 @@ export function parseProductPayload(body) {
   }
 
   const title = String(body.title || "").trim();
-  const category = String(body.category || "").trim();
+  const category = parseCategory(body.category);
   const subCategory = String(body.subCategory || "").trim();
   const description = String(body.description || "").trim();
   const quantityUnit = String(body.quantityUnit || "").trim();
 
-  if (!title || !category || !subCategory || !description || !quantityUnit) {
+  if (!category) {
+    throw new Error("Invalid category. Choose one of the allowed categories.");
+  }
+
+  if (!title || !subCategory || !description || !quantityUnit) {
     throw new Error("Title, category, subCategory, description, and quantityUnit are required");
   }
 

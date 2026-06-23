@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { normalizeCategory, suggestCategoryIcon } from "./category.js";
 import { createLogger, describeUploadFile } from "./logger.js";
 import { PRODUCT_ANALYSIS_PROMPT } from "./productPrompt.js";
 
@@ -57,10 +58,13 @@ function normalizeAnalysis(raw) {
         }))
     : [];
 
+  const category = normalizeCategory(raw.category);
+
   return {
     title: String(raw.title || "").trim(),
-    category: String(raw.category || "").trim(),
+    category,
     subCategory: String(raw.subCategory || "").trim(),
+    categoryIcon: suggestCategoryIcon(category),
     description: String(raw.description || "").trim(),
     quantityUnit: String(raw.quantityUnit || "").trim(),
     attributes,
@@ -114,6 +118,7 @@ export async function analyzeProductImages(files) {
     title: analysis.title,
     category: analysis.category,
     subCategory: analysis.subCategory,
+    categoryIcon: analysis.categoryIcon,
   });
 
   return analysis;

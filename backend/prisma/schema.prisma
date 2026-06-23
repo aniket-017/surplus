@@ -102,3 +102,14 @@ model Product {
   @@index([category, subCategory])
   @@map("products")
 }
+
+model CategoryMeta {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  slug      String   @unique
+  icon      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("category_meta")
+}

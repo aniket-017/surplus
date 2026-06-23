@@ -1,4 +1,4 @@
-import type { PriceType, ProductListing } from '@/src/types/product';
+import type { ProductCategory, ProductListing } from '@/src/types/product';
 
 export function formatPrice(value: number) {
   return `₹${value.toLocaleString('en-IN')}`;
@@ -23,11 +23,23 @@ export function getCategoryIcon(category: string) {
   const key = category.toLowerCase();
 
   if (key.includes('metal')) return 'construct-outline';
-  if (key.includes('plastic')) return 'cube-outline';
+  if (key.includes('polymer') || key.includes('plastic')) return 'cube-outline';
   if (key.includes('paper')) return 'document-text-outline';
-  if (key.includes('electronic')) return 'hardware-chip-outline';
+  if (key.includes('electronic') || key.includes('electrical')) return 'hardware-chip-outline';
   if (key.includes('machin')) return 'cog-outline';
-  if (key.includes('pipe')) return 'git-branch-outline';
+  if (key.includes('pipe') || key.includes('tube')) return 'git-branch-outline';
+  if (key.includes('chemical')) return 'flask-outline';
+  if (key.includes('rubber')) return 'ellipse-outline';
 
   return 'layers-outline';
+}
+
+export function suggestCategoryIcon(name: string) {
+  return getCategoryIcon(name);
+}
+
+export function resolveCategoryIcon(category: ProductCategory | string, icon?: string) {
+  if (icon) return icon;
+  if (typeof category !== 'string' && category.icon) return category.icon;
+  return getCategoryIcon(typeof category === 'string' ? category : category.name);
 }

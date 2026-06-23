@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../components/AppShell'
-import { getCategoryEmoji } from '../../lib/productFormat'
+import CategoryIcon from '../../components/CategoryIcon'
+import { resolveCategoryIcon } from '../../lib/productFormat'
 import { getCategories } from '../../lib/productsApi'
 
 export default function CategoriesPage() {
@@ -60,7 +61,12 @@ export default function CategoriesPage() {
               className="category-tile"
               onClick={() => navigate(`/buyer?category=${encodeURIComponent(category.name)}`)}
             >
-              <div className="category-tile-icon">{getCategoryEmoji(category.name)}</div>
+              <div className="category-tile-icon">
+                <CategoryIcon
+                  name={resolveCategoryIcon(category, category.icon)}
+                  size={28}
+                />
+              </div>
               <div className="category-tile-name">{category.name}</div>
               <div className="category-tile-count">{category.count} listings</div>
             </button>

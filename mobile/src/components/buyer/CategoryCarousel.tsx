@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { getCategoryIcon } from '@/src/lib/productFormat';
+import { resolveCategoryIcon } from '@/src/lib/productFormat';
 import { colors, spacing } from '@/src/constants/theme';
 import type { ProductCategory } from '@/src/types/product';
 
@@ -37,7 +37,9 @@ export function CategoryCarousel({
             >
               <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
                 <Ionicons
-                  name={getCategoryIcon(category.name) as keyof typeof Ionicons.glyphMap}
+                  name={
+                    resolveCategoryIcon(category, category.icon) as keyof typeof Ionicons.glyphMap
+                  }
                   size={22}
                   color={active ? colors.white : colors.accent}
                 />

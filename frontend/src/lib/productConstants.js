@@ -13,6 +13,20 @@ export const CONDITION_OPTIONS = [
   { label: 'Refurbished', value: 'refurbished' },
 ]
 
+export const PRODUCT_CATEGORY_OPTIONS = [
+  'Metals',
+  'Polymers',
+  'Pipes & Tubes',
+  'Machinery',
+  'Electrical',
+  'Chemicals',
+  'Other',
+]
+
+export function isAllowedProductCategory(value) {
+  return PRODUCT_CATEGORY_OPTIONS.includes(value)
+}
+
 export function emptyProductForm() {
   return {
     title: '',

@@ -20,6 +20,7 @@ import { colors, spacing } from '@/src/constants/theme';
 import { analyzeProductImages, createProduct } from '@/src/lib/productsApi';
 import {
   emptyProductForm,
+  isAllowedProductCategory,
   isCompleteLocation,
   profileAddressToLocation,
   type LocalImage,
@@ -119,6 +120,11 @@ export default function AddProductScreen() {
 
     if (!isCompleteLocation(form.location)) {
       setError('City, state, and pincode are required for the pickup location.');
+      return;
+    }
+
+    if (!isAllowedProductCategory(form.category)) {
+      setError('Please select a category from the list.');
       return;
     }
 

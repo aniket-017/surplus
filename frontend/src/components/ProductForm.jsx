@@ -4,6 +4,7 @@ import {
   isCompleteLocation,
   PRICE_TYPE_OPTIONS,
   profileAddressToLocation,
+  PRODUCT_CATEGORY_OPTIONS,
 } from '../lib/productConstants'
 
 export default function ProductForm({ values, onChange, profileAddress }) {
@@ -75,13 +76,20 @@ export default function ProductForm({ values, onChange, profileAddress }) {
         <div className="form-row">
           <div className="form-field">
             <label className="form-label" htmlFor="category">Category</label>
-            <input
+            <select
               id="category"
               className="form-input"
               value={values.category}
               onChange={(e) => updateField('category', e.target.value)}
-              placeholder="Metals"
-            />
+              required
+            >
+              <option value="">Select category</option>
+              {PRODUCT_CATEGORY_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="form-field">
             <label className="form-label" htmlFor="subCategory">Sub-category</label>

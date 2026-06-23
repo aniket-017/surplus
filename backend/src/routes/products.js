@@ -1,5 +1,10 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
+import {
+  ensureCategoryMeta,
+  getAllowedCategories,
+  listCategoriesWithCounts,
+} from "../lib/category.js";
 import { analyzeProductImages } from "../lib/gemini.js";
 import { optimizeProductImage } from "../lib/imageOptimize.js";
 import {
@@ -92,6 +97,8 @@ router.post("/", requireSeller, handleUpload, optimizeUploadedImages, async (req
   try {
     const payload = parseProductPayload(req.body);
 
+    await ensureCategoryMeta(payload.category);
+
     const product = await prisma.product.create({
       data: {
         sellerId: req.sellerId,
@@ -143,21 +150,21 @@ router.get("/mine", requireSeller, async (req, res) => {
 
 router.get("/categories", requireAuth, async (_req, res) => {
   try {
-    const grouped = await prisma.product.groupBy({
-      by: ["category"],
-      _count: { category: true },
-      orderBy: { category: "asc" },
-    });
+    const categories = await listCategoriesWithCounts();
 
-    res.json({
-      categories: grouped.map((item) => ({
-        name: item.category,
-        count: item._count.category,
-      })),
-    });
+    res.json({ categories });
   } catch (error) {
     console.error("List categories failed:", error);
     res.status(500).json({ error: "Failed to fetch categories" });
+  }
+});
+
+router.get("/category-options", requireAuth, async (_req, res) => {
+  try {
+    res.json({ categories: getAllowedCategories() });
+  } catch (error) {
+    console.error("List category options failed:", error);
+    res.status(500).json({ error: "Failed to fetch category options" });
   }
 });
 
@@ -264,6 +271,9 @@ router.patch("/:id", requireSeller, handleUpload, optimizeUploadedImages, async 
       attributes: req.body.attributes ?? existing.attributes,
       location: req.body.location ?? existing.location,
     });
+
+    await ensureCategoryMeta(payload.category);
+
     const updateData = { ...payload };
 
     if (req.files?.length) {

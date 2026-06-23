@@ -10,6 +10,7 @@ import { isGoogleAuthEnabled, isOtpAuthEnabled } from "./config/auth.js";
 import { verifySmtpConnection } from "./lib/mail.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
+import { backfillCategoryMeta } from "./lib/category.js";
 import { assertS3Config } from "./lib/s3.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -119,4 +120,8 @@ app.listen(PORT, () => {
   if (FRONTEND_DIST_EXISTS) {
     console.log(`Serving frontend from ${FRONTEND_DIST}`);
   }
+
+  backfillCategoryMeta().catch((error) => {
+    console.error("Category meta backfill failed:", error.message);
+  });
 });

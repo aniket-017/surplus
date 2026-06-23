@@ -40,15 +40,46 @@ export function formatAttributeKey(key) {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
+export function getCategoryIcon(category) {
+  const key = String(category || '').toLowerCase()
+
+  if (key.includes('metal')) return 'construct-outline'
+  if (key.includes('polymer') || key.includes('plastic')) return 'cube-outline'
+  if (key.includes('paper')) return 'document-text-outline'
+  if (key.includes('electronic') || key.includes('electrical')) return 'hardware-chip-outline'
+  if (key.includes('machin')) return 'cog-outline'
+  if (key.includes('pipe') || key.includes('tube')) return 'git-branch-outline'
+  if (key.includes('chemical')) return 'flask-outline'
+  if (key.includes('rubber')) return 'ellipse-outline'
+
+  return 'layers-outline'
+}
+
+export function suggestCategoryIcon(name) {
+  return getCategoryIcon(name)
+}
+
+export function resolveCategoryIcon(category, icon) {
+  if (icon) return icon
+  if (category && typeof category === 'object' && category.icon) return category.icon
+  const name = typeof category === 'string' ? category : category?.name
+  return getCategoryIcon(name)
+}
+
+/** @deprecated Use resolveCategoryIcon with CategoryIcon component */
 export function getCategoryEmoji(category) {
-  const key = category.toLowerCase()
+  const icon = getCategoryIcon(category)
+  const emojiMap = {
+    'construct-outline': '🔩',
+    'cube-outline': '🧱',
+    'document-text-outline': '📄',
+    'hardware-chip-outline': '💻',
+    'cog-outline': '⚙️',
+    'git-branch-outline': '🔧',
+    'flask-outline': '🧪',
+    'ellipse-outline': '⭕',
+    'layers-outline': '📦',
+  }
 
-  if (key.includes('metal')) return '🔩'
-  if (key.includes('plastic')) return '🧱'
-  if (key.includes('paper')) return '📄'
-  if (key.includes('electronic')) return '💻'
-  if (key.includes('machin')) return '⚙️'
-  if (key.includes('pipe')) return '🔧'
-
-  return '📦'
+  return emojiMap[icon] || '📦'
 }

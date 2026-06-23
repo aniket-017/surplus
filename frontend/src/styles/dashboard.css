@@ -427,6 +427,9 @@
 
 .category-chip {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.5rem 1rem;
   border-radius: 999px;
   border: 1.5px solid var(--border);
@@ -436,6 +439,47 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.category-chip-icon {
+  color: var(--accent);
+}
+
+.category-chip.active .category-chip-icon {
+  color: white;
+}
+
+.category-icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.category-icon-option {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.category-icon-option.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.category-icon-option.active ion-icon {
+  color: white;
+}
+
+.category-tile-icon ion-icon {
+  color: var(--accent);
 }
 
 .category-chip.active {

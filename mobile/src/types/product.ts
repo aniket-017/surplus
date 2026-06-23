@@ -19,6 +19,7 @@ export type ProductAnalysis = {
   title: string;
   category: string;
   subCategory: string;
+  categoryIcon: string;
   description: string;
   quantityUnit: string;
   attributes: ProductAttribute[];
@@ -56,6 +57,7 @@ export type ProductListing = Product & {
 export type ProductCategory = {
   name: string;
   count: number;
+  icon: string;
 };
 
 export type BrowseSort = 'recent' | 'price_asc' | 'price_desc';
@@ -102,6 +104,22 @@ export const CONDITION_OPTIONS: { label: string; value: ProductCondition }[] = [
   { label: 'Scrap', value: 'scrap' },
   { label: 'Refurbished', value: 'refurbished' },
 ];
+
+export const PRODUCT_CATEGORY_OPTIONS = [
+  'Metals',
+  'Polymers',
+  'Pipes & Tubes',
+  'Machinery',
+  'Electrical',
+  'Chemicals',
+  'Other',
+] as const;
+
+export type ProductCategoryName = (typeof PRODUCT_CATEGORY_OPTIONS)[number];
+
+export function isAllowedProductCategory(value: string): value is ProductCategoryName {
+  return PRODUCT_CATEGORY_OPTIONS.includes(value as ProductCategoryName);
+}
 
 export const emptyProductForm = (): ProductFormValues => ({
   title: '',

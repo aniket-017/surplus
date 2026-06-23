@@ -11,6 +11,7 @@ import {
 
 import { colors, spacing } from '@/src/constants/theme';
 import { ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
+import { CategorySelect } from '@/src/components/CategorySelect';
 import type { UserAddress } from '@/src/types/auth';
 import {
   CONDITION_OPTIONS,
@@ -99,12 +100,9 @@ export function ProductForm({ values, onChange, profileAddress }: ProductFormPro
         <View style={styles.rowItem}>
           <Field label="Category">
             <ScrollIntoView>
-              <TextInput
-                style={styles.input}
+              <CategorySelect
                 value={values.category}
-                onChangeText={(text) => updateField('category', text)}
-                placeholder="Metals"
-                placeholderTextColor={colors.muted}
+                onChange={(category) => updateField('category', category)}
               />
             </ScrollIntoView>
           </Field>

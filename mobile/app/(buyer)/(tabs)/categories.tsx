@@ -14,7 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
-import { getCategoryIcon } from '@/src/lib/productFormat';
+import { resolveCategoryIcon } from '@/src/lib/productFormat';
 import { getProductCategories } from '@/src/lib/productsApi';
 import type { ProductCategory } from '@/src/types/product';
 
@@ -89,7 +89,9 @@ export default function BuyerCategoriesTab() {
             >
               <View style={styles.iconWrap}>
                 <Ionicons
-                  name={getCategoryIcon(category.name) as keyof typeof Ionicons.glyphMap}
+                  name={
+                    resolveCategoryIcon(category, category.icon) as keyof typeof Ionicons.glyphMap
+                  }
                   size={28}
                   color={colors.accent}
                 />

@@ -13,6 +13,7 @@
     "android": {
       "package": "com.surplus.surplus",
       "versionCode": 1,
+      "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

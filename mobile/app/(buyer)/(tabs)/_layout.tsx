@@ -1,13 +1,14 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTabScreenOptions } from '@/src/constants/tabBar';
+import { useTabSafeAreaInsets, useTabScreenOptions } from '@/src/constants/tabBar';
 
 export default function BuyerTabsLayout() {
   const screenOptions = useTabScreenOptions();
+  const safeAreaInsets = useTabSafeAreaInsets();
 
   return (
-    <Tabs screenOptions={screenOptions}>
+    <Tabs screenOptions={screenOptions} safeAreaInsets={safeAreaInsets}>
       <Tabs.Screen
         name="index"
         options={{

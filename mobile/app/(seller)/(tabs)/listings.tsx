@@ -43,6 +43,13 @@ export default function SellerListingsTab() {
     });
   }
 
+  function openEdit(productId: string) {
+    router.push({
+      pathname: '/(seller)/edit-product/[id]',
+      params: { id: productId },
+    });
+  }
+
   return (
     <DashboardScreen>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -100,7 +107,7 @@ export default function SellerListingsTab() {
                 key={product.id}
                 product={product}
                 onPress={() => openProduct(product.id)}
-                onEdit={() => openProduct(product.id)}
+                onEdit={() => openEdit(product.id)}
               />
             ))}
           </View>

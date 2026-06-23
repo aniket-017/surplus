@@ -5,6 +5,7 @@ export default function SellerLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="add-product" />
+      <Stack.Screen name="edit-product/[id]" />
       <Stack.Screen name="products/[id]" />
     </Stack>
   );

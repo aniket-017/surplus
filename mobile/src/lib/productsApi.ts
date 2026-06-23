@@ -99,6 +99,29 @@ export async function getProduct(token: string, id: string) {
   return parseResponse<{ product: Product }>(res);
 }
 
+export async function updateProduct(
+  token: string,
+  id: string,
+  values: ProductFormValues,
+  images?: LocalImage[],
+) {
+  const formData = new FormData();
+  if (images?.length) {
+    appendImages(formData, images);
+  }
+  appendProductFields(formData, values);
+
+  const res = await fetch(`${API_BASE}/api/products/${id}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  return parseResponse<{ product: Product }>(res);
+}
+
 function buildBrowseQuery(params: BrowseProductsParams = {}) {
   const query = new URLSearchParams();
 

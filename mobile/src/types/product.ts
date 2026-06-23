@@ -152,3 +152,24 @@ export function profileAddressToLocation(address: UserAddress): ProductLocation 
     pincode: address.pincode.trim(),
   };
 }
+
+export function productToFormValues(product: Product): ProductFormValues {
+  return {
+    title: product.title,
+    category: product.category,
+    subCategory: product.subCategory,
+    description: product.description,
+    quantityUnit: product.quantityUnit,
+    quantity: String(product.quantity),
+    price: String(product.price),
+    priceType: product.priceType,
+    condition: product.condition,
+    attributes: product.attributes,
+    location: {
+      address: product.location.address ?? '',
+      city: product.location.city,
+      state: product.location.state,
+      pincode: product.location.pincode,
+    },
+  };
+}

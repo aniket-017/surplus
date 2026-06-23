@@ -142,7 +142,17 @@ export default function ProductDetailScreen() {
           <Text style={styles.backText}>Back</Text>
         </Pressable>
         <Text style={styles.headerTitle}>Listing details</Text>
-        <View style={styles.headerSpacer} />
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: '/(seller)/edit-product/[id]',
+              params: { id: product.id },
+            })
+          }
+          hitSlop={8}
+        >
+          <Text style={styles.editText}>Edit</Text>
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -310,6 +320,11 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
+  },
+  editText: {
+    color: colors.accent,
+    fontWeight: '700',
+    fontSize: 15,
   },
   centered: {
     flex: 1,

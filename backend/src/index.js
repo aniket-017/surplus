@@ -11,7 +11,7 @@ import { verifySmtpConnection } from "./lib/mail.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
 import { backfillCategoryMeta } from "./lib/category.js";
-import { CATEGORY_ASSETS_DIR } from "./lib/categoryAssets.js";
+import { CATEGORY_ASSETS_DIR, getCategoryImageManifest } from "./lib/categoryAssets.js";
 import { assertS3Config } from "./lib/s3.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -88,7 +88,21 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-app.use("/api/assets/categories", express.static(CATEGORY_ASSETS_DIR));
+app.get("/api/assets/categories/manifest", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(getCategoryImageManifest());
+});
+
+app.use(
+  "/api/assets/categories",
+  express.static(CATEGORY_ASSETS_DIR, {
+    etag: true,
+    lastModified: true,
+    setHeaders(res) {
+      res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+    },
+  }),
+);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);

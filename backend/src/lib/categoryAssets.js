@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -23,8 +24,41 @@ const CATEGORY_IMAGE_FILES = {
   Others: "Others.png",
 };
 
+function getCategoryImageFilePath(categoryName) {
+  const filename = CATEGORY_IMAGE_FILES[categoryName];
+  if (!filename) {
+    return null;
+  }
+
+  return path.join(CATEGORY_ASSETS_DIR, filename);
+}
+
 export function getCategoryImageFilename(categoryName) {
   return CATEGORY_IMAGE_FILES[categoryName] ?? null;
+}
+
+export function getCategoryImageVersion(categoryName) {
+  const filePath = getCategoryImageFilePath(categoryName);
+  if (!filePath) {
+    return null;
+  }
+
+  try {
+    const stat = fs.statSync(filePath);
+    return Math.floor(stat.mtimeMs);
+  } catch {
+    return null;
+  }
+}
+
+export function getCategoryImageManifest() {
+  const manifest = {};
+
+  for (const name of Object.keys(CATEGORY_IMAGE_FILES)) {
+    manifest[name] = getCategoryImageVersion(name) ?? 0;
+  }
+
+  return manifest;
 }
 
 export function getCategoryImagePath(categoryName) {
@@ -33,7 +67,10 @@ export function getCategoryImagePath(categoryName) {
     return null;
   }
 
-  return `/api/assets/categories/${encodeURIComponent(filename)}`;
+  const version = getCategoryImageVersion(categoryName);
+  const base = `/api/assets/categories/${encodeURIComponent(filename)}`;
+
+  return version ? `${base}?v=${version}` : base;
 }
 
 export function formatCategoryEntry(canonical, count) {

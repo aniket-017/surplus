@@ -20,6 +20,7 @@ import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
 import { browseProducts, getProductCategories } from '@/src/lib/productsApi';
+import { loadCategoryImageManifest } from '@/src/lib/categoryImages';
 import type { BrowseSort, ProductCategory, ProductListing } from '@/src/types/product';
 
 const HORIZONTAL_PADDING = spacing.lg;
@@ -96,6 +97,7 @@ export default function BuyerHomeTab() {
 
   useFocusEffect(
     useCallback(() => {
+      loadCategoryImageManifest(true);
       loadFeed();
     }, [loadFeed]),
   );

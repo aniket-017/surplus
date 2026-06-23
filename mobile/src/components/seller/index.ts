@@ -5,6 +5,8 @@ export {
   SellerListingStatusTabs,
   type SellerListingFilter,
 } from './SellerListingStatusTabs';
+export { SellerDashboardStats } from './SellerDashboardStats';
+export { SellerSwitchToBuyerCard } from './SellerSwitchToBuyerCard';
 export { SellerWelcomeBanner } from './SellerWelcomeBanner';
 export {
   filterSellerListings,

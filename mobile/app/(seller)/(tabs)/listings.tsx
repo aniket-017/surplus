@@ -1,59 +1,106 @@
 import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { DashboardScreen } from '@/src/components/DashboardShell';
-import { SellerListingCard } from '@/src/components/seller';
+import {
+  SellerAddProductCard,
+  SellerListingCard,
+  SellerListingsHeader,
+  SellerListingStatusTabs,
+  filterSellerListings,
+  getSellerListingCounts,
+  type SellerListingFilter,
+} from '@/src/components/seller';
 import { useMyProducts } from '@/src/hooks/useMyProducts';
 import { colors, spacing } from '@/src/constants/theme';
 
 export default function SellerListingsTab() {
   const { products, loading } = useMyProducts();
+  const [activeFilter, setActiveFilter] = useState<SellerListingFilter>('all');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const counts = useMemo(() => getSellerListingCounts(products), [products]);
+  const filteredProducts = useMemo(
+    () => filterSellerListings(products, activeFilter, searchQuery),
+    [products, activeFilter, searchQuery],
+  );
+
+  function openProduct(productId: string) {
+    router.push({
+      pathname: '/(seller)/products/[id]',
+      params: { id: productId },
+    });
+  }
 
   return (
     <DashboardScreen>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.pageHeader}>
-          <Text style={styles.pageTitle}>My Listings</Text>
-          <Text style={styles.pageCount}>{products.length} total</Text>
-        </View>
+        <SellerListingsHeader
+          totalCount={products.length}
+          onSearchPress={() => setSearchOpen((value) => !value)}
+        />
 
-        <Pressable
-          style={styles.addButton}
-          onPress={() => router.push('/(seller)/add-product')}
-        >
-          <Text style={styles.addButtonText}>Add Product</Text>
-        </Pressable>
+        {searchOpen ? (
+          <View style={styles.searchWrap}>
+            <Ionicons name="search-outline" size={18} color={colors.muted} />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search listings..."
+              placeholderTextColor={colors.muted}
+              style={styles.searchInput}
+              autoFocus
+            />
+            {searchQuery ? (
+              <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={colors.muted} />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
+        <SellerAddProductCard onPress={() => router.push('/(seller)/add-product')} />
+
+        <SellerListingStatusTabs
+          activeFilter={activeFilter}
+          counts={counts}
+          onChange={setActiveFilter}
+        />
 
         {loading ? (
           <View style={styles.loadingWrap}>
             <ActivityIndicator color={colors.accent} />
           </View>
-        ) : products.length === 0 ? (
+        ) : filteredProducts.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No listings yet</Text>
+            <Text style={styles.emptyTitle}>
+              {products.length === 0 ? 'No listings yet' : 'No matching listings'}
+            </Text>
             <Text style={styles.emptyText}>
-              Add your first surplus item to start reaching buyers on Surplus.
+              {products.length === 0
+                ? 'Add your first surplus item to start reaching buyers on Surplus.'
+                : 'Try a different filter or search term to find your listings.'}
             </Text>
           </View>
         ) : (
           <View style={styles.list}>
-            {products.map((product) => (
+            {filteredProducts.map((product) => (
               <SellerListingCard
                 key={product.id}
                 product={product}
-                onPress={() =>
-                  router.push({
-                    pathname: '/(seller)/products/[id]',
-                    params: { id: product.id },
-                  })
-                }
+                onPress={() => openProduct(product.id)}
+                onEdit={() => openProduct(product.id)}
               />
             ))}
           </View>
@@ -69,35 +116,22 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: spacing.xl,
   },
-  pageHeader: {
+  searchWrap: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    paddingTop: spacing.xs,
-  },
-  pageTitle: {
-    color: colors.textStrong,
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  pageCount: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  addButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    paddingVertical: 15,
     alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10,
   },
-  addButtonText: {
-    color: colors.white,
-    fontWeight: '700',
+  searchInput: {
+    flex: 1,
+    color: colors.textStrong,
     fontSize: 15,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    paddingVertical: 0,
   },
   loadingWrap: {
     paddingVertical: spacing.lg,
@@ -107,7 +141,7 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     backgroundColor: colors.surface,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     borderStyle: 'dashed',

@@ -2,19 +2,17 @@ import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
+import { BuyerCategoryCard, CATEGORY_GRID_GAP, CATEGORY_GRID_PADDING } from '@/src/components/buyer/BuyerCategoryCard';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
-import { resolveCategoryIcon } from '@/src/lib/productFormat';
 import { getProductCategories } from '@/src/lib/productsApi';
 import type { ProductCategory } from '@/src/types/product';
 
@@ -71,36 +69,25 @@ export default function BuyerCategoriesTab() {
       ) : error ? (
         <View style={styles.centered}>
           <Text style={styles.error}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={loadCategories}>
-            <Text style={styles.retryText}>Try again</Text>
-          </Pressable>
+          <Text style={styles.retryLink} onPress={loadCategories}>
+            Try again
+          </Text>
         </View>
       ) : categories.length === 0 ? (
         <View style={styles.centered}>
           <Text style={styles.emptyText}>No categories yet. Check back when listings are available.</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           {categories.map((category) => (
-            <Pressable
+            <BuyerCategoryCard
               key={category.name}
-              style={styles.tile}
+              name={category.name}
+              icon={category.icon}
+              imageUrl={category.imageUrl}
+              count={category.count}
               onPress={() => handleSelectCategory(category.name)}
-            >
-              <View style={styles.iconWrap}>
-                <Ionicons
-                  name={
-                    resolveCategoryIcon(category, category.icon) as keyof typeof Ionicons.glyphMap
-                  }
-                  size={28}
-                  color={colors.accent}
-                />
-              </View>
-              <Text style={styles.tileLabel} numberOfLines={2}>
-                {category.name}
-              </Text>
-              <Text style={styles.tileCount}>{category.count} listings</Text>
-            </Pressable>
+            />
           ))}
         </ScrollView>
       )}
@@ -135,62 +122,27 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.sm,
   },
-  grid: {
+  list: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: spacing.lg,
+    gap: CATEGORY_GRID_GAP,
+    paddingHorizontal: CATEGORY_GRID_PADDING,
     paddingBottom: spacing.xl,
-    gap: spacing.sm,
-  },
-  tile: {
-    width: '47%',
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    gap: spacing.xs,
-    alignItems: 'flex-start',
-  },
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(92, 179, 53, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tileLabel: {
-    color: colors.textStrong,
-    fontSize: 15,
-    fontWeight: '800',
-    lineHeight: 20,
-  },
-  tileCount: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '600',
   },
   error: {
     color: colors.error,
     fontSize: 14,
     textAlign: 'center',
   },
+  retryLink: {
+    color: colors.accent,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   emptyText: {
     color: colors.muted,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
-  },
-  retryButton: {
-    backgroundColor: colors.navy,
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  retryText: {
-    color: colors.white,
-    fontWeight: '700',
-    fontSize: 14,
   },
 });

@@ -1,18 +1,19 @@
 import { prisma } from "./prisma.js";
+import { formatCategoryEntry } from "./categoryAssets.js";
 
 export const CATEGORY_ICON_ALLOWLIST = [
   { id: "construct-outline", label: "Metals" },
   { id: "cube-outline", label: "Plastics" },
-  { id: "git-branch-outline", label: "Piping" },
+  { id: "filter-outline", label: "Piping" },
   { id: "cog-outline", label: "Machinery" },
   { id: "hardware-chip-outline", label: "Electronics" },
   { id: "flask-outline", label: "Chemicals" },
   { id: "ellipse-outline", label: "Rubber" },
   { id: "albums-outline", label: "Packaging" },
   { id: "home-outline", label: "Construction" },
-  { id: "grid-outline", label: "Textiles" },
+  { id: "shirt-outline", label: "Textiles" },
   { id: "leaf-outline", label: "Wood & Agro" },
-  { id: "barbell-outline", label: "Minerals" },
+  { id: "earth-outline", label: "Minerals" },
   { id: "flash-outline", label: "Energy" },
   { id: "shield-outline", label: "Safety" },
   { id: "layers-outline", label: "Others" },
@@ -32,16 +33,16 @@ const ALLOWED_ICON_IDS = new Set(CATEGORY_ICON_ALLOWLIST.map((item) => item.id))
 export const CANONICAL_CATEGORIES = [
   { name: "Metals", icon: "construct-outline" },
   { name: "Plastics", icon: "cube-outline" },
-  { name: "Piping", icon: "git-branch-outline" },
+  { name: "Piping", icon: "filter-outline" },
   { name: "Machinery", icon: "cog-outline" },
   { name: "Electronics", icon: "hardware-chip-outline" },
   { name: "Chemicals", icon: "flask-outline" },
   { name: "Rubber", icon: "ellipse-outline" },
   { name: "Packaging", icon: "albums-outline" },
   { name: "Construction", icon: "home-outline" },
-  { name: "Textiles", icon: "grid-outline" },
+  { name: "Textiles", icon: "shirt-outline" },
   { name: "Wood & Agro", icon: "leaf-outline" },
-  { name: "Minerals", icon: "barbell-outline" },
+  { name: "Minerals", icon: "earth-outline" },
   { name: "Energy", icon: "flash-outline" },
   { name: "Safety", icon: "shield-outline" },
   { name: "Others", icon: "layers-outline" },
@@ -116,7 +117,7 @@ export function normalizeCategory(value) {
 }
 
 export function getAllowedCategories() {
-  return CANONICAL_CATEGORIES.map(({ name, icon }) => ({ name, icon }));
+  return CANONICAL_CATEGORIES.map((canonical) => formatCategoryEntry(canonical));
 }
 
 export function isAllowedCategoryIcon(icon) {
@@ -133,16 +134,16 @@ export function suggestCategoryIcon(name) {
 
   if (key.includes("metal")) return "construct-outline";
   if (key.includes("plastic") || key.includes("polymer")) return "cube-outline";
-  if (key.includes("pipe") || key.includes("tube") || key.includes("piping")) return "git-branch-outline";
+  if (key.includes("pipe") || key.includes("tube") || key.includes("piping")) return "filter-outline";
   if (key.includes("machin")) return "cog-outline";
   if (key.includes("electronic") || key.includes("electrical")) return "hardware-chip-outline";
   if (key.includes("chemical")) return "flask-outline";
   if (key.includes("rubber")) return "ellipse-outline";
   if (key.includes("packag")) return "albums-outline";
   if (key.includes("construct") || key.includes("cement")) return "home-outline";
-  if (key.includes("textile") || key.includes("fabric")) return "grid-outline";
+  if (key.includes("textile") || key.includes("fabric")) return "shirt-outline";
   if (key.includes("wood") || key.includes("agro")) return "leaf-outline";
-  if (key.includes("mineral") || key.includes("ore")) return "barbell-outline";
+  if (key.includes("mineral") || key.includes("ore")) return "earth-outline";
   if (key.includes("energy") || key.includes("solar") || key.includes("fuel")) return "flash-outline";
   if (key.includes("safety") || key.includes("ppe")) return "shield-outline";
   if (key.includes("paper")) return "document-text-outline";
@@ -245,16 +246,8 @@ export async function listCategoriesWithCounts() {
     );
   }
 
-  const categories = await Promise.all(
-    CANONICAL_CATEGORIES.map(async (canonical) => {
-      const meta = await getOrCreateCategoryMeta(canonical.name, canonical.icon);
-
-      return {
-        name: canonical.name,
-        count: countByCanonical.get(canonical.name) ?? 0,
-        icon: meta?.icon ?? canonical.icon,
-      };
-    }),
+  const categories = CANONICAL_CATEGORIES.map((canonical) =>
+    formatCategoryEntry(canonical, countByCanonical.get(canonical.name) ?? 0),
   );
 
   return categories;

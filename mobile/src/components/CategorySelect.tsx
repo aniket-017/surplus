@@ -9,8 +9,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { CategoryImage } from '@/src/components/CategoryImage';
 import { colors, spacing } from '@/src/constants/theme';
-import { getCategoryIcon } from '@/src/lib/productFormat';
 import { PRODUCT_CATEGORIES } from '@/src/types/product';
 
 type CategorySelectProps = {
@@ -20,19 +20,14 @@ type CategorySelectProps = {
 
 export function CategorySelect({ value, onChange }: CategorySelectProps) {
   const [open, setOpen] = useState(false);
-  const selectedIcon = value ? getCategoryIcon(value) : null;
 
   return (
     <>
       <Pressable style={styles.trigger} onPress={() => setOpen(true)}>
         <View style={styles.triggerContent}>
-          {selectedIcon ? (
+          {value ? (
             <View style={styles.triggerIconWrap}>
-              <Ionicons
-                name={selectedIcon as keyof typeof Ionicons.glyphMap}
-                size={18}
-                color={colors.accent}
-              />
+              <CategoryImage name={value} style={styles.triggerImage} />
             </View>
           ) : null}
           <Text style={[styles.triggerText, !value && styles.placeholder]}>
@@ -61,11 +56,7 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
                   >
                     <View style={styles.optionContent}>
                       <View style={[styles.optionIconWrap, selected && styles.optionIconWrapSelected]}>
-                        <Ionicons
-                          name={option.icon as keyof typeof Ionicons.glyphMap}
-                          size={18}
-                          color={selected ? colors.white : colors.accent}
-                        />
+                        <CategoryImage name={option.name} style={styles.optionImage} />
                       </View>
                       <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
                         {option.name}
@@ -107,9 +98,15 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: 'rgba(92, 179, 53, 0.12)',
+    backgroundColor: '#EEF2F6',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    padding: 4,
+  },
+  triggerImage: {
+    width: '100%',
+    height: '100%',
   },
   triggerText: {
     color: colors.textStrong,
@@ -160,15 +157,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionIconWrap: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 10,
-    backgroundColor: 'rgba(92, 179, 53, 0.12)',
+    backgroundColor: '#EEF2F6',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    padding: 5,
   },
   optionIconWrapSelected: {
-    backgroundColor: colors.accent,
+    backgroundColor: '#E8F5E3',
+  },
+  optionImage: {
+    width: '100%',
+    height: '100%',
   },
   optionText: {
     color: colors.textStrong,

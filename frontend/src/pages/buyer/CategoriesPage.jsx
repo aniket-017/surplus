@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../components/AppShell'
-import CategoryIcon from '../../components/CategoryIcon'
-import { resolveCategoryIcon } from '../../lib/productFormat'
+import CategoryImage from '../../components/CategoryImage'
 import { getCategories } from '../../lib/productsApi'
 
 export default function CategoriesPage() {
@@ -53,22 +52,23 @@ export default function CategoriesPage() {
           <p>No categories yet. Check back when listings are available.</p>
         </div>
       ) : (
-        <div className="categories-grid">
+        <div className="categories-list">
           {categories.map((category) => (
             <button
               key={category.name}
               type="button"
-              className="category-tile"
+              className="category-list-card"
               onClick={() => navigate(`/buyer?category=${encodeURIComponent(category.name)}`)}
             >
-              <div className="category-tile-icon">
-                <CategoryIcon
-                  name={resolveCategoryIcon(category, category.icon)}
-                  size={28}
+              <div className="category-list-card-icon">
+                <CategoryImage
+                  name={category.name}
+                  imageUrl={category.imageUrl}
+                  size={72}
+                  className="category-list-card-image"
                 />
               </div>
-              <div className="category-tile-name">{category.name}</div>
-              <div className="category-tile-count">{category.count} listings</div>
+              <span className="category-list-card-name">{category.name}</span>
             </button>
           ))}
         </div>

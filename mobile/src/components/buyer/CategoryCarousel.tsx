@@ -1,7 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
-import { resolveCategoryIcon } from '@/src/lib/productFormat';
+import { CategoryImage } from '@/src/components/CategoryImage';
 import { colors, spacing } from '@/src/constants/theme';
 import type { ProductCategory } from '@/src/types/product';
 
@@ -36,12 +35,10 @@ export function CategoryCarousel({
               onPress={() => onSelectCategory(active ? '' : category.name)}
             >
               <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
-                <Ionicons
-                  name={
-                    resolveCategoryIcon(category, category.icon) as keyof typeof Ionicons.glyphMap
-                  }
-                  size={22}
-                  color={active ? colors.white : colors.accent}
+                <CategoryImage
+                  name={category.name}
+                  imageUrl={category.imageUrl}
+                  style={styles.image}
                 />
               </View>
               <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
@@ -94,15 +91,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(92, 179, 53, 0.08)',
   },
   iconWrap: {
-    width: 44,
-    height: 44,
+    width: 64,
+    height: 64,
     borderRadius: 12,
-    backgroundColor: 'rgba(92, 179, 53, 0.12)',
+    backgroundColor: '#EEF2F6',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    padding: 6,
   },
   iconWrapActive: {
-    backgroundColor: colors.accent,
+    backgroundColor: '#E8F5E3',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
   },
   label: {
     color: colors.textStrong,

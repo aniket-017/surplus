@@ -52,16 +52,16 @@ export function getCategoryIcon(category) {
 
   if (key.includes('metal')) return 'construct-outline'
   if (key.includes('plastic') || key.includes('polymer')) return 'cube-outline'
-  if (key.includes('pipe') || key.includes('tube') || key.includes('piping')) return 'git-branch-outline'
+  if (key.includes('pipe') || key.includes('tube') || key.includes('piping')) return 'filter-outline'
   if (key.includes('machin')) return 'cog-outline'
   if (key.includes('electronic') || key.includes('electrical')) return 'hardware-chip-outline'
   if (key.includes('chemical')) return 'flask-outline'
   if (key.includes('rubber')) return 'ellipse-outline'
   if (key.includes('packag')) return 'albums-outline'
   if (key.includes('construct') || key.includes('cement')) return 'home-outline'
-  if (key.includes('textile') || key.includes('fabric')) return 'grid-outline'
+  if (key.includes('textile') || key.includes('fabric')) return 'shirt-outline'
   if (key.includes('wood') || key.includes('agro')) return 'leaf-outline'
-  if (key.includes('mineral') || key.includes('ore')) return 'barbell-outline'
+  if (key.includes('mineral') || key.includes('ore')) return 'earth-outline'
   if (key.includes('energy') || key.includes('solar') || key.includes('fuel')) return 'flash-outline'
   if (key.includes('safety') || key.includes('ppe')) return 'shield-outline'
   if (key.includes('paper')) return 'document-text-outline'
@@ -89,14 +89,14 @@ export function getCategoryEmoji(category) {
     'document-text-outline': '📄',
     'hardware-chip-outline': '💻',
     'cog-outline': '⚙️',
-    'git-branch-outline': '🔧',
+    'filter-outline': '🔧',
     'flask-outline': '🧪',
     'ellipse-outline': '⭕',
     'albums-outline': '📦',
     'home-outline': '🏗️',
-    'grid-outline': '🧵',
+    'shirt-outline': '🧵',
     'leaf-outline': '🌿',
-    'barbell-outline': '⛏️',
+    'earth-outline': '⛏️',
     'flash-outline': '⚡',
     'shield-outline': '🦺',
     'layers-outline': '📦',

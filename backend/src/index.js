@@ -11,6 +11,7 @@ import { verifySmtpConnection } from "./lib/mail.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
 import { backfillCategoryMeta } from "./lib/category.js";
+import { CATEGORY_ASSETS_DIR } from "./lib/categoryAssets.js";
 import { assertS3Config } from "./lib/s3.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -86,6 +87,8 @@ app.get("/api/health", (_req, res) => {
     },
   });
 });
+
+app.use("/api/assets/categories", express.static(CATEGORY_ASSETS_DIR));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);

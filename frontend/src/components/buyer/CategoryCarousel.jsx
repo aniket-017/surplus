@@ -1,5 +1,4 @@
-import CategoryIcon from '../CategoryIcon'
-import { resolveCategoryIcon } from '../../lib/productFormat'
+import CategoryImage from '../CategoryImage'
 
 export default function CategoryCarousel({ categories, activeCategory, onSelectCategory }) {
   return (
@@ -15,14 +14,17 @@ export default function CategoryCarousel({ categories, activeCategory, onSelectC
         <button
           key={category.name}
           type="button"
-          className={`category-chip${activeCategory === category.name ? ' active' : ''}`}
+          className={`category-chip category-chip-image${activeCategory === category.name ? ' active' : ''}`}
           onClick={() => onSelectCategory(category.name)}
         >
-          <CategoryIcon
-            name={resolveCategoryIcon(category, category.icon)}
-            size={16}
-            className="category-chip-icon"
-          />
+          <span className="category-chip-thumb">
+            <CategoryImage
+              name={category.name}
+              imageUrl={category.imageUrl}
+              size={28}
+              className="category-chip-image"
+            />
+          </span>
           {category.name}
         </button>
       ))}

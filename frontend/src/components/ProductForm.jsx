@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import CategoryIcon from './CategoryIcon'
+import CategoryImage from './CategoryImage'
 import {
   CONDITION_OPTIONS,
   isCompleteLocation,
@@ -87,11 +87,9 @@ export default function ProductForm({ values, onChange, profileAddress }) {
                   className={`category-picker-chip${selected ? ' active' : ''}`}
                   onClick={() => updateField('category', option.name)}
                 >
-                  <CategoryIcon
-                    name={option.icon}
-                    size={18}
-                    className="category-picker-chip-icon"
-                  />
+                  <span className="category-picker-chip-thumb">
+                    <CategoryImage name={option.name} size={28} className="category-picker-chip-image" />
+                  </span>
                   <span>{option.name}</span>
                 </button>
               )

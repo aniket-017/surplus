@@ -67,9 +67,26 @@ try {
 const app = express();
 const PORT = process.env.PORT || 4369;
 
+// Allow CORS for mobile app and frontend
+const allowedOrigins = [
+  process.env.FRONTEND_URL, // Frontend (localhost:5000)
+  'http://10.220.255.117:4369', // Mobile app's API base URL
+  'http://localhost:4369', // Local development
+];
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.log('CORS blocked origin:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   }),
 );

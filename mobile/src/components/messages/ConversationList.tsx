@@ -10,17 +10,29 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
 import { getConversations, type ConversationSummary } from '@/src/lib/conversationsApi';
+import { formatConversationTime } from '@/src/lib/messageFormat';
 import { getImageUrl } from '@/src/lib/productsApi';
-import { formatRelativeDate } from '@/src/lib/productFormat';
 
 function getPreview(conversation: ConversationSummary) {
   const body = conversation.lastMessage?.body?.trim();
   if (body) return body;
   return 'Inquiry sent';
+}
+
+function getRowTitle(conversation: ConversationSummary, role: 'buyer' | 'seller' | null | undefined) {
+  const productTitle = conversation.product?.title || 'Listing';
+
+  if (role === 'seller') {
+    const buyerName = conversation.otherParty?.name || 'User';
+    return `${buyerName} - ${productTitle}`;
+  }
+
+  return productTitle;
 }
 
 type ConversationListProps = {
@@ -80,7 +92,7 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
   if (conversations.length === 0) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyTitle}>No messages yet</Text>
+        <Text style={styles.emptyTitle}>No chats yet</Text>
         <Text style={styles.emptySubtitle}>{emptySubtitle}</Text>
       </View>
     );
@@ -95,8 +107,8 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
       }
       renderItem={({ item }) => {
-        const thumb = item.product?.images?.[0];
-        const name = item.otherParty?.name || 'User';
+        const title = getRowTitle(item, user?.role);
+        const productImage = item.product?.images?.[0];
 
         return (
           <Pressable
@@ -109,19 +121,20 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
               }
             }}
           >
-            {thumb ? (
-              <Image source={{ uri: getImageUrl(thumb) }} style={styles.thumb} contentFit="cover" />
+            {productImage ? (
+              <Image source={{ uri: getImageUrl(productImage) }} style={styles.avatar} contentFit="cover" />
             ) : (
-              <View style={[styles.thumb, styles.thumbFallback]} />
+              <View style={[styles.avatar, styles.avatarFallback]}>
+                <Ionicons name="cube-outline" size={22} color={colors.muted} />
+              </View>
             )}
             <View style={styles.content}>
               <View style={styles.topRow}>
-                <Text style={styles.title} numberOfLines={1}>
-                  {item.product?.title || 'Listing'}
+                <Text style={styles.name} numberOfLines={1}>
+                  {title}
                 </Text>
-                <Text style={styles.time}>{formatRelativeDate(item.lastMessageAt)}</Text>
+                <Text style={styles.time}>{formatConversationTime(item.lastMessageAt)}</Text>
               </View>
-              <Text style={styles.name}>{name}</Text>
               <Text style={styles.preview} numberOfLines={1}>
                 {getPreview(item)}
               </Text>
@@ -135,33 +148,40 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
 
 const styles = StyleSheet.create({
   list: {
-    padding: spacing.lg,
-    gap: spacing.sm,
+    paddingBottom: spacing.lg,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
+    backgroundColor: colors.bg,
   },
   row: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
+    backgroundColor: colors.bg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0, 0, 0, 0.08)',
+    minHeight: 76,
   },
-  thumb: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-  },
-  thumbFallback: {
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
     backgroundColor: colors.surfaceMuted,
+  },
+  avatarFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     flex: 1,
-    gap: 2,
+    minWidth: 0,
+    gap: 4,
   },
   topRow: {
     flexDirection: 'row',
@@ -169,24 +189,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.xs,
   },
-  title: {
+  name: {
     flex: 1,
     color: colors.textStrong,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
   },
   time: {
     color: colors.muted,
-    fontSize: 11,
-  },
-  name: {
-    color: colors.muted,
     fontSize: 12,
-    fontWeight: '600',
   },
   preview: {
-    color: colors.text,
-    fontSize: 13,
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 19,
   },
   emptyTitle: {
     color: colors.textStrong,

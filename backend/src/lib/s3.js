@@ -168,6 +168,51 @@ function extensionFromFile(file, index) {
   return mimeExt[file.mimetype] || `.jpg`;
 }
 
+export function buildMessageImageKey(conversationId, ext) {
+  const { prefix } = getConfig();
+  const safeExt = ext.toLowerCase().replace(/[^a-z0-9.]/g, "") || ".webp";
+  const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`;
+  return `${prefix}/messages/${conversationId}/${filename}`;
+}
+
+export async function uploadMessageFile(conversationId, file) {
+  const client = getS3Client();
+  const { bucket } = getConfig();
+  const ext = extensionFromFile(file, 0);
+  const key = buildMessageImageKey(conversationId, ext);
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype || "application/octet-stream",
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
+
+  return getPublicUrl(key);
+}
+
+export async function uploadMessageImage(conversationId, file) {
+  const client = getS3Client();
+  const { bucket } = getConfig();
+  const ext = extensionFromFile(file, 0);
+  const key = buildMessageImageKey(conversationId, ext);
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
+
+  return getPublicUrl(key);
+}
+
 export async function uploadProductImages(category, subCategory, productId, files) {
   const client = getS3Client();
   const { bucket } = getConfig();

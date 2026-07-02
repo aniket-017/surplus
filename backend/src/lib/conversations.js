@@ -1,11 +1,34 @@
-export function formatMessage(message) {
+import { getReadableImageUrl } from "./s3.js";
+
+export async function formatMessage(message) {
+  const imageUrl = message.imageUrl
+    ? await getReadableImageUrl(message.imageUrl)
+    : null;
+
+  const fileUrl = message.fileUrl
+    ? await getReadableImageUrl(message.fileUrl)
+    : null;
+
   return {
     id: message.id,
     conversationId: message.conversationId,
     senderId: message.senderId,
     body: message.body ?? null,
+    imageUrl,
+    fileUrl,
+    fileName: message.fileName ?? null,
     createdAt: message.createdAt.toISOString(),
   };
+}
+
+function formatLastMessagePreview(message) {
+  if (!message) return null;
+
+  const body = message.body?.trim();
+  if (body) return body;
+  if (message.imageUrl) return "Photo";
+  if (message.fileUrl) return message.fileName || "Document";
+  return "Inquiry sent";
 }
 
 export async function formatConversationSummary(conversation, currentUserId) {
@@ -35,7 +58,7 @@ export async function formatConversationSummary(conversation, currentUserId) {
       : null,
     lastMessage: lastMessage
       ? {
-          body: lastMessage.body,
+          body: formatLastMessagePreview(lastMessage),
           senderId: lastMessage.senderId,
           createdAt: lastMessage.createdAt.toISOString(),
         }

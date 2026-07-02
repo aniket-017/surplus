@@ -1,9 +1,86 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { formatMessage, formatConversationSummary } from "../lib/conversations.js";
+import { optimizeProductImage } from "../lib/imageOptimize.js";
+import { uploadMessageFile, uploadMessageImage as uploadMessageImageToS3 } from "../lib/s3.js";
+import { getMessageUploadFile, isImageUpload, uploadMessageAttachment } from "../lib/upload.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
+
+// Test endpoint for debugging connectivity
+router.post("/:id/test-upload", requireAuth, (req, res) => {
+  console.log("=== TEST UPLOAD ENDPOINT HIT ===");
+  console.log("Conversation ID:", req.params.id);
+  console.log("Headers:", req.headers);
+  console.log("Body:", req.body);
+  res.json({ success: true, message: "Test endpoint reached successfully" });
+});
+
+// Test endpoint for debugging file uploads specifically
+router.post("/:id/test-file-upload", requireAuth, handleMessageUpload, async (req, res) => {
+  console.log("=== TEST FILE UPLOAD ENDPOINT HIT ===");
+  console.log("Conversation ID:", req.params.id);
+  console.log("Headers:", req.headers);
+  console.log("Files:", req.files);
+  console.log("Body:", req.body);
+  
+  try {
+    const uploadedFile = getMessageUploadFile(req);
+    console.log("Found uploaded file:", uploadedFile ? {
+      fieldname: uploadedFile.fieldname,
+      originalname: uploadedFile.originalname,
+      mimetype: uploadedFile.mimetype,
+      size: uploadedFile.size,
+      hasBuffer: !!uploadedFile.buffer,
+    } : "No file");
+
+    if (uploadedFile) {
+      console.log("Testing image processing...");
+      if (isImageUpload(uploadedFile)) {
+        console.log("Processing as image...");
+        const optimized = await optimizeProductImage(uploadedFile, 0);
+        console.log("Image optimization successful");
+        
+        // Test S3 upload without saving to database
+        console.log("Testing S3 upload...");
+        const testUrl = await uploadMessageImageToS3('test-conversation-id', optimized);
+        console.log("S3 upload successful:", testUrl);
+        
+        return res.json({ 
+          success: true, 
+          message: "File upload test successful",
+          fileType: "image",
+          optimized: {
+            mimetype: optimized.mimetype,
+            size: optimized.buffer.length
+          },
+          s3Url: testUrl
+        });
+      } else {
+        console.log("Processing as document...");
+        const testUrl = await uploadMessageFile('test-conversation-id', uploadedFile);
+        console.log("Document upload successful:", testUrl);
+        
+        return res.json({ 
+          success: true, 
+          message: "File upload test successful",
+          fileType: "document",
+          s3Url: testUrl
+        });
+      }
+    }
+    
+    res.json({ success: true, message: "No file provided for test" });
+  } catch (error) {
+    console.error("Test file upload failed:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
 
 async function getConversationForUser(conversationId, userId) {
   const conversation = await prisma.conversation.findUnique({
@@ -24,6 +101,30 @@ async function getConversationForUser(conversationId, userId) {
   }
 
   return conversation;
+}
+
+function handleMessageUpload(req, res, next) {
+  console.log("=== MESSAGE UPLOAD REQUEST ===");
+  console.log("Method:", req.method);
+  console.log("URL:", req.url);
+  console.log("Content-Type:", req.headers["content-type"]);
+  console.log("User-Agent:", req.headers["user-agent"]);
+
+  const contentType = (req.headers["content-type"] || "").toLowerCase();
+  if (contentType.includes("application/json")) {
+    console.log("Detected JSON content, skipping multer");
+    return next();
+  }
+
+  console.log("Processing multipart upload...");
+  uploadMessageAttachment(req, res, (error) => {
+    if (error) {
+      console.error("Multer error:", error);
+      return res.status(400).json({ error: error.message || "Invalid upload" });
+    }
+    console.log("Multer processing completed successfully");
+    next();
+  });
 }
 
 router.post("/", requireAuth, async (req, res) => {
@@ -82,7 +183,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     res.status(201).json({
       conversationId: conversation.id,
-      message: formatMessage(message),
+      message: await formatMessage(message),
       isNew: !messageBody && conversation.createdAt.getTime() === message.createdAt.getTime(),
     });
   } catch (error) {
@@ -140,14 +241,30 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
       skip,
     });
 
+    const otherParty = conversation.buyerId === req.user.id ? conversation.seller : conversation.buyer;
+
     res.json({
       conversation: {
         id: conversation.id,
         productId: conversation.productId,
         buyerId: conversation.buyerId,
         sellerId: conversation.sellerId,
+        otherParty: otherParty
+          ? {
+              id: otherParty.id,
+              name: otherParty.name || otherParty.email.split("@")[0],
+              avatarUrl: otherParty.avatarUrl || null,
+            }
+          : null,
+        product: conversation.product
+          ? {
+              id: conversation.product.id,
+              title: conversation.product.title,
+              images: conversation.product.images,
+            }
+          : null,
       },
-      messages: messages.map(formatMessage),
+      messages: await Promise.all(messages.map(formatMessage)),
     });
   } catch (error) {
     console.error("List messages failed:", error);
@@ -155,36 +272,122 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/:id/messages", requireAuth, async (req, res) => {
+router.post("/:id/messages", requireAuth, handleMessageUpload, async (req, res) => {
+  console.log("🚀 UPLOAD ROUTE HIT! Conversation ID:", req.params.id);
+  console.log("📋 Request Headers:", req.headers);
+  console.log("📁 Files:", req.files);
+  console.log("📝 Body:", req.body);
+  
   try {
+    console.log("Message upload request:", {
+      conversationId: req.params.id,
+      contentType: req.headers["content-type"],
+      hasFiles: !!req.files,
+      filesType: Array.isArray(req.files) ? "array" : typeof req.files,
+      filesLength: Array.isArray(req.files) ? req.files.length : Object.keys(req.files || {}).length,
+      bodyKeys: Object.keys(req.body || {}),
+    });
+
+    console.log("🔍 Step 1: Getting conversation...");
     const conversation = await getConversationForUser(req.params.id, req.user.id);
 
     if (!conversation) {
+      console.log("❌ Conversation not found");
       return res.status(404).json({ error: "Conversation not found" });
     }
+    console.log("✅ Conversation found:", conversation.id);
 
     const body = req.body.body ? String(req.body.body).trim() : "";
+    let imageUrl = null;
+    let fileUrl = null;
+    let fileName = null;
 
-    if (!body) {
-      return res.status(400).json({ error: "Message body is required" });
+    console.log("🔍 Step 2: Processing uploaded file...");
+    const uploadedFile = getMessageUploadFile(req);
+    console.log(
+      "Uploaded file:",
+      uploadedFile
+        ? {
+            fieldname: uploadedFile.fieldname,
+            originalname: uploadedFile.originalname,
+            mimetype: uploadedFile.mimetype,
+            size: uploadedFile.size,
+          }
+        : "No file found",
+    );
+
+    if (uploadedFile) {
+      console.log("🔍 Step 3: Processing file based on type...");
+      try {
+        if (isImageUpload(uploadedFile)) {
+          console.log("📷 Processing image upload...");
+          console.log("🔧 Step 3a: Optimizing image...");
+          const optimized = await optimizeProductImage(uploadedFile, 0);
+          console.log("✅ Image optimization complete");
+          
+          console.log("☁️ Step 3b: Uploading to S3...");
+          imageUrl = await uploadMessageImageToS3(conversation.id, optimized);
+          console.log("✅ Image uploaded to S3:", imageUrl);
+        } else {
+          console.log("📄 Processing document upload...");
+          fileName = uploadedFile.originalname || (req.body.fileName ? String(req.body.fileName) : "document");
+          console.log("☁️ Step 3c: Uploading document to S3...");
+          fileUrl = await uploadMessageFile(conversation.id, uploadedFile);
+          console.log("✅ Document uploaded to S3:", fileUrl);
+        }
+      } catch (uploadError) {
+        console.error("❌ File processing failed:", uploadError);
+        console.error("❌ Upload error details:", uploadError.message);
+        console.error("❌ Upload error stack:", uploadError.stack);
+        throw new Error(`File upload failed: ${uploadError.message}`);
+      }
     }
 
-    const message = await prisma.message.create({
-      data: {
-        conversationId: conversation.id,
-        senderId: req.user.id,
-        body,
-      },
-    });
+    if (!body && !imageUrl && !fileUrl) {
+      console.log("❌ No content provided");
+      return res.status(400).json({ error: "Message body or attachment is required" });
+    }
 
+    console.log("🔍 Step 4: Creating message in database...");
+    const messageData = {
+      conversationId: conversation.id,
+      senderId: req.user.id,
+      body: body || null,
+      imageUrl,
+      fileUrl,
+      fileName,
+    };
+    console.log("💾 Message data:", messageData);
+
+    const message = await prisma.message.create({
+      data: messageData,
+    });
+    console.log("✅ Message created:", message.id);
+
+    console.log("🔍 Step 5: Updating conversation timestamp...");
     await prisma.conversation.update({
       where: { id: conversation.id },
       data: { lastMessageAt: message.createdAt },
     });
+    console.log("✅ Conversation updated");
 
-    res.status(201).json({ message: formatMessage(message) });
+    console.log("🔍 Step 6: Formatting message response...");
+    const formattedMessage = await formatMessage(message);
+    console.log("✅ Message saved successfully:", message.id);
+    res.status(201).json({ message: formattedMessage });
   } catch (error) {
-    console.error("Send message failed:", error);
+    console.error("❌ Send message failed:", error);
+    console.error("❌ Error message:", error.message);
+    console.error("❌ Error stack:", error.stack);
+    
+    // More detailed error information
+    if (error.code) {
+      console.error("❌ Error code:", error.code);
+    }
+    if (error.meta) {
+      console.error("❌ Error meta:", error.meta);
+    }
+    
     res.status(500).json({ error: "Failed to send message" });
   }
 });

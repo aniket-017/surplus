@@ -8,8 +8,7 @@ export default function SellerMessagesTab() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Messages</Text>
-        <Text style={styles.subtitle}>Chat with buyers and manage inquiries</Text>
+        <Text style={styles.title}>Chats</Text>
       </View>
       <ConversationList emptySubtitle="When buyers inquire on your listings, conversations will appear here." />
     </SafeAreaView>
@@ -19,22 +18,17 @@ export default function SellerMessagesTab() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.bgSubtle,
+    backgroundColor: colors.bg,
   },
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-    gap: 4,
+    paddingBottom: spacing.sm,
   },
   title: {
     color: colors.textStrong,
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '700',
     letterSpacing: -0.4,
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 14,
   },
 });

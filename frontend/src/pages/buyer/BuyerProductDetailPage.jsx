@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import AppShell from '../../components/AppShell'
+import InquiryModal from '../../components/messages/InquiryModal'
+import { useAuth } from '../../context/AuthContext'
+import { startInquiry } from '../../lib/conversationsApi'
 import {
   formatAttributeKey,
   formatPrice,
@@ -12,10 +15,30 @@ import { getBrowseProduct, getImageUrl } from '../../lib/productsApi'
 export default function BuyerProductDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeImage, setActiveImage] = useState(0)
+  const [inquiryOpen, setInquiryOpen] = useState(false)
+  const [inquiryMessage, setInquiryMessage] = useState('')
+  const [inquirySubmitting, setInquirySubmitting] = useState(false)
+  const [inquiryError, setInquiryError] = useState('')
+
+  async function handleSendInquiry() {
+    setInquirySubmitting(true)
+    setInquiryError('')
+    try {
+      const data = await startInquiry(id, inquiryMessage)
+      setInquiryOpen(false)
+      setInquiryMessage('')
+      navigate(`/buyer/messages/${data.conversationId}`)
+    } catch (err) {
+      setInquiryError(err.message || 'Failed to send inquiry')
+    } finally {
+      setInquirySubmitting(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -68,6 +91,8 @@ export default function BuyerProductDetailPage() {
   }
 
   const sellerName = product.seller?.name || 'Seller'
+  const isOwnListing =
+    user?.email && product.seller?.email && user.email === product.seller.email
   const locationPrimary = product.location.address
     ? product.location.address
     : `${product.location.city}, ${product.location.state} — ${product.location.pincode}`
@@ -153,6 +178,21 @@ export default function BuyerProductDetailPage() {
             ) : null}
           </div>
         </div>
+        {isOwnListing ? (
+          <p className="detail-section-sub inquiry-own-note">This is your own listing.</p>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-primary btn-block inquiry-cta"
+            onClick={() => {
+              setInquiryError('')
+              setInquiryOpen(true)
+            }}
+          >
+            <span className="inquiry-cta-icon" aria-hidden="true">✉</span>
+            Send inquiry to seller
+          </button>
+        )}
       </div>
 
       <div className="detail-section">
@@ -193,6 +233,18 @@ export default function BuyerProductDetailPage() {
       <Link to="/buyer" className="btn btn-outline">
         Back to browse
       </Link>
+
+      <InquiryModal
+        open={inquiryOpen}
+        sellerName={sellerName}
+        productTitle={product.title}
+        message={inquiryMessage}
+        submitting={inquirySubmitting}
+        error={inquiryError}
+        onChangeMessage={setInquiryMessage}
+        onClose={() => setInquiryOpen(false)}
+        onSubmit={handleSendInquiry}
+      />
     </AppShell>
   )
 }

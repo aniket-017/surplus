@@ -70,6 +70,8 @@ const PORT = process.env.PORT || 4369;
 // Allow CORS for mobile app and frontend
 const allowedOrigins = [
   process.env.FRONTEND_URL, // Frontend (localhost:5000)
+  'http://localhost:5173', // Vite dev server
+  'http://127.0.0.1:5173', // Vite dev server (alternate host)
   'http://10.220.255.117:4369', // Mobile app's API base URL
   'http://localhost:4369', // Local development
 ];

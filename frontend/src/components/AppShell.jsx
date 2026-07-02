@@ -6,11 +6,13 @@ import RoleSwitchButton from './RoleSwitchButton'
 const BUYER_NAV = [
   { to: '/buyer', label: 'Home', end: true },
   { to: '/buyer/categories', label: 'Categories' },
+  { to: '/buyer/messages', label: 'Messages' },
   { to: '/buyer/profile', label: 'Profile' },
 ]
 
 const SELLER_NAV = [
   { to: '/seller', label: 'Listings', end: true },
+  { to: '/seller/messages', label: 'Messages' },
   { to: '/seller/profile', label: 'Profile' },
 ]
 

@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import AppShell from '../../components/AppShell'
 import CategoryImage from '../../components/CategoryImage'
 import { getCategories } from '../../lib/productsApi'
+import { getCategoryTheme } from '../../lib/categoryTheme'
+
+function formatCount(count) {
+  if (count == null) return 'Browse listings'
+  if (count === 0) return 'No listings yet'
+  return `${count} ${count === 1 ? 'listing' : 'listings'}`
+}
 
 export default function CategoriesPage() {
   const navigate = useNavigate()
@@ -53,24 +60,36 @@ export default function CategoriesPage() {
         </div>
       ) : (
         <div className="categories-list">
-          {categories.map((category) => (
-            <button
-              key={category.name}
-              type="button"
-              className="category-list-card"
-              onClick={() => navigate(`/buyer?category=${encodeURIComponent(category.name)}`)}
-            >
-              <div className="category-list-card-icon">
-                <CategoryImage
-                  name={category.name}
-                  imageUrl={category.imageUrl}
-                  size={72}
-                  className="category-list-card-image"
-                />
-              </div>
-              <span className="category-list-card-name">{category.name}</span>
-            </button>
-          ))}
+          {categories.map((category) => {
+            const theme = getCategoryTheme(category.name)
+            return (
+              <button
+                key={category.name}
+                type="button"
+                className="category-list-card"
+                style={{ '--cat-color': theme.iconColor, '--cat-bg': theme.iconBg }}
+                onClick={() => navigate(`/buyer?category=${encodeURIComponent(category.name)}`)}
+              >
+                <div className="category-list-card-icon">
+                  <CategoryImage
+                    name={category.name}
+                    imageUrl={category.imageUrl}
+                    size={72}
+                    className="category-list-card-image"
+                  />
+                </div>
+                <div className="category-list-card-body">
+                  <span className="category-list-card-name">{category.name}</span>
+                  <span className="category-list-card-count">{formatCount(category.count)}</span>
+                </div>
+                <span className="category-list-card-arrow" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </span>
+              </button>
+            )
+          })}
         </div>
       )}
     </AppShell>

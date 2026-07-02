@@ -7,6 +7,8 @@ import AuthPage from './pages/AuthPage'
 import LandingPage from './pages/LandingPage'
 import ProfilePage from './pages/ProfilePage'
 import RoleSelectPage from './pages/RoleSelectPage'
+import ChatThreadPage from './pages/ChatThreadPage'
+import MessagesPage from './pages/MessagesPage'
 import BuyerHomePage from './pages/buyer/BuyerHomePage'
 import BuyerProductDetailPage from './pages/buyer/BuyerProductDetailPage'
 import CategoriesPage from './pages/buyer/CategoriesPage'
@@ -74,6 +76,26 @@ export default function App() {
             }
           />
           <Route
+            path="/buyer/messages"
+            element={
+              <ProtectedRoute>
+                <RoleRoute role="buyer">
+                  <MessagesPage role="buyer" />
+                </RoleRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/buyer/messages/:id"
+            element={
+              <ProtectedRoute>
+                <RoleRoute role="buyer">
+                  <ChatThreadPage role="buyer" />
+                </RoleRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/buyer/profile"
             element={
               <ProtectedRoute>
@@ -110,6 +132,26 @@ export default function App() {
               <ProtectedRoute>
                 <RoleRoute role="seller">
                   <SellerProductDetailPage />
+                </RoleRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/seller/messages"
+            element={
+              <ProtectedRoute>
+                <RoleRoute role="seller">
+                  <MessagesPage role="seller" />
+                </RoleRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/seller/messages/:id"
+            element={
+              <ProtectedRoute>
+                <RoleRoute role="seller">
+                  <ChatThreadPage role="seller" />
                 </RoleRoute>
               </ProtectedRoute>
             }

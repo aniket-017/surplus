@@ -3,11 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   FlatList,
   Keyboard,
-  type KeyboardEvent,
   Platform,
+  StatusBar,
   StyleSheet,
   Text,
   View,
@@ -34,36 +33,6 @@ import type { ChatAttachment } from '@/src/lib/chatAttachments';
 type ThreadProduct = { id: string; title: string; images: string[] } | null;
 type ThreadOtherParty = { id: string; name: string; avatarUrl: string | null } | null;
 
-const COMPOSER_HEIGHT = 68;
-const ANDROID_KEYBOARD_BUFFER = 20;
-
-function resolveKeyboardOffset(event: KeyboardEvent) {
-  const windowHeight = Dimensions.get('window').height;
-  const fromScreenY = Math.max(0, windowHeight - event.endCoordinates.screenY);
-  const measured = Math.max(event.endCoordinates.height, fromScreenY);
-
-  if (Platform.OS === 'android') {
-    return measured + ANDROID_KEYBOARD_BUFFER;
-  }
-
-  return measured;
-}
-
-function readKeyboardOffset() {
-  const metrics = Keyboard.metrics();
-  if (!metrics) return 0;
-
-  const windowHeight = Dimensions.get('window').height;
-  const fromScreenY = Math.max(0, windowHeight - metrics.screenY);
-  const measured = Math.max(metrics.height, fromScreenY);
-
-  if (Platform.OS === 'android') {
-    return measured + ANDROID_KEYBOARD_BUFFER;
-  }
-
-  return measured;
-}
-
 export function ChatThreadScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { token, user } = useAuth();
@@ -79,24 +48,24 @@ export function ChatThreadScreen() {
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [composerHeight, setComposerHeight] = useState(COMPOSER_HEIGHT);
+  const keyboardVisible = keyboardHeight > 0;
+
+  // In Expo Go's edge-to-edge mode the safe-area top inset can report 0, letting
+  // the header slide under the status bar. Fall back to the native status bar
+  // height on Android so the header always clears the clock/battery icons.
+  const topInset =
+    Platform.OS === 'android'
+      ? Math.max(insets.top, StatusBar.currentHeight ?? 0)
+      : insets.top;
 
   const listItems = useMemo(
     () => buildMessageListItems(messages, user?.id),
     [messages, user?.id],
   );
 
-  const listBottomPadding =
-    composerHeight +
-    spacing.sm +
-    (keyboardHeight > 0 ? keyboardHeight : Math.max(insets.bottom, spacing.xs));
-
-  const applyKeyboardOffset = useCallback((event?: KeyboardEvent) => {
-    const nextHeight = event ? resolveKeyboardOffset(event) : readKeyboardOffset();
-    if (nextHeight > 0) {
-      setKeyboardHeight(nextHeight);
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
-    }
+  const scrollToEnd = useCallback((animated = true) => {
+    // Deferred so it runs after layout/keyboard settle, avoiding a visible jump.
+    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated }));
   }, []);
 
   useEffect(() => {
@@ -104,21 +73,19 @@ export function ChatThreadScreen() {
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSub = Keyboard.addListener(showEvent, (event) => {
-      applyKeyboardOffset(event);
-      if (Platform.OS === 'android') {
-        setTimeout(() => applyKeyboardOffset(), 100);
-        setTimeout(() => applyKeyboardOffset(), 250);
-      }
+      // On Android (edge-to-edge) the reported keyboard height excludes the
+      // navigation bar, so add the bottom inset so the composer clears it fully.
+      const extra = Platform.OS === 'android' ? insets.bottom : 0;
+      setKeyboardHeight(event.endCoordinates.height + extra);
+      scrollToEnd(true);
     });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
 
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, [applyKeyboardOffset]);
+  }, [scrollToEnd, insets.bottom]);
 
   const loadMessages = useCallback(async () => {
     if (!token || !id) {
@@ -150,9 +117,9 @@ export function ChatThreadScreen() {
 
   useEffect(() => {
     if (messages.length > 0) {
-      listRef.current?.scrollToEnd({ animated: true });
+      scrollToEnd(true);
     }
-  }, [messages.length]);
+  }, [messages.length, scrollToEnd]);
 
   async function handleSend() {
     if (!token || !id || !draft.trim()) return;
@@ -178,7 +145,7 @@ export function ChatThreadScreen() {
       setMessages((prev) => [...prev, result.message]);
       setDraft('');
       setError('');
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+      scrollToEnd(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to send attachment';
       setError(message);
@@ -200,7 +167,7 @@ export function ChatThreadScreen() {
 
   if (loading && messages.length === 0) {
     return (
-      <View style={[styles.safeArea, { paddingTop: insets.top }]}>
+      <View style={[styles.safeArea, { paddingTop: topInset }]}>
         <View style={styles.centered}>
           <ActivityIndicator color={colors.accent} size="large" />
         </View>
@@ -209,7 +176,7 @@ export function ChatThreadScreen() {
   }
 
   return (
-    <View style={[styles.safeArea, { paddingTop: insets.top }]}>
+    <View style={[styles.safeArea, { paddingTop: topInset }]}>
       <ChatHeader
         role={user?.role ?? undefined}
         otherParty={otherParty}
@@ -231,10 +198,13 @@ export function ChatThreadScreen() {
             style={styles.messageListFlex}
             data={listItems}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={[styles.messageList, { paddingBottom: listBottomPadding }]}
+            contentContainerStyle={[
+              styles.messageList,
+              { paddingBottom: spacing.sm },
+            ]}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
-            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            onContentSizeChange={() => scrollToEnd(false)}
             renderItem={({ item }) => {
               if (item.type === 'date') {
                 return <DateSeparator label={item.label} />;
@@ -251,28 +221,26 @@ export function ChatThreadScreen() {
           />
         </ChatWallpaper>
 
-        <View
-          style={[styles.composerHost, { bottom: keyboardHeight }]}
-          onLayout={(event) => {
-            const nextHeight = event.nativeEvent.layout.height;
-            if (nextHeight > 0 && Math.abs(nextHeight - composerHeight) > 1) {
-              setComposerHeight(nextHeight);
-            }
-          }}
-        >
+        {/*
+          Composer lives in normal flex flow. A spacer below it grows to the
+          keyboard height when the keyboard is open (lifting the composer above
+          it) and collapses to exactly 0 when closed — so no residual gap remains
+          after the keyboard is dismissed.
+        */}
+        <View style={styles.composerHost}>
           <MessageComposer
             draft={draft}
             sending={sending}
             uploading={uploading}
-            keyboardVisible={keyboardHeight > 0}
+            keyboardVisible={keyboardVisible}
             onChangeText={setDraft}
             onSend={handleSend}
             onAttachFile={handleAttachFile}
-            onFocus={() => {
-              setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-            }}
+            onFocus={() => scrollToEnd(true)}
           />
         </View>
+
+        <View style={{ height: keyboardHeight }} />
       </View>
     </View>
   );
@@ -312,8 +280,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   composerHost: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
+    backgroundColor: chatTheme.headerBg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.08)',
   },
 });

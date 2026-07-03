@@ -55,6 +55,29 @@ export default function ChatThreadPage({ role }) {
     }
   }, [listItems.length])
 
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return undefined
+
+    const updateKeyboardInset = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      document.documentElement.style.setProperty('--keyboard-inset', `${inset}px`)
+      if (inset > 0 && listRef.current) {
+        listRef.current.scrollTop = listRef.current.scrollHeight
+      }
+    }
+
+    vv.addEventListener('resize', updateKeyboardInset)
+    vv.addEventListener('scroll', updateKeyboardInset)
+    updateKeyboardInset()
+
+    return () => {
+      vv.removeEventListener('resize', updateKeyboardInset)
+      vv.removeEventListener('scroll', updateKeyboardInset)
+      document.documentElement.style.removeProperty('--keyboard-inset')
+    }
+  }, [])
+
   async function handleSend(event) {
     event?.preventDefault()
     const body = draft.trim()

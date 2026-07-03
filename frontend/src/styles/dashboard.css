@@ -1883,7 +1883,7 @@
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
-  height: calc(100svh - 210px);
+  height: calc(100svh - 210px - var(--keyboard-inset, 0px));
   min-height: 420px;
 }
 
@@ -2166,6 +2166,11 @@
 
 @media (max-width: 768px) {
   .chat-panel {
-    height: calc(100svh - 200px);
+    height: calc(100svh - 200px - var(--keyboard-inset, 0px));
+    min-height: 0;
+  }
+
+  .chat-composer {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
 }

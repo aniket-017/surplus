@@ -38,6 +38,7 @@ export function ChatThreadScreen() {
   const { token, user } = useAuth();
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<MessageListItem>>(null);
+  const pendingInitialScrollRef = useRef(true);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [product, setProduct] = useState<ThreadProduct>(null);
@@ -64,9 +65,35 @@ export function ChatThreadScreen() {
   );
 
   const scrollToEnd = useCallback((animated = true) => {
-    // Deferred so it runs after layout/keyboard settle, avoiding a visible jump.
-    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated }));
+    const list = listRef.current;
+    if (!list) return;
+
+    // Multiple passes so we still land on the last message after layout/images settle.
+    requestAnimationFrame(() => list.scrollToEnd({ animated }));
+    setTimeout(() => list.scrollToEnd({ animated }), 50);
+    setTimeout(() => list.scrollToEnd({ animated }), 200);
   }, []);
+
+  const scrollToEndIfPending = useCallback(
+    (animated = false) => {
+      if (!pendingInitialScrollRef.current) return;
+      scrollToEnd(animated);
+    },
+    [scrollToEnd],
+  );
+
+  const finishInitialScroll = useCallback(() => {
+    pendingInitialScrollRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    pendingInitialScrollRef.current = true;
+    setMessages([]);
+    setProduct(null);
+    setOtherParty(null);
+    setLoading(true);
+    setError('');
+  }, [id]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -108,18 +135,26 @@ export function ChatThreadScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      pendingInitialScrollRef.current = true;
       loadMessages();
       const interval = setInterval(loadMessages, 10000);
-      return () => clearInterval(interval);
-    }, [loadMessages]),
+      const focusScroll = setTimeout(() => scrollToEnd(false), 100);
+
+      return () => {
+        clearInterval(interval);
+        clearTimeout(focusScroll);
+      };
+    }, [loadMessages, scrollToEnd]),
   );
 
   useEffect(() => {
-    if (messages.length > 0) {
-      scrollToEnd(true);
-    }
-  }, [messages.length, scrollToEnd]);
+    if (loading || listItems.length === 0) return;
+
+    scrollToEnd(false);
+    const doneTimer = setTimeout(finishInitialScroll, 600);
+
+    return () => clearTimeout(doneTimer);
+  }, [loading, listItems.length, id, scrollToEnd, finishInitialScroll]);
 
   async function handleSend() {
     if (!token || !id || !draft.trim()) return;
@@ -129,6 +164,7 @@ export function ChatThreadScreen() {
       const result = await sendMessage(token, id, draft.trim());
       setMessages((prev) => [...prev, result.message]);
       setDraft('');
+      scrollToEnd(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message');
     } finally {
@@ -204,7 +240,8 @@ export function ChatThreadScreen() {
             ]}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
-            onContentSizeChange={() => scrollToEnd(false)}
+            onLayout={() => scrollToEndIfPending(false)}
+            onContentSizeChange={() => scrollToEndIfPending(false)}
             renderItem={({ item }) => {
               if (item.type === 'date') {
                 return <DateSeparator label={item.label} />;

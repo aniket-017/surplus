@@ -4,9 +4,11 @@ import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
+  Text,
   TextInput,
   View,
   type TextInput as TextInputType,
@@ -21,28 +23,38 @@ import { buildAttachmentFromUri, type ChatAttachment } from '@/src/lib/chatAttac
 
 type MessageComposerProps = {
   draft: string;
+  pendingAttachment: ChatAttachment | null;
   sending: boolean;
   uploading?: boolean;
   keyboardVisible?: boolean;
   onChangeText: (text: string) => void;
   onSend: () => void;
-  onAttachFile: (attachment: ChatAttachment) => void;
+  onSelectAttachment: (attachment: ChatAttachment) => void;
+  onClearAttachment: () => void;
   onFocus?: () => void;
 };
 
+function isImageAttachment(attachment: ChatAttachment) {
+  return attachment.type.startsWith('image/');
+}
+
 export function MessageComposer({
   draft,
+  pendingAttachment,
   sending,
   uploading = false,
   keyboardVisible = false,
   onChangeText,
   onSend,
-  onAttachFile,
+  onSelectAttachment,
+  onClearAttachment,
   onFocus,
 }: MessageComposerProps) {
   const inputRef = useRef<TextInputType>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const hasText = draft.trim().length > 0;
+  const hasAttachment = pendingAttachment !== null;
+  const canSend = hasText || hasAttachment;
   const isMultiline = draft.includes('\n');
   const busy = sending || uploading;
 
@@ -72,7 +84,7 @@ export function MessageComposer({
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
-    onAttachFile(
+    onSelectAttachment(
       buildAttachmentFromUri(
         asset.uri,
         asset.fileName || `photo-${Date.now()}.jpg`,
@@ -96,7 +108,7 @@ export function MessageComposer({
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
-    onAttachFile(
+    onSelectAttachment(
       buildAttachmentFromUri(
         asset.uri,
         asset.fileName || `photo-${Date.now()}.jpg`,
@@ -123,7 +135,7 @@ export function MessageComposer({
     if (result.canceled || !result.assets?.[0]) return;
 
     const asset = result.assets[0];
-    onAttachFile(
+    onSelectAttachment(
       buildAttachmentFromUri(asset.uri, asset.name || `document-${Date.now()}`, asset.mimeType),
     );
   }
@@ -143,6 +155,30 @@ export function MessageComposer({
     <SafeAreaView edges={keyboardVisible ? [] : ['bottom']} style={styles.safeArea}>
       <View style={styles.host}>
         <EmojiPickerPanel visible={emojiOpen} onSelect={handleEmojiSelect} />
+
+        {pendingAttachment ? (
+          <View style={styles.attachmentPreview}>
+            {isImageAttachment(pendingAttachment) ? (
+              <Image source={{ uri: pendingAttachment.uri }} style={styles.attachmentThumb} />
+            ) : (
+              <View style={styles.attachmentDocIcon}>
+                <Ionicons name="document-text-outline" size={22} color={colors.accent} />
+              </View>
+            )}
+            <Text style={styles.attachmentName} numberOfLines={1}>
+              {pendingAttachment.name}
+            </Text>
+            <Pressable
+              hitSlop={8}
+              style={styles.attachmentRemove}
+              onPress={onClearAttachment}
+              disabled={busy}
+              accessibilityLabel="Remove attachment"
+            >
+              <Ionicons name="close-circle" size={22} color={colors.muted} />
+            </Pressable>
+          </View>
+        ) : null}
 
         <View style={[styles.row, isMultiline && styles.rowMultiline]}>
           <View style={[styles.inputWrap, isMultiline && styles.inputWrapMultiline]}>
@@ -187,13 +223,13 @@ export function MessageComposer({
             </Pressable>
           </View>
 
-          {hasText ? (
+          {canSend ? (
             <Pressable
               onPress={onSend}
               disabled={busy}
               style={[styles.actionButton, isMultiline && styles.actionButtonMultiline]}
             >
-              {sending ? (
+              {busy ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <Ionicons name="send" size={18} color={colors.white} style={styles.sendIcon} />
@@ -212,6 +248,41 @@ const styles = StyleSheet.create({
   },
   host: {
     position: 'relative',
+  },
+  attachmentPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  attachmentThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  attachmentDocIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  attachmentName: {
+    flex: 1,
+    color: colors.textStrong,
+    fontSize: 14,
+  },
+  attachmentRemove: {
+    padding: 2,
   },
   row: {
     flexDirection: 'row',

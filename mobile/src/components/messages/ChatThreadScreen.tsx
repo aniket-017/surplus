@@ -47,6 +47,7 @@ export function ChatThreadScreen() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [draft, setDraft] = useState('');
+  const [pendingAttachment, setPendingAttachment] = useState<ChatAttachment | null>(null);
   const [error, setError] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardVisible = keyboardHeight > 0;
@@ -93,6 +94,8 @@ export function ChatThreadScreen() {
     setOtherParty(null);
     setLoading(true);
     setError('');
+    setDraft('');
+    setPendingAttachment(null);
   }, [id]);
 
   useEffect(() => {
@@ -157,7 +160,33 @@ export function ChatThreadScreen() {
   }, [loading, listItems.length, id, scrollToEnd, finishInitialScroll]);
 
   async function handleSend() {
-    if (!token || !id || !draft.trim()) return;
+    if (!token || !id) return;
+
+    if (pendingAttachment) {
+      setUploading(true);
+      try {
+        const result = await sendMessageWithAttachment(
+          token,
+          id,
+          pendingAttachment,
+          draft.trim() || undefined,
+        );
+        setMessages((prev) => [...prev, result.message]);
+        setDraft('');
+        setPendingAttachment(null);
+        setError('');
+        scrollToEnd(true);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to send attachment';
+        setError(message);
+        Alert.alert('Upload failed', message);
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+
+    if (!draft.trim()) return;
 
     setSending(true);
     try {
@@ -169,25 +198,6 @@ export function ChatThreadScreen() {
       setError(err instanceof Error ? err.message : 'Failed to send message');
     } finally {
       setSending(false);
-    }
-  }
-
-  async function handleAttachFile(attachment: ChatAttachment) {
-    if (!token || !id) return;
-
-    setUploading(true);
-    try {
-      const result = await sendMessageWithAttachment(token, id, attachment, draft.trim() || undefined);
-      setMessages((prev) => [...prev, result.message]);
-      setDraft('');
-      setError('');
-      scrollToEnd(true);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to send attachment';
-      setError(message);
-      Alert.alert('Upload failed', message);
-    } finally {
-      setUploading(false);
     }
   }
 
@@ -267,12 +277,14 @@ export function ChatThreadScreen() {
         <View style={styles.composerHost}>
           <MessageComposer
             draft={draft}
+            pendingAttachment={pendingAttachment}
             sending={sending}
             uploading={uploading}
             keyboardVisible={keyboardVisible}
             onChangeText={setDraft}
             onSend={handleSend}
-            onAttachFile={handleAttachFile}
+            onSelectAttachment={setPendingAttachment}
+            onClearAttachment={() => setPendingAttachment(null)}
             onFocus={() => scrollToEnd(true)}
           />
         </View>

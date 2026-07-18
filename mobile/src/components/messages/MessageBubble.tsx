@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { chatTheme } from '@/src/constants/chatTheme';
 import { colors } from '@/src/constants/theme';
-import type { ChatMessage } from '@/src/lib/conversationsApi';
+import type { ChatMessage, MessageReceiptStatus } from '@/src/lib/conversationsApi';
 import { formatMessageTime } from '@/src/lib/messageFormat';
 import { getImageUrl } from '@/src/lib/productsApi';
 
@@ -14,13 +14,30 @@ type MessageBubbleProps = {
   isMine: boolean;
   isGrouped?: boolean;
   onImagePress?: (messageId: string) => void;
+  onLongPress?: (message: ChatMessage) => void;
 };
+
+function ReceiptCheck({ status }: { status?: MessageReceiptStatus | null }) {
+  const resolved = status ?? 'sent';
+  const isRead = resolved === 'read';
+  const isDouble = resolved === 'delivered' || resolved === 'read';
+
+  return (
+    <Ionicons
+      name={isDouble ? 'checkmark-done' : 'checkmark'}
+      size={14}
+      color={isRead ? chatTheme.checkmarkRead : chatTheme.checkmark}
+      style={styles.check}
+    />
+  );
+}
 
 export function MessageBubble({
   message,
   isMine,
   isGrouped,
   onImagePress,
+  onLongPress,
 }: MessageBubbleProps) {
   const body = message.body?.trim();
   const imageUri = message.imageUrl ? getImageUrl(message.imageUrl) : null;
@@ -42,7 +59,9 @@ export function MessageBubble({
         isGrouped && styles.wrapGrouped,
       ]}
     >
-      <View
+      <Pressable
+        onLongPress={isMine && onLongPress ? () => onLongPress(message) : undefined}
+        delayLongPress={350}
         style={[
           styles.bubble,
           isMine ? styles.bubbleMine : styles.bubbleOther,
@@ -52,6 +71,8 @@ export function MessageBubble({
         {hasImage ? (
           <Pressable
             onPress={() => onImagePress?.(message.id)}
+            onLongPress={isMine && onLongPress ? () => onLongPress(message) : undefined}
+            delayLongPress={350}
             accessibilityRole="imagebutton"
             accessibilityLabel="Open image"
           >
@@ -60,7 +81,12 @@ export function MessageBubble({
         ) : null}
 
         {hasFile ? (
-          <Pressable style={styles.fileRow} onPress={() => void openDocument()}>
+          <Pressable
+            style={styles.fileRow}
+            onPress={() => void openDocument()}
+            onLongPress={isMine && onLongPress ? () => onLongPress(message) : undefined}
+            delayLongPress={350}
+          >
             <View style={styles.fileIconWrap}>
               <Ionicons name="document-text-outline" size={22} color={colors.accent} />
             </View>
@@ -76,11 +102,9 @@ export function MessageBubble({
 
         <View style={styles.meta}>
           <Text style={styles.time}>{formatMessageTime(message.createdAt)}</Text>
-          {isMine ? (
-            <Ionicons name="checkmark-done" size={14} color={chatTheme.checkmark} style={styles.check} />
-          ) : null}
+          {isMine ? <ReceiptCheck status={message.status} /> : null}
         </View>
-      </View>
+      </Pressable>
     </View>
   );
 }

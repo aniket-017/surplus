@@ -19,6 +19,7 @@ import { ChatWallpaper } from '@/src/components/messages/ChatWallpaper';
 import { DateSeparator } from '@/src/components/messages/DateSeparator';
 import { MessageBubble } from '@/src/components/messages/MessageBubble';
 import { MessageComposer } from '@/src/components/messages/MessageComposer';
+import { MessageInfoModal } from '@/src/components/messages/MessageInfoModal';
 import { useAuth } from '@/src/context/AuthContext';
 import { useUnreadMessages } from '@/src/context/UnreadMessagesContext';
 import { chatTheme } from '@/src/constants/chatTheme';
@@ -56,6 +57,7 @@ export function ChatThreadScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
+  const [infoMessage, setInfoMessage] = useState<ChatMessage | null>(null);
   const keyboardVisible = keyboardHeight > 0;
 
   // In Expo Go's edge-to-edge mode the safe-area top inset can report 0, letting
@@ -185,6 +187,19 @@ export function ChatThreadScreen() {
     return () => clearTimeout(doneTimer);
   }, [loading, listItems.length, id, scrollToEnd, finishInitialScroll]);
 
+  useEffect(() => {
+    if (!infoMessage) return;
+    const fresh = messages.find((message) => message.id === infoMessage.id);
+    if (
+      fresh &&
+      (fresh.status !== infoMessage.status ||
+        fresh.deliveredAt !== infoMessage.deliveredAt ||
+        fresh.readAt !== infoMessage.readAt)
+    ) {
+      setInfoMessage(fresh);
+    }
+  }, [messages, infoMessage]);
+
   async function handleSend() {
     if (!token || !id) return;
 
@@ -289,6 +304,7 @@ export function ChatThreadScreen() {
                   isMine={item.isMine}
                   isGrouped={item.isGrouped}
                   onImagePress={openImageViewer}
+                  onLongPress={setInfoMessage}
                 />
               );
             }}
@@ -324,6 +340,12 @@ export function ChatThreadScreen() {
         initialIndex={viewerInitialIndex}
         visible={viewerVisible}
         onClose={() => setViewerVisible(false)}
+      />
+
+      <MessageInfoModal
+        message={infoMessage}
+        visible={Boolean(infoMessage)}
+        onClose={() => setInfoMessage(null)}
       />
     </View>
   );

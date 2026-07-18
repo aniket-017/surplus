@@ -134,11 +134,13 @@ model Conversation {
   buyer           User      @relation("BuyerConversations", fields: [buyerId], references: [id])
   seller          User      @relation("SellerConversations", fields: [sellerId], references: [id])
   product         Product   @relation(fields: [productId], references: [id])
-  messages        Message[]
-  buyerLastReadAt DateTime? @map("buyer_last_read_at")
-  sellerLastReadAt DateTime? @map("seller_last_read_at")
-  lastMessageAt   DateTime  @default(now()) @map("last_message_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
+  messages             Message[]
+  buyerLastReadAt      DateTime? @map("buyer_last_read_at")
+  sellerLastReadAt     DateTime? @map("seller_last_read_at")
+  buyerLastDeliveredAt DateTime? @map("buyer_last_delivered_at")
+  sellerLastDeliveredAt DateTime? @map("seller_last_delivered_at")
+  lastMessageAt        DateTime  @default(now()) @map("last_message_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
 
   @@unique([buyerId, productId])
   @@index([buyerId])

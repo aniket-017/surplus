@@ -4,6 +4,7 @@ import {
   countTotalUnreadForUser,
   formatMessage,
   formatConversationSummary,
+  markConversationDelivered,
   markConversationRead,
 } from "../lib/conversations.js";
 import { optimizeProductImage } from "../lib/imageOptimize.js";
@@ -226,7 +227,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     res.status(201).json({
       conversationId: conversation.id,
-      message: await formatMessage(message),
+      message: await formatMessage(message, conversation, req.user.id),
       isNew: !messageBody && conversation.createdAt.getTime() === message.createdAt.getTime(),
     });
   } catch (error) {
@@ -287,6 +288,15 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
     const skip = Math.max(Number(req.query.skip) || 0, 0);
 
+    // Opening/fetching the thread counts as delivered for the other party's ticks.
+    // Don't fail the whole fetch if delivery watermark update errors.
+    let receiptConversation = conversation;
+    try {
+      receiptConversation = await markConversationDelivered(conversation, req.user.id);
+    } catch (deliveryError) {
+      console.error("Mark conversation delivered failed:", deliveryError);
+    }
+
     const messages = await prisma.message.findMany({
       where: { conversationId: conversation.id },
       orderBy: { createdAt: "asc" },
@@ -317,7 +327,9 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
             }
           : null,
       },
-      messages: await Promise.all(messages.map(formatMessage)),
+      messages: await Promise.all(
+        messages.map((message) => formatMessage(message, receiptConversation, req.user.id)),
+      ),
     });
   } catch (error) {
     console.error("List messages failed:", error);
@@ -451,7 +463,7 @@ router.post("/:id/messages", requireAuth, handleMessageUpload, async (req, res) 
     console.log("✅ Conversation updated");
 
     console.log("🔍 Step 6: Formatting message response...");
-    const formattedMessage = await formatMessage(message);
+    const formattedMessage = await formatMessage(message, updatedConversation, req.user.id);
 
     const sender = await prisma.user.findUnique({
       where: { id: req.user.id },

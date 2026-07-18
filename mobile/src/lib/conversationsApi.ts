@@ -31,6 +31,8 @@ export type ConversationSummary = {
   createdAt: string;
 };
 
+export type MessageReceiptStatus = 'sent' | 'delivered' | 'read';
+
 export type ChatMessage = {
   id: string;
   conversationId: string;
@@ -40,6 +42,10 @@ export type ChatMessage = {
   fileUrl: string | null;
   fileName: string | null;
   createdAt: string;
+  /** Present on the sender's own messages (WhatsApp-style ticks). */
+  status?: MessageReceiptStatus | null;
+  deliveredAt?: string | null;
+  readAt?: string | null;
 };
 
 async function parseResponse<T>(res: Response): Promise<T> {

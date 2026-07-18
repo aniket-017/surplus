@@ -8,6 +8,7 @@ export const chatTheme = {
   datePill: '#FFFFFF',
   datePillBorder: 'rgba(0, 0, 0, 0.12)',
   checkmark: 'rgba(0, 0, 0, 0.35)',
+  checkmarkRead: '#53BDEB',
   headerBorder: 'rgba(0, 0, 0, 0.08)',
   rowDivider: 'rgba(0, 0, 0, 0.08)',
 } as const;

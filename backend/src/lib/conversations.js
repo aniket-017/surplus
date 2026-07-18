@@ -1,7 +1,57 @@
 import { prisma } from "./prisma.js";
 import { getReadableImageUrl } from "./s3.js";
 
-export async function formatMessage(message) {
+function getOtherPartyReceiptWatermarks(conversation, viewerId) {
+  if (conversation.buyerId === viewerId) {
+    return {
+      deliveredAt: conversation.sellerLastDeliveredAt ?? null,
+      readAt: conversation.sellerLastReadAt ?? null,
+    };
+  }
+  if (conversation.sellerId === viewerId) {
+    return {
+      deliveredAt: conversation.buyerLastDeliveredAt ?? null,
+      readAt: conversation.buyerLastReadAt ?? null,
+    };
+  }
+  return { deliveredAt: null, readAt: null };
+}
+
+/**
+ * WhatsApp-style receipt for the viewer's own messages:
+ * sent → delivered (other opened/fetched chat) → read (other marked read).
+ */
+export function getMessageReceipt(message, conversation, viewerId) {
+  if (!viewerId || message.senderId !== viewerId) {
+    return { status: null, deliveredAt: null, readAt: null };
+  }
+
+  const { deliveredAt, readAt } = getOtherPartyReceiptWatermarks(conversation, viewerId);
+  const createdMs = message.createdAt.getTime();
+
+  const isRead = Boolean(readAt && readAt.getTime() >= createdMs);
+  const isDelivered = Boolean(deliveredAt && deliveredAt.getTime() >= createdMs);
+
+  if (isRead) {
+    return {
+      status: "read",
+      deliveredAt: (isDelivered ? deliveredAt : readAt).toISOString(),
+      readAt: readAt.toISOString(),
+    };
+  }
+
+  if (isDelivered) {
+    return {
+      status: "delivered",
+      deliveredAt: deliveredAt.toISOString(),
+      readAt: null,
+    };
+  }
+
+  return { status: "sent", deliveredAt: null, readAt: null };
+}
+
+export async function formatMessage(message, conversation = null, viewerId = null) {
   const imageUrl = message.imageUrl
     ? await getReadableImageUrl(message.imageUrl)
     : null;
@@ -9,6 +59,11 @@ export async function formatMessage(message) {
   const fileUrl = message.fileUrl
     ? await getReadableImageUrl(message.fileUrl)
     : null;
+
+  const receipt =
+    conversation && viewerId
+      ? getMessageReceipt(message, conversation, viewerId)
+      : { status: message.senderId === viewerId ? "sent" : null, deliveredAt: null, readAt: null };
 
   return {
     id: message.id,
@@ -19,6 +74,9 @@ export async function formatMessage(message) {
     fileUrl,
     fileName: message.fileName ?? null,
     createdAt: message.createdAt.toISOString(),
+    status: receipt.status,
+    deliveredAt: receipt.deliveredAt,
+    readAt: receipt.readAt,
   };
 }
 
@@ -120,12 +178,7 @@ export async function formatConversationSummary(conversation, currentUserId) {
   };
 }
 
-/**
- * Mark conversation as read up to the latest message currently stored.
- * Uses the max message createdAt so a concurrent newer message is not
- * accidentally marked as read.
- */
-export async function markConversationRead(conversation, userId) {
+async function advanceParticipantWatermark(conversation, userId, fields) {
   const latestMessage = await prisma.message.findFirst({
     where: { conversationId: conversation.id },
     orderBy: { createdAt: "desc" },
@@ -136,15 +189,41 @@ export async function markConversationRead(conversation, userId) {
     return conversation;
   }
 
-  const field = conversation.buyerId === userId ? "buyerLastReadAt" : "sellerLastReadAt";
-  const currentReadAt = conversation[field];
+  const data = {};
+  for (const field of fields) {
+    const current = conversation[field];
+    if (!current || current.getTime() < latestMessage.createdAt.getTime()) {
+      data[field] = latestMessage.createdAt;
+    }
+  }
 
-  if (currentReadAt && currentReadAt.getTime() >= latestMessage.createdAt.getTime()) {
+  if (Object.keys(data).length === 0) {
     return conversation;
   }
 
   return prisma.conversation.update({
     where: { id: conversation.id },
-    data: { [field]: latestMessage.createdAt },
+    data,
   });
+}
+
+/**
+ * Mark messages as delivered to this participant (opened/fetched the chat).
+ */
+export async function markConversationDelivered(conversation, userId) {
+  const field =
+    conversation.buyerId === userId ? "buyerLastDeliveredAt" : "sellerLastDeliveredAt";
+  return advanceParticipantWatermark(conversation, userId, [field]);
+}
+
+/**
+ * Mark conversation as read up to the latest message currently stored.
+ * Uses the max message createdAt so a concurrent newer message is not
+ * accidentally marked as read. Also advances delivery (open implies delivered).
+ */
+export async function markConversationRead(conversation, userId) {
+  const readField = conversation.buyerId === userId ? "buyerLastReadAt" : "sellerLastReadAt";
+  const deliveredField =
+    conversation.buyerId === userId ? "buyerLastDeliveredAt" : "sellerLastDeliveredAt";
+  return advanceParticipantWatermark(conversation, userId, [readField, deliveredField]);
 }

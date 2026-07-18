@@ -51,9 +51,10 @@ export function getImageUrl(path) {
   return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`
 }
 
-export async function browseProducts(params = {}) {
+export async function browseProducts(params = {}, options = {}) {
   const res = await fetch(`${API_BASE}/api/products/browse${buildBrowseQuery(params)}`, {
     credentials: 'include',
+    signal: options.signal,
   })
   return parseResponse(res)
 }

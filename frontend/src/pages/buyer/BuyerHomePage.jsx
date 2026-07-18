@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppShell from '../../components/AppShell'
 import BuyerLocationHeader from '../../components/buyer/BuyerLocationHeader'
@@ -25,7 +25,12 @@ export default function BuyerHomePage() {
   const [categories, setCategories] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
   const [error, setError] = useState('')
+
+  const abortRef = useRef(null)
+  const requestIdRef = useRef(0)
+  const hasLoadedOnceRef = useRef(false)
 
   const nearMeCity = location?.city || user?.address?.city || ''
 
@@ -42,44 +47,98 @@ export default function BuyerHomePage() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const loadFeed = useCallback(async () => {
-    setLoading(true)
-    setError('')
-
+  const loadCategories = useCallback(async () => {
     try {
-      const [categoriesData, productsData] = await Promise.all([
-        getCategories(),
-        browseProducts({
-          search: debouncedSearch || undefined,
-          category: activeCategory || undefined,
-          sort,
-          city: activeFilter === 'near' && nearMeCity ? nearMeCity : undefined,
-          limit: 40,
-        }),
-      ])
-
+      const categoriesData = await getCategories()
       setCategories(categoriesData.categories)
-      setProducts(productsData.products)
-
-      if (activeFilter === 'near' && !nearMeCity) {
-        setError('Choose a location above so "Near Me" can filter listings near you.')
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to load listings')
-      setProducts([])
-    } finally {
-      setLoading(false)
+    } catch {
+      // Categories are non-blocking; feed can still load.
     }
-  }, [debouncedSearch, activeCategory, sort, activeFilter, nearMeCity])
+  }, [])
+
+  const loadFeed = useCallback(
+    async ({ full = false } = {}) => {
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+      const requestId = ++requestIdRef.current
+
+      const useFullLoading = full || !hasLoadedOnceRef.current
+      if (useFullLoading) {
+        setLoading(true)
+      } else {
+        setUpdating(true)
+      }
+      setError('')
+
+      try {
+        const productsData = await browseProducts(
+          {
+            search: debouncedSearch || undefined,
+            category: activeCategory || undefined,
+            sort,
+            city: activeFilter === 'near' && nearMeCity ? nearMeCity : undefined,
+            limit: 40,
+          },
+          { signal: controller.signal },
+        )
+
+        if (requestId !== requestIdRef.current) return
+
+        setProducts(productsData.products)
+        hasLoadedOnceRef.current = true
+
+        if (activeFilter === 'near' && !nearMeCity) {
+          setError('Choose a location above so "Near Me" can filter listings near you.')
+        }
+      } catch (err) {
+        if (err?.name === 'AbortError') return
+        if (requestId !== requestIdRef.current) return
+        setError(err.message || 'Failed to load listings')
+        setProducts([])
+        hasLoadedOnceRef.current = true
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setLoading(false)
+          setUpdating(false)
+        }
+      }
+    },
+    [debouncedSearch, activeCategory, sort, activeFilter, nearMeCity],
+  )
+
+  useEffect(() => {
+    loadCategories()
+  }, [loadCategories])
 
   useEffect(() => {
     loadFeed()
+    return () => {
+      abortRef.current?.abort()
+    }
   }, [loadFeed])
 
   function handleFilterChange(filterId, nextSort) {
     setActiveFilter(filterId)
     setSort(nextSort)
   }
+
+  function handleSearchSubmit(value) {
+    const next = (value ?? search).trim()
+    setSearch(next)
+    setDebouncedSearch(next)
+  }
+
+  function handleSearchClear() {
+    setSearch('')
+    setDebouncedSearch('')
+  }
+
+  const searchStatus = debouncedSearch
+    ? products.length === 0 && !loading && !updating
+      ? `No results for “${debouncedSearch}”`
+      : `Showing ${products.length} result${products.length === 1 ? '' : 's'} for “${debouncedSearch}”`
+    : ''
 
   return (
     <AppShell role="buyer" title="Browse">
@@ -91,7 +150,12 @@ export default function BuyerHomePage() {
         <BuyerLocationHeader />
       </div>
 
-      <BuyerSearchBar value={search} onChange={setSearch} />
+      <BuyerSearchBar
+        value={search}
+        onChange={setSearch}
+        onSubmit={handleSearchSubmit}
+        onClear={handleSearchClear}
+      />
 
       <div className="buyer-banner">
         <h3>Turn surplus into value</h3>
@@ -107,7 +171,28 @@ export default function BuyerHomePage() {
       <ListingFilterChips activeFilter={activeFilter} onChangeFilter={handleFilterChange} />
 
       <div className="refresh-row">
-        <button type="button" className="btn btn-outline" onClick={loadFeed} disabled={loading}>
+        {searchStatus ? (
+          <p className="buyer-search-status">
+            {searchStatus}
+            {updating ? <span className="buyer-search-updating"> Updating…</span> : null}
+            <button type="button" className="buyer-search-status-clear" onClick={handleSearchClear}>
+              Clear
+            </button>
+          </p>
+        ) : updating ? (
+          <p className="buyer-search-status">Updating…</p>
+        ) : (
+          <span />
+        )}
+        <button
+          type="button"
+          className="btn btn-outline"
+          onClick={() => {
+            loadCategories()
+            loadFeed({ full: true })
+          }}
+          disabled={loading || updating}
+        >
           Refresh
         </button>
       </div>
@@ -121,10 +206,14 @@ export default function BuyerHomePage() {
       ) : products.length === 0 ? (
         <div className="empty-state">
           <h3>No listings found</h3>
-          <p>Try adjusting your search or filters to discover more surplus materials.</p>
+          <p>
+            {debouncedSearch
+              ? `No listings match “${debouncedSearch}”. Try a different term or clear your filters.`
+              : 'Try adjusting your search or filters to discover more surplus materials.'}
+          </p>
         </div>
       ) : (
-        <div className="product-grid">
+        <div className={`product-grid${updating ? ' is-updating' : ''}`}>
           {products.map((product) => (
             <ProductListingCard
               key={product.id}

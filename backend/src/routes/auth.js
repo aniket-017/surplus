@@ -17,6 +17,14 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 
+// Test account for Play Store app review: no email is sent, a fixed OTP is accepted.
+const TEST_ACCOUNT_EMAIL = "aniketkhillare17@gmail.com";
+const TEST_ACCOUNT_OTP = "123456";
+
+function isTestAccount(email) {
+  return email === TEST_ACCOUNT_EMAIL;
+}
+
 function parseRole(role) {
   const normalized = role?.trim().toLowerCase();
   if (normalized === "buyer") return "BUYER";
@@ -85,6 +93,10 @@ if (isOtpAuthEnabled()) {
         return res.status(403).json({ error: "This account has been banned" });
       }
 
+      if (isTestAccount(email)) {
+        return res.json({ message: "OTP sent to your email" });
+      }
+
       const otp = generateOtp();
 
       await prisma.otp.deleteMany({ where: { email } });
@@ -148,22 +160,28 @@ if (isOtpAuthEnabled()) {
         return res.status(403).json({ error: "This account has been banned" });
       }
 
-      const record = await prisma.otp.findFirst({
-        where: { email },
-        orderBy: { createdAt: "desc" },
-      });
+      if (isTestAccount(email)) {
+        if (code !== TEST_ACCOUNT_OTP) {
+          return res.status(400).json({ error: "Invalid OTP" });
+        }
+      } else {
+        const record = await prisma.otp.findFirst({
+          where: { email },
+          orderBy: { createdAt: "desc" },
+        });
 
-      if (!record) {
-        return res.status(400).json({ error: "OTP not found. Request a new one." });
-      }
+        if (!record) {
+          return res.status(400).json({ error: "OTP not found. Request a new one." });
+        }
 
-      if (record.expiresAt < new Date()) {
-        await prisma.otp.delete({ where: { id: record.id } });
-        return res.status(400).json({ error: "OTP expired. Request a new one." });
-      }
+        if (record.expiresAt < new Date()) {
+          await prisma.otp.delete({ where: { id: record.id } });
+          return res.status(400).json({ error: "OTP expired. Request a new one." });
+        }
 
-      if (record.code !== hashOtp(email, code)) {
-        return res.status(400).json({ error: "Invalid OTP" });
+        if (record.code !== hashOtp(email, code)) {
+          return res.status(400).json({ error: "Invalid OTP" });
+        }
       }
 
       const user =

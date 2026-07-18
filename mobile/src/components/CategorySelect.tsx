@@ -30,7 +30,11 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
               <CategoryImage name={value} style={styles.triggerImage} />
             </View>
           ) : null}
-          <Text style={[styles.triggerText, !value && styles.placeholder]}>
+          <Text
+            style={[styles.triggerText, !value && styles.placeholder]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {value || 'Select category'}
           </Text>
         </View>
@@ -78,27 +82,28 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
 
 const styles = StyleSheet.create({
   trigger: {
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 10,
+    borderWidth: 0,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 13,
-    backgroundColor: colors.bg,
+    paddingVertical: 12,
+    backgroundColor: colors.surfaceMuted,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
   triggerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     flex: 1,
+    minWidth: 0,
   },
   triggerIconWrap: {
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: 8,
-    backgroundColor: '#EEF2F6',
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -111,20 +116,22 @@ const styles = StyleSheet.create({
   triggerText: {
     color: colors.textStrong,
     fontSize: 15,
+    fontWeight: '600',
     flex: 1,
   },
   placeholder: {
     color: colors.muted,
+    fontWeight: '500',
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'rgba(15, 27, 45, 0.45)',
     justifyContent: 'flex-end',
   },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
     maxHeight: '75%',
@@ -144,8 +151,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(15, 27, 45, 0.08)',
   },
   optionSelected: {
     backgroundColor: 'rgba(92, 179, 53, 0.06)',
@@ -160,14 +167,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#EEF2F6',
+    backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
     padding: 5,
   },
   optionIconWrapSelected: {
-    backgroundColor: '#E8F5E3',
+    backgroundColor: 'rgba(92, 179, 53, 0.16)',
   },
   optionImage: {
     width: '100%',

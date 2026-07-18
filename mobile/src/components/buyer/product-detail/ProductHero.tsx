@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { cardShadow, colors, spacing } from '@/src/constants/theme';
+import { colors, spacing } from '@/src/constants/theme';
 import {
   formatListingPrice,
   formatListedDate,
@@ -18,7 +18,7 @@ export function ProductHero({ product }: ProductHeroProps) {
   const isNegotiable = product.priceType === 'negotiable';
 
   return (
-    <View style={styles.card}>
+    <View style={styles.block}>
       <View style={styles.chipRow}>
         <View style={styles.chip}>
           <Text style={styles.chipText}>{product.category}</Text>
@@ -56,12 +56,9 @@ export function ProductHero({ product }: ProductHeroProps) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing.lg,
+  block: {
     gap: spacing.sm,
-    ...cardShadow,
+    paddingTop: spacing.md,
   },
   chipRow: {
     flexDirection: 'row',

@@ -65,12 +65,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     minWidth: 72,
+    paddingVertical: 4,
+    marginLeft: -4,
   },
   backText: {
     color: colors.accent,
@@ -86,11 +89,11 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
     minWidth: 72,
     justifyContent: 'flex-end',
   },
   iconButton: {
-    padding: 4,
+    padding: 8,
   },
 });

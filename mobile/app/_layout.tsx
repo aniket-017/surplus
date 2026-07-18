@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -16,6 +17,8 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
+      {/* App screens are light-themed; keep system icons dark for contrast. */}
+      <StatusBar style="dark" />
       <AuthProvider>
         <UnreadMessagesProvider>
           <LocationProvider>

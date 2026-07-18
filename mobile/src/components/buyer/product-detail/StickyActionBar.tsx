@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { cardShadow, colors, spacing } from '@/src/constants/theme';
+import { colors, spacing } from '@/src/constants/theme';
 import { formatListingPrice } from '@/src/lib/productFormat';
 import type { ProductListing } from '@/src/types/product';
 
@@ -13,7 +13,6 @@ type StickyActionBarProps = {
   submitting: boolean;
   onSave: () => void;
   onInquiry: () => void;
-  onRequestBestPrice?: () => void;
 };
 
 export function StickyActionBar({
@@ -23,10 +22,8 @@ export function StickyActionBar({
   submitting,
   onSave,
   onInquiry,
-  onRequestBestPrice,
 }: StickyActionBarProps) {
   const insets = useSafeAreaInsets();
-  const isNegotiable = product.priceType === 'negotiable';
 
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
@@ -42,6 +39,8 @@ export function StickyActionBar({
           disabled={saving}
           style={[styles.iconButton, saved && styles.iconButtonActive]}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Remove from saved' : 'Save listing'}
         >
           {saving ? (
             <ActivityIndicator size="small" color={colors.accent} />
@@ -53,19 +52,12 @@ export function StickyActionBar({
             />
           )}
         </Pressable>
-        {isNegotiable && onRequestBestPrice ? (
-          <Pressable
-            onPress={onRequestBestPrice}
-            disabled={submitting}
-            style={styles.secondaryButton}
-          >
-            <Text style={styles.secondaryText}>Best Price</Text>
-          </Pressable>
-        ) : null}
         <Pressable
           onPress={onInquiry}
           disabled={submitting}
           style={[styles.primaryButton, submitting && styles.primaryDisabled]}
+          accessibilityRole="button"
+          accessibilityLabel="Send inquiry"
         >
           {submitting ? (
             <ActivityIndicator size="small" color={colors.white} />
@@ -84,15 +76,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
+    backgroundColor: colors.bg,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    ...cardShadow,
   },
   summary: {
     flex: 1,
@@ -124,24 +115,12 @@ const styles = StyleSheet.create({
   iconButtonActive: {
     backgroundColor: 'rgba(92, 179, 53, 0.12)',
   },
-  secondaryButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.accent,
-  },
-  secondaryText: {
-    color: colors.accent,
-    fontSize: 13,
-    fontWeight: '700',
-  },
   primaryButton: {
     backgroundColor: colors.accent,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 12,
-    minWidth: 110,
+    minWidth: 128,
     alignItems: 'center',
   },
   primaryDisabled: {

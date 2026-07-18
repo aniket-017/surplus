@@ -11,58 +11,82 @@ type ProductListingCardProps = {
   product: ProductListing;
   width: number;
   onPress: () => void;
+  saved?: boolean;
+  onToggleSave?: () => void;
 };
 
-export function ProductListingCard({ product, width, onPress }: ProductListingCardProps) {
+export function ProductListingCard({
+  product,
+  width,
+  onPress,
+  saved = false,
+  onToggleSave,
+}: ProductListingCardProps) {
   const sellerName = product.seller?.name || 'Seller';
 
   return (
-    <Pressable style={[styles.card, { width }]} onPress={onPress}>
-      <View style={styles.imageWrap}>
-        {product.images[0] ? (
-          <Image
-            source={{ uri: getImageUrl(product.images[0]) }}
-            style={styles.image}
-            contentFit="cover"
-          />
-        ) : (
-          <View style={[styles.image, styles.imageFallback]} />
-        )}
-        <Pressable style={styles.wishlistButton} hitSlop={8}>
-          <Ionicons name="heart-outline" size={16} color={colors.textStrong} />
-        </Pressable>
-        <View style={styles.locationBadge}>
-          <Text style={styles.locationBadgeText} numberOfLines={1}>
-            {formatLocationShort(product.location)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
-          {product.title}
-        </Text>
-        <Text style={styles.category} numberOfLines={1}>
-          {product.category}
-        </Text>
-        <Text style={styles.price}>{formatListingPrice(product)}</Text>
-
-        <View style={styles.sellerRow}>
-          <View style={styles.sellerAvatar}>
-            <Text style={styles.sellerInitial}>{sellerName[0]?.toUpperCase()}</Text>
+    <View style={[styles.card, { width }]}>
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={product.title}>
+        <View style={styles.imageWrap}>
+          {product.images[0] ? (
+            <Image
+              source={{ uri: getImageUrl(product.images[0]) }}
+              style={styles.image}
+              contentFit="cover"
+            />
+          ) : (
+            <View style={[styles.image, styles.imageFallback]} />
+          )}
+          <View style={styles.locationBadge}>
+            <Text style={styles.locationBadgeText} numberOfLines={1}>
+              {formatLocationShort(product.location)}
+            </Text>
           </View>
-          <Text style={styles.sellerName} numberOfLines={1}>
-            {sellerName}
-          </Text>
-          <Ionicons name="checkmark-circle" size={14} color={colors.accent} />
         </View>
-      </View>
-    </Pressable>
+
+        <View style={styles.content}>
+          <Text style={styles.title} numberOfLines={2}>
+            {product.title}
+          </Text>
+          <Text style={styles.category} numberOfLines={1}>
+            {product.category}
+          </Text>
+          <Text style={styles.price}>{formatListingPrice(product)}</Text>
+
+          <View style={styles.sellerRow}>
+            <View style={styles.sellerAvatar}>
+              <Text style={styles.sellerInitial}>{sellerName[0]?.toUpperCase()}</Text>
+            </View>
+            <Text style={styles.sellerName} numberOfLines={1}>
+              {sellerName}
+            </Text>
+            <Ionicons name="checkmark-circle" size={14} color={colors.accent} />
+          </View>
+        </View>
+      </Pressable>
+
+      {onToggleSave ? (
+        <Pressable
+          style={[styles.wishlistButton, saved && styles.wishlistButtonActive]}
+          hitSlop={10}
+          onPress={onToggleSave}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Remove from saved' : 'Save listing'}
+        >
+          <Ionicons
+            name={saved ? 'bookmark' : 'bookmark-outline'}
+            size={16}
+            color={saved ? colors.accent : colors.textStrong}
+          />
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    position: 'relative',
     backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
@@ -84,12 +108,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    zIndex: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 2,
+  },
+  wishlistButtonActive: {
+    backgroundColor: 'rgba(92, 179, 53, 0.18)',
   },
   locationBadge: {
     position: 'absolute',

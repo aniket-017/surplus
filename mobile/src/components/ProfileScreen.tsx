@@ -399,6 +399,19 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
           </View>
         </View>
 
+        {role === 'buyer' ? (
+          <>
+            <ActionRow
+              icon="bookmark-outline"
+              iconTone="accent"
+              title="Saved listings"
+              subtitle="View products you bookmarked"
+              onPress={() => router.push('/(buyer)/saved')}
+            />
+            <View style={styles.actionDivider} />
+          </>
+        ) : null}
+
         <ActionRow
           icon="swap-horizontal-outline"
           iconTone="accent"

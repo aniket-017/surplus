@@ -58,7 +58,6 @@ export default function BuyerProductDetailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [inquiryVisible, setInquiryVisible] = useState(false);
   const [inquiryMessage, setInquiryMessage] = useState('');
-  const [inquiryTitle, setInquiryTitle] = useState('Send Inquiry');
 
   const loadProduct = useCallback(async () => {
     if (!token || !id) {
@@ -114,9 +113,8 @@ export default function BuyerProductDetailScreen() {
     }
   }
 
-  function openInquiryModal(title = 'Send Inquiry', preset = '') {
-    setInquiryTitle(title);
-    setInquiryMessage(preset);
+  function openInquiryModal() {
+    setInquiryMessage('');
     setInquiryVisible(true);
   }
 
@@ -186,16 +184,18 @@ export default function BuyerProductDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ProductGallery images={product.images} title={product.title} />
-        <ProductHero product={product} />
-        <QuickStatsRow product={product} />
-        <SellerTrustCard seller={product.seller} />
-        <MarketRateCard product={product} range={marketRange} />
-        <InquiryUrgency inquiryCount={inquiryCount} />
-        <DescriptionOverview description={product.description} />
-        <SpecsGrid attributes={product.attributes} />
-        <WhyBuySection product={product} />
-        <LocationSection location={product.location} />
-        <SimilarListings products={similar} category={product.category} />
+        <View style={styles.content}>
+          <ProductHero product={product} />
+          <QuickStatsRow product={product} />
+          <SellerTrustCard seller={product.seller} />
+          <MarketRateCard product={product} range={marketRange} />
+          <InquiryUrgency inquiryCount={inquiryCount} />
+          <DescriptionOverview description={product.description} />
+          <SpecsGrid attributes={product.attributes} />
+          <WhyBuySection product={product} />
+          <LocationSection location={product.location} />
+          <SimilarListings products={similar} category={product.category} />
+        </View>
       </ScrollView>
 
       <StickyActionBar
@@ -205,17 +205,11 @@ export default function BuyerProductDetailScreen() {
         submitting={submitting}
         onSave={handleToggleSave}
         onInquiry={() => openInquiryModal()}
-        onRequestBestPrice={() =>
-          openInquiryModal(
-            'Request Best Price',
-            'Hi, I am interested in this listing. Could you share your best price?',
-          )
-        }
       />
 
       <InquiryModal
         visible={inquiryVisible}
-        title={inquiryTitle}
+        title="Send Inquiry"
         submitting={submitting}
         message={inquiryMessage}
         onChangeMessage={setInquiryMessage}
@@ -232,7 +226,7 @@ export default function BuyerProductDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.bgSubtle,
+    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
@@ -241,9 +235,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   container: {
-    padding: spacing.lg,
     paddingTop: 0,
-    gap: spacing.lg,
+  },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
   },
   error: {
     color: colors.error,

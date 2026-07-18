@@ -125,25 +125,32 @@ export default function AddProductScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAwareScrollView contentContainerStyle={styles.container}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={20} color={colors.accent} />
             <Text style={styles.backText}>Back</Text>
           </Pressable>
           <Logo size="sm" />
         </View>
 
-        <Text style={styles.title}>Add Product</Text>
-        <Text style={styles.subtitle}>
-          Upload up to 5 images, analyze with AI, review the details, then publish your listing.
-        </Text>
+        <View style={styles.hero}>
+          <Text style={styles.title}>Add Product</Text>
+          <Text style={styles.subtitle}>
+            Add photos, let AI draft the listing, then review and publish.
+          </Text>
+        </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Images</Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeading}>
+            <Text style={styles.sectionTitle}>Photos</Text>
+            <Text style={styles.sectionMeta}>{images.length}/{MAX_IMAGES}</Text>
+          </View>
+
           <View style={styles.imageGrid}>
             {images.map((image, index) => (
               <View key={`${image.uri}-${index}`} style={styles.imageWrap}>
                 <Image source={{ uri: image.uri }} style={styles.imagePreview} contentFit="cover" />
                 <Pressable style={styles.removeImageBtn} onPress={() => removeImage(index)}>
-                  <Text style={styles.removeImageText}>×</Text>
+                  <Ionicons name="close" size={14} color={colors.white} />
                 </Pressable>
               </View>
             ))}
@@ -154,42 +161,45 @@ export default function AddProductScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Add product photos"
               >
-                <View style={styles.addImageIcon}>
-                  <Ionicons name="camera-outline" size={22} color={colors.accent} />
-                </View>
+                <Ionicons name="camera-outline" size={24} color={colors.accent} />
                 <Text style={styles.addImageText}>Add</Text>
-                <Text style={styles.addImageHint}>Camera or gallery</Text>
               </Pressable>
             ) : null}
           </View>
 
           <Pressable
-            style={[styles.button, styles.buttonOutline, analyzing && styles.buttonDisabled]}
+            style={[
+              styles.analyzeBtn,
+              (!images.length || analyzing) && styles.analyzeBtnDisabled,
+            ]}
             onPress={handleAnalyze}
             disabled={analyzing || !images.length}
           >
             {analyzing ? (
-              <ActivityIndicator color={colors.accent} />
+              <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={styles.buttonOutlineText}>Analyze with AI</Text>
+              <>
+                <Ionicons name="sparkles-outline" size={18} color={colors.white} />
+                <Text style={styles.analyzeBtnText}>Analyze with AI</Text>
+              </>
             )}
           </Pressable>
         </View>
 
-        <View style={styles.card}>
+        <View style={styles.section}>
           <ProductForm values={form} onChange={setForm} profileAddress={user?.address} />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable
-            style={[styles.button, submitting && styles.buttonDisabled]}
+            style={[styles.publishBtn, submitting && styles.publishBtnDisabled]}
             onPress={handleSubmit}
             disabled={submitting}
           >
             {submitting ? (
               <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={styles.buttonText}>Publish listing</Text>
+              <Text style={styles.publishBtnText}>Publish listing</Text>
             )}
           </Pressable>
         </View>
@@ -208,43 +218,60 @@ export default function AddProductScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.bgSubtle,
+    backgroundColor: colors.bg,
   },
   container: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
     gap: spacing.lg,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: spacing.xs,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   backText: {
     color: colors.accent,
     fontWeight: '700',
+    fontSize: 16,
+  },
+  hero: {
+    gap: 6,
   },
   title: {
     color: colors.textStrong,
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '800',
+    letterSpacing: -0.5,
   },
   subtitle: {
     color: colors.muted,
     fontSize: 15,
     lineHeight: 22,
   },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+  section: {
     gap: spacing.md,
+  },
+  sectionHeading: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
   },
   sectionTitle: {
     color: colors.textStrong,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
+  },
+  sectionMeta: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '600',
   },
   imageGrid: {
     flexDirection: 'row',
@@ -252,11 +279,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   imageWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 10,
+    width: 92,
+    height: 92,
+    borderRadius: 14,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: colors.surfaceMuted,
   },
   imagePreview: {
     width: '100%',
@@ -264,85 +292,67 @@ const styles = StyleSheet.create({
   },
   removeImageBtn: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    top: 6,
+    right: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(15, 27, 45, 0.55)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  removeImageText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
   },
   addImageBtn: {
-    width: 96,
-    height: 96,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.borderAccent,
-    borderStyle: 'dashed',
+    width: 92,
+    height: 92,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(92, 179, 53, 0.06)',
-    gap: 2,
-    paddingHorizontal: 4,
-  },
-  addImageIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(92, 179, 53, 0.14)',
-    marginBottom: 2,
+    backgroundColor: 'rgba(92, 179, 53, 0.1)',
+    gap: 4,
   },
   addImageText: {
     color: colors.accent,
-    fontWeight: '800',
+    fontWeight: '700',
     fontSize: 13,
   },
-  addImageHint: {
-    color: colors.muted,
-    fontSize: 9,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: colors.accent,
-    borderRadius: 8,
-    paddingVertical: 14,
+  analyzeBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    gap: 8,
+    backgroundColor: colors.navy,
+    borderRadius: 14,
+    paddingVertical: 14,
+    minHeight: 50,
   },
-  buttonOutline: {
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.accent,
+  analyzeBtnDisabled: {
+    opacity: 0.55,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
+  analyzeBtnText: {
     color: colors.white,
     fontWeight: '700',
     fontSize: 15,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
   },
-  buttonOutlineText: {
-    color: colors.accent,
+  publishBtn: {
+    backgroundColor: colors.accent,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+    marginTop: spacing.sm,
+  },
+  publishBtnDisabled: {
+    opacity: 0.7,
+  },
+  publishBtnText: {
+    color: colors.white,
     fontWeight: '700',
-    fontSize: 15,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    fontSize: 16,
   },
   error: {
     color: colors.error,
     fontSize: 14,
+    lineHeight: 20,
   },
 });

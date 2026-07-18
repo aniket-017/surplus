@@ -12,12 +12,11 @@ import {
 } from 'react-native';
 import ImageView from 'react-native-image-viewing';
 
-import { cardShadow, colors, spacing } from '@/src/constants/theme';
+import { colors, spacing } from '@/src/constants/theme';
 import { getImageUrl } from '@/src/lib/productsApi';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const HORIZONTAL_PADDING = spacing.lg;
-const IMAGE_WIDTH = SCREEN_WIDTH - HORIZONTAL_PADDING * 2;
+const IMAGE_WIDTH = SCREEN_WIDTH;
 const THUMB_SIZE = 56;
 
 type ProductGalleryProps = {
@@ -42,7 +41,7 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
 
   if (images.length === 0) {
     return (
-      <View style={styles.card}>
+      <View style={styles.wrap}>
         <View style={styles.fallback}>
           <Text style={styles.fallbackText}>No image</Text>
         </View>
@@ -54,7 +53,7 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
 
   return (
     <>
-      <View style={styles.card}>
+      <View style={styles.wrap}>
         <Pressable onPress={() => setViewerVisible(true)}>
           <ScrollView
             ref={scrollRef}
@@ -70,6 +69,7 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
                 source={{ uri: getImageUrl(image) }}
                 style={styles.heroImage}
                 contentFit="cover"
+                accessibilityLabel={title}
               />
             ))}
           </ScrollView>
@@ -117,18 +117,18 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
+  wrap: {
+    backgroundColor: colors.surfaceMuted,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
     overflow: 'hidden',
-    ...cardShadow,
   },
   heroImage: {
     width: IMAGE_WIDTH,
-    height: 280,
+    height: 300,
   },
   fallback: {
-    height: 280,
+    height: 300,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   photoCountBadge: {
     position: 'absolute',
     bottom: spacing.sm,
-    right: spacing.sm,
+    right: spacing.lg,
     backgroundColor: 'rgba(15, 27, 45, 0.72)',
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -153,7 +153,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   thumbRow: {
-    padding: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     gap: spacing.xs,
   },
   thumbWrap: {

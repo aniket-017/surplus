@@ -293,6 +293,14 @@ export async function sendMessageWithAttachment(
 /** @deprecated Use sendMessageWithAttachment */
 export const sendMessageWithImage = sendMessageWithAttachment;
 
+export async function getSavedListings(token: string) {
+  const res = await fetch(`${API_BASE}/api/saved`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  return parseResponse<{ products: ProductListing[] }>(res);
+}
+
 export async function toggleSavedListing(token: string, productId: string) {
   const res = await fetch(`${API_BASE}/api/saved/${productId}`, {
     method: 'POST',

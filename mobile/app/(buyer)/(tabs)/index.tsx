@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   FlatList,
   RefreshControl,
@@ -26,6 +27,7 @@ import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
 import { useAuth } from '@/src/context/AuthContext';
 import { useBuyerLocation } from '@/src/context/LocationContext';
 import { colors, spacing } from '@/src/constants/theme';
+import { getSavedListings, toggleSavedListing } from '@/src/lib/conversationsApi';
 import { browseProducts, getProductCategories } from '@/src/lib/productsApi';
 import { loadCategoryImageManifest } from '@/src/lib/categoryImages';
 import type { BrowseSort, ProductCategory, ProductListing } from '@/src/types/product';
@@ -60,9 +62,11 @@ export default function BuyerHomeTab() {
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [products, setProducts] = useState<ProductListing[]>([]);
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const activeCategory = filters.category;
   const activeFilter = chipIdFromFilters(filters);
@@ -99,7 +103,7 @@ export default function BuyerHomeTab() {
       setError('');
 
       try {
-        const [categoriesData, productsData] = await Promise.all([
+        const [categoriesData, productsData, savedData] = await Promise.all([
           getProductCategories(token),
           browseProducts(token, {
             search: debouncedSearch || undefined,
@@ -112,10 +116,12 @@ export default function BuyerHomeTab() {
             negotiable: filters.negotiable || undefined,
             limit: 40,
           }),
+          getSavedListings(token).catch(() => ({ products: [] as ProductListing[] })),
         ]);
 
         setCategories(categoriesData.categories);
         setProducts(productsData.products);
+        setSavedIds(new Set(savedData.products.map((item) => item.id)));
 
         if (filters.nearMe && !nearMeCity) {
           setError('Tap the location at the top to choose where "Near Me" should look.');
@@ -130,6 +136,50 @@ export default function BuyerHomeTab() {
     },
     [token, debouncedSearch, filters, nearMeCity],
   );
+
+  async function handleToggleSave(productId: string) {
+    if (!token || togglingId) return;
+
+    setTogglingId(productId);
+    const wasSaved = savedIds.has(productId);
+
+    // Optimistic UI so the bookmark fills immediately.
+    setSavedIds((current) => {
+      const next = new Set(current);
+      if (wasSaved) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+
+    try {
+      const result = await toggleSavedListing(token, productId);
+      setSavedIds((current) => {
+        const next = new Set(current);
+        if (result.saved) {
+          next.add(productId);
+        } else {
+          next.delete(productId);
+        }
+        return next;
+      });
+    } catch (err) {
+      setSavedIds((current) => {
+        const next = new Set(current);
+        if (wasSaved) {
+          next.add(productId);
+        } else {
+          next.delete(productId);
+        }
+        return next;
+      });
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update saved listing');
+    } finally {
+      setTogglingId(null);
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -189,6 +239,8 @@ export default function BuyerHomeTab() {
           <ProductListingCard
             product={item}
             width={CARD_WIDTH}
+            saved={savedIds.has(item.id)}
+            onToggleSave={() => void handleToggleSave(item.id)}
             onPress={() =>
               router.push({
                 pathname: '/products/[id]',

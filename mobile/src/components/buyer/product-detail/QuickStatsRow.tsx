@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { cardShadow, colors, spacing } from '@/src/constants/theme';
+import { colors, spacing } from '@/src/constants/theme';
 import { formatRelativeDate } from '@/src/lib/productFormat';
 import type { ProductListing } from '@/src/types/product';
 
@@ -10,10 +10,10 @@ type QuickStatsRowProps = {
 };
 
 const STATS = [
-  { key: 'quantity', icon: 'cube-outline' as const, label: 'Quantity' },
-  { key: 'location', icon: 'location-outline' as const, label: 'Location' },
-  { key: 'pickup', icon: 'car-outline' as const, label: 'Pickup' },
-  { key: 'listed', icon: 'calendar-outline' as const, label: 'Listed' },
+  { key: 'quantity', icon: 'cube-outline' as const },
+  { key: 'location', icon: 'location-outline' as const },
+  { key: 'pickup', icon: 'car-outline' as const },
+  { key: 'listed', icon: 'calendar-outline' as const },
 ];
 
 export function QuickStatsRow({ product }: QuickStatsRowProps) {
@@ -24,7 +24,7 @@ export function QuickStatsRow({ product }: QuickStatsRowProps) {
       case 'location':
         return product.location.city;
       case 'pickup':
-        return 'Available';
+        return 'Pickup';
       case 'listed':
         return formatRelativeDate(product.createdAt);
       default:
@@ -33,14 +33,16 @@ export function QuickStatsRow({ product }: QuickStatsRowProps) {
   }
 
   return (
-    <View style={styles.row}>
-      {STATS.map((stat) => (
-        <View key={stat.key} style={styles.statCard}>
-          <Ionicons name={stat.icon} size={18} color={colors.accent} />
-          <Text style={styles.statLabel}>{stat.label}</Text>
-          <Text style={styles.statValue} numberOfLines={1}>
-            {getValue(stat.key)}
-          </Text>
+    <View style={styles.strip}>
+      {STATS.map((stat, index) => (
+        <View key={stat.key} style={styles.statItem}>
+          {index > 0 ? <View style={styles.separator} /> : null}
+          <View style={styles.statContent}>
+            <Ionicons name={stat.icon} size={16} color={colors.accent} />
+            <Text style={styles.statValue} numberOfLines={1}>
+              {getValue(stat.key)}
+            </Text>
+          </View>
         </View>
       ))}
     </View>
@@ -48,30 +50,35 @@ export function QuickStatsRow({ product }: QuickStatsRowProps) {
 }
 
 const styles = StyleSheet.create({
-  row: {
+  strip: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
-  statCard: {
+  statItem: {
     flex: 1,
-    minWidth: '46%',
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.sm,
-    gap: 4,
-    ...cardShadow,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  statLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+  separator: {
+    width: StyleSheet.hairlineWidth,
+    height: 28,
+    backgroundColor: colors.border,
+    marginRight: spacing.xs,
+  },
+  statContent: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 2,
   },
   statValue: {
     color: colors.textStrong,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
+    textAlign: 'center',
   },
 });

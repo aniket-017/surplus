@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import RoleRoute from './components/RoleRoute'
+import SuperAdminRoute from './components/SuperAdminRoute'
 import { AuthProvider } from './context/AuthContext'
 import { LocationProvider } from './context/LocationContext'
 import { MessageNotificationsProvider } from './context/MessageNotificationsContext'
@@ -9,6 +10,7 @@ import AuthPage from './pages/AuthPage'
 import LandingPage from './pages/LandingPage'
 import ProfilePage from './pages/ProfilePage'
 import RoleSelectPage from './pages/RoleSelectPage'
+import SuperLoginPage from './pages/SuperLoginPage'
 import ChatThreadPage from './pages/ChatThreadPage'
 import MessagesPage from './pages/MessagesPage'
 import BuyerHomePage from './pages/buyer/BuyerHomePage'
@@ -18,6 +20,11 @@ import SavedListingsPage from './pages/buyer/SavedListingsPage'
 import AddProductPage from './pages/seller/AddProductPage'
 import SellerDashboardPage from './pages/seller/SellerDashboardPage'
 import SellerProductDetailPage from './pages/seller/SellerProductDetailPage'
+import SuperAdminLayout from './pages/superadmin/SuperAdminLayout'
+import OverviewPage from './pages/superadmin/OverviewPage'
+import UsersPage from './pages/superadmin/UsersPage'
+import ProductsPage from './pages/superadmin/ProductsPage'
+import AdminsPage from './pages/superadmin/AdminsPage'
 
 function BuyerProfilePage() {
   return <ProfilePage role="buyer" />
@@ -37,7 +44,22 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/signin" element={<AuthPage />} />
           <Route path="/signup" element={<AuthPage />} />
+          <Route path="/superlogin" element={<SuperLoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+
+          <Route
+            path="/superadmin"
+            element={
+              <SuperAdminRoute>
+                <SuperAdminLayout />
+              </SuperAdminRoute>
+            }
+          >
+            <Route index element={<OverviewPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="products" element={<ProductsPage />} />
+            <Route path="admins" element={<AdminsPage />} />
+          </Route>
 
           <Route
             path="/onboarding/role"

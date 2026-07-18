@@ -4,3 +4,7 @@ export function getPostAuthPath(user) {
   if (user.role === 'seller') return '/seller'
   return '/onboarding/role'
 }
+
+export function getSuperadminPath() {
+  return '/superadmin'
+}

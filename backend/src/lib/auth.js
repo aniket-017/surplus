@@ -7,6 +7,10 @@ const userSelect = {
   avatarUrl: true,
   role: true,
   address: true,
+  isSuperAdmin: true,
+  isBanned: true,
+  bannedAt: true,
+  bannedReason: true,
   createdAt: true,
 };
 
@@ -18,6 +22,10 @@ export function formatUser(user) {
     avatarUrl: user.avatarUrl,
     role: user.role ? user.role.toLowerCase() : null,
     address: user.address ?? null,
+    isSuperAdmin: Boolean(user.isSuperAdmin),
+    isBanned: Boolean(user.isBanned),
+    bannedAt: user.bannedAt ?? null,
+    bannedReason: user.bannedReason ?? null,
     createdAt: user.createdAt,
   };
 }
@@ -61,6 +69,7 @@ export function signToken(user) {
       email: user.email,
       name: user.name,
       role: user.role ? user.role.toLowerCase() : null,
+      isSuperAdmin: Boolean(user.isSuperAdmin),
     },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }

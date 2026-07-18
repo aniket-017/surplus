@@ -13,8 +13,10 @@ import productRoutes from "./routes/products.js";
 import conversationRoutes from "./routes/conversations.js";
 import pushTokenRoutes from "./routes/pushTokens.js";
 import savedRoutes from "./routes/saved.js";
+import superadminRoutes from "./routes/superadmin.js";
 import { backfillCategoryMeta } from "./lib/category.js";
 import { CATEGORY_ASSETS_DIR, getCategoryImageManifest } from "./lib/categoryAssets.js";
+import { bootstrapSuperAdmin } from "./lib/bootstrapSuperAdmin.js";
 import { prisma } from "./lib/prisma.js";
 import { assertS3Config } from "./lib/s3.js";
 
@@ -166,6 +168,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/push-tokens", pushTokenRoutes);
 app.use("/api/saved", savedRoutes);
+app.use("/api/superadmin", superadminRoutes);
 
 if (FRONTEND_DIST_EXISTS) {
   app.use(express.static(FRONTEND_DIST));
@@ -197,6 +200,10 @@ app.listen(PORT, () => {
   if (FRONTEND_DIST_EXISTS) {
     console.log(`Serving frontend from ${FRONTEND_DIST}`);
   }
+
+  bootstrapSuperAdmin().catch((error) => {
+    console.error("Superadmin bootstrap failed:", error.message);
+  });
 
   backfillCategoryMeta().catch((error) => {
     console.error("Category meta backfill failed:", error.message);

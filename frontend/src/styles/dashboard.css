@@ -3239,3 +3239,173 @@
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
 }
+
+/* Superadmin panel */
+.sa-page {
+  padding: 1.5rem;
+  max-width: 1200px;
+}
+
+.sa-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.sa-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 960px) {
+  .sa-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.sa-panel {
+  padding: 1rem;
+}
+
+.sa-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.sa-panel-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.sa-panel-header a {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.sa-toolbar {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.sa-toolbar .auth-input {
+  flex: 1;
+  margin: 0;
+}
+
+.sa-table-wrap {
+  overflow-x: auto;
+}
+
+.sa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.sa-table th,
+.sa-table td {
+  text-align: left;
+  padding: 0.65rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.sa-table th {
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sa-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sa-badge-danger {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.sa-badge-ok {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.sa-cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sa-muted {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.sa-action-btn {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.sa-danger-btn {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.sa-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.sa-sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sa-sidebar-email {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.sa-logout-btn {
+  width: 100%;
+}
+
+.sa-invite-form {
+  margin-bottom: 1rem;
+}
+
+.sa-invite-form .sa-toolbar {
+  margin-bottom: 0;
+}

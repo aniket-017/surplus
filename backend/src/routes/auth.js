@@ -45,6 +45,9 @@ if (isGoogleAuthEnabled()) {
       failureRedirect: `${process.env.FRONTEND_URL}/login?error=auth_failed`,
     }),
     (req, res) => {
+      if (req.user?.isBanned) {
+        return res.redirect(`${process.env.FRONTEND_URL}/signin?error=banned`);
+      }
       setAuthCookie(res, req.user);
       res.redirect(`${process.env.FRONTEND_URL}/auth/callback?success=true`);
     }
@@ -63,7 +66,7 @@ if (isOtpAuthEnabled()) {
     try {
       const existingUser = await prisma.user.findUnique({
         where: { email },
-        select: { id: true },
+        select: { id: true, isBanned: true },
       });
 
       if (intent === "signin" && !existingUser) {
@@ -76,6 +79,10 @@ if (isOtpAuthEnabled()) {
         return res.status(409).json({
           error: "An account with this email already exists. Sign in instead.",
         });
+      }
+
+      if (existingUser?.isBanned) {
+        return res.status(403).json({ error: "This account has been banned" });
       }
 
       const otp = generateOtp();
@@ -137,6 +144,10 @@ if (isOtpAuthEnabled()) {
         });
       }
 
+      if (existingUser?.isBanned) {
+        return res.status(403).json({ error: "This account has been banned" });
+      }
+
       const record = await prisma.otp.findFirst({
         where: { email },
         orderBy: { createdAt: "desc" },
@@ -194,6 +205,11 @@ router.get("/me", requireAuth, async (req, res) => {
 
   if (!user) {
     return res.status(404).json({ error: "User not found" });
+  }
+
+  if (user.isBanned) {
+    clearAuthCookie(res);
+    return res.status(403).json({ error: "This account has been banned" });
   }
 
   res.json({ user: formatUser(user) });

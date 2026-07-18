@@ -41,7 +41,7 @@ export function verifyOtp(email, otp, intent = 'signin') {
 
 export async function getCurrentUser() {
   const res = await fetch(`${API_BASE}/api/auth/me`, { credentials: 'include' })
-  if (res.status === 401) return null
+  if (res.status === 401 || res.status === 403) return null
   return parseResponse(res)
 }
 
@@ -60,5 +60,71 @@ export function updateRole(role) {
   return apiFetch('/api/auth/role', {
     method: 'PATCH',
     body: JSON.stringify({ role }),
+  })
+}
+
+export function sendSuperadminOtp(email) {
+  return apiFetch('/api/superadmin/otp/send', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+export function verifySuperadminOtp(email, otp) {
+  return apiFetch('/api/superadmin/otp/verify', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp }),
+  })
+}
+
+export function getSuperadminOverview() {
+  return apiFetch('/api/superadmin/overview')
+}
+
+export function getSuperadminUsers({ page = 1, limit = 20, q = '' } = {}) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  if (q) params.set('q', q)
+  return apiFetch(`/api/superadmin/users?${params}`)
+}
+
+export function banSuperadminUser(id, reason) {
+  return apiFetch(`/api/superadmin/users/${id}/ban`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  })
+}
+
+export function unbanSuperadminUser(id) {
+  return apiFetch(`/api/superadmin/users/${id}/unban`, {
+    method: 'POST',
+  })
+}
+
+export function getSuperadminProducts({ page = 1, limit = 20, q = '' } = {}) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  if (q) params.set('q', q)
+  return apiFetch(`/api/superadmin/products?${params}`)
+}
+
+export function deleteSuperadminProduct(id) {
+  return apiFetch(`/api/superadmin/products/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export function getSuperadmins() {
+  return apiFetch('/api/superadmin/admins')
+}
+
+export function addSuperadmin(email) {
+  return apiFetch('/api/superadmin/admins', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+export function revokeSuperadmin(id) {
+  return apiFetch(`/api/superadmin/admins/${id}`, {
+    method: 'DELETE',
   })
 }

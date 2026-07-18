@@ -54,6 +54,10 @@ model User {
   avatarUrl String?   @map("avatar_url")
   role      UserRole?
   address   UserAddress?
+  isSuperAdmin Boolean   @default(false) @map("is_super_admin")
+  isBanned     Boolean   @default(false) @map("is_banned")
+  bannedAt     DateTime? @map("banned_at")
+  bannedReason String?   @map("banned_reason")
   products  Product[]
   buyerConversations  Conversation[] @relation("BuyerConversations")
   sellerConversations Conversation[] @relation("SellerConversations")
@@ -64,6 +68,7 @@ model User {
   updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@index([googleId])
+  @@index([isSuperAdmin])
   @@map("users")
 }
 

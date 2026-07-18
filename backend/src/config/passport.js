@@ -40,6 +40,10 @@ export function configurePassport() {
             },
           });
 
+          if (user.isBanned) {
+            return done(null, false, { message: "This account has been banned" });
+          }
+
           return done(null, user);
         } catch (error) {
           return done(error, null);

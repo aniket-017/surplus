@@ -4,7 +4,7 @@ const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 
 type ApiError = { error?: string };
 
-async function parseResponse<T>(res: Response):`` Promise<T> {
+async function parseResponse<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as T & ApiError;
   if (!res.ok) {
     throw new Error(data.error || 'Something went wrong');

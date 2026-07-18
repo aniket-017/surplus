@@ -193,11 +193,21 @@ export function buildBrowseOrderBy(sort) {
   return { createdAt: "desc" };
 }
 
-export function buildBrowseWhere({ search, category }) {
+export function buildBrowseWhere({ search, category, city, state }) {
   const where = {};
 
   if (category) {
     where.category = category;
+  }
+
+  if (city) {
+    where.location = {
+      is: { city: { equals: city, mode: "insensitive" } },
+    };
+  } else if (state) {
+    where.location = {
+      is: { state: { equals: state, mode: "insensitive" } },
+    };
   }
 
   if (search) {

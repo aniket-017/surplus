@@ -71,6 +71,8 @@ export type BrowseProductsParams = {
   search?: string;
   category?: string;
   sort?: BrowseSort;
+  city?: string;
+  state?: string;
   limit?: number;
   skip?: number;
 };

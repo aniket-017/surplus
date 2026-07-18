@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/src/context/AuthContext';
+import { LocationProvider } from '@/src/context/LocationContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -15,13 +16,15 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="role-select" />
-          <Stack.Screen name="(buyer)" />
-          <Stack.Screen name="(seller)" />
-        </Stack>
+        <LocationProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="role-select" />
+            <Stack.Screen name="(buyer)" />
+            <Stack.Screen name="(seller)" />
+          </Stack>
+        </LocationProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

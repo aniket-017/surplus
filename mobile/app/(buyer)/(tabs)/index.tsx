@@ -18,6 +18,7 @@ import { CategoryCarousel } from '@/src/components/buyer/CategoryCarousel';
 import { ListingFilterChips } from '@/src/components/buyer/ListingFilterChips';
 import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
 import { useAuth } from '@/src/context/AuthContext';
+import { useBuyerLocation } from '@/src/context/LocationContext';
 import { colors, spacing } from '@/src/constants/theme';
 import { browseProducts, getProductCategories } from '@/src/lib/productsApi';
 import { loadCategoryImageManifest } from '@/src/lib/categoryImages';
@@ -29,7 +30,8 @@ const CARD_WIDTH =
   (Dimensions.get('window').width - HORIZONTAL_PADDING * 2 - GRID_GAP) / 2;
 
 export default function BuyerHomeTab() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const { location } = useBuyerLocation();
   const { category: categoryParam } = useLocalSearchParams<{ category?: string }>();
 
   const [search, setSearch] = useState('');
@@ -57,6 +59,8 @@ export default function BuyerHomeTab() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  const nearMeCity = location?.city || user?.address?.city || '';
+
   const loadFeed = useCallback(
     async (isRefresh = false) => {
       if (!token) {
@@ -78,12 +82,17 @@ export default function BuyerHomeTab() {
             search: debouncedSearch || undefined,
             category: activeCategory || undefined,
             sort,
+            city: activeFilter === 'near' && nearMeCity ? nearMeCity : undefined,
             limit: 40,
           }),
         ]);
 
         setCategories(categoriesData.categories);
         setProducts(productsData.products);
+
+        if (activeFilter === 'near' && !nearMeCity) {
+          setError('Tap the location at the top to choose where "Near Me" should look.');
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load listings');
         setProducts([]);
@@ -92,7 +101,7 @@ export default function BuyerHomeTab() {
         setRefreshing(false);
       }
     },
-    [token, debouncedSearch, activeCategory, sort],
+    [token, debouncedSearch, activeCategory, sort, activeFilter, nearMeCity],
   );
 
   useFocusEffect(

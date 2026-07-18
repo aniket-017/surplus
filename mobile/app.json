@@ -55,6 +55,12 @@
           "cameraPermission": "Allow Surplus to use your camera to take and send photos in chat."
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Surplus to use your location to show listings near you."
+        }
+      ],
       "expo-document-picker"
     ],
     "experiments": {

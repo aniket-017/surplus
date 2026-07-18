@@ -1,18 +1,32 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { LocationPickerModal } from '@/src/components/buyer/LocationPickerModal';
 import { useAuth } from '@/src/context/AuthContext';
+import { useBuyerLocation } from '@/src/context/LocationContext';
 import { colors, spacing } from '@/src/constants/theme';
+import { formatBuyerLocation } from '@/src/types/location';
 
 export function BuyerHomeHeader() {
   const { user } = useAuth();
-  const locationLabel = user?.address?.city
+  const { location } = useBuyerLocation();
+  const [pickerVisible, setPickerVisible] = useState(false);
+
+  const profileLabel = user?.address?.city
     ? `${user.address.city}, ${user.address.state}`
-    : 'Set location in Profile';
+    : '';
+  const locationLabel = location
+    ? formatBuyerLocation(location)
+    : profileLabel || 'Choose location';
 
   return (
     <View style={styles.container}>
-      <View style={styles.locationBlock}>
+      <Pressable
+        style={({ pressed }) => [styles.locationBlock, pressed && styles.locationBlockPressed]}
+        onPress={() => setPickerVisible(true)}
+        hitSlop={4}
+      >
         <Ionicons name="location-outline" size={18} color={colors.accent} />
         <View style={styles.locationTextWrap}>
           <Text style={styles.locationLabel}>Location</Text>
@@ -21,7 +35,7 @@ export function BuyerHomeHeader() {
           </Text>
         </View>
         <Ionicons name="chevron-down" size={16} color={colors.muted} />
-      </View>
+      </Pressable>
 
       <View style={styles.actions}>
         <Pressable style={styles.iconButton} hitSlop={8}>
@@ -31,6 +45,8 @@ export function BuyerHomeHeader() {
           <Ionicons name="notifications-outline" size={20} color={colors.textStrong} />
         </Pressable>
       </View>
+
+      <LocationPickerModal visible={pickerVisible} onClose={() => setPickerVisible(false)} />
     </View>
   );
 }
@@ -47,6 +63,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+  },
+  locationBlockPressed: {
+    opacity: 0.7,
   },
   locationTextWrap: {
     flex: 1,

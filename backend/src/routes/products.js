@@ -210,11 +210,13 @@ router.get("/browse", requireAuth, async (req, res) => {
   try {
     const search = String(req.query.search || "").trim();
     const category = String(req.query.category || "").trim();
+    const city = String(req.query.city || "").trim();
+    const state = String(req.query.state || "").trim();
     const sort = parseBrowseSort(req.query.sort);
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
     const skip = Math.max(Number(req.query.skip) || 0, 0);
 
-    const where = buildBrowseWhere({ search, category });
+    const where = buildBrowseWhere({ search, category, city, state });
 
     const products = await prisma.product.findMany({
       where,

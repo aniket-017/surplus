@@ -12,7 +12,7 @@ type FilterOption = {
 
 const FILTERS: FilterOption[] = [
   { id: 'all', label: 'All', sort: 'recent' },
-  { id: 'near', label: 'Near Me', disabled: true },
+  { id: 'near', label: 'Near Me', sort: 'recent' },
   { id: 'price', label: 'Best Price', sort: 'price_asc' },
   { id: 'recent', label: 'Recently Added', sort: 'recent' },
 ];

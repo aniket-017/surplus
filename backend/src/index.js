@@ -107,24 +107,27 @@ const PORT = process.env.PORT || 4369;
 
 // Allow CORS for mobile app and frontend
 const allowedOrigins = [
-  process.env.FRONTEND_URL, // Frontend (localhost:5000)
+  process.env.FRONTEND_URL?.replace(/\/+$/, ""), // Frontend (strip trailing slash to match Origin header)
   'http://localhost:5173', // Vite dev server
   'http://127.0.0.1:5173', // Vite dev server (alternate host)
   'http://10.220.255.117:4369', // Mobile app's API base URL
   'http://localhost:4369', // Local development
-];
+].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
-      
+
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         console.log('CORS blocked origin:', origin);
-        callback(new Error('Not allowed by CORS'));
+        // Deny by omitting CORS headers instead of erroring the request.
+        // Same-origin requests (e.g. frontend assets served by this server
+        // with Vite's crossorigin attribute) still succeed without headers.
+        callback(null, false);
       }
     },
     credentials: true,

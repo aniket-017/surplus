@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -16,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import { CameraCaptureModal } from '@/src/components/messages/CameraCaptureModal';
 import { EmojiPickerPanel } from '@/src/components/messages/EmojiPickerPanel';
 import { chatTheme } from '@/src/constants/chatTheme';
 import { colors, spacing } from '@/src/constants/theme';
@@ -52,6 +54,8 @@ export function MessageComposer({
 }: MessageComposerProps) {
   const inputRef = useRef<TextInputType>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const hasText = draft.trim().length > 0;
   const hasAttachment = pendingAttachment !== null;
   const canSend = hasText || hasAttachment;
@@ -93,30 +97,6 @@ export function MessageComposer({
     );
   }
 
-  async function pickFromCamera() {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Allow camera access to take photos.');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 0.85,
-    });
-
-    if (result.canceled || !result.assets[0]) return;
-
-    const asset = result.assets[0];
-    onSelectAttachment(
-      buildAttachmentFromUri(
-        asset.uri,
-        asset.fileName || `photo-${Date.now()}.jpg`,
-        asset.mimeType,
-      ),
-    );
-  }
-
   async function pickDocument() {
     const result = await DocumentPicker.getDocumentAsync({
       type: [
@@ -140,15 +120,30 @@ export function MessageComposer({
     );
   }
 
+  function closeAttachMenu() {
+    setAttachMenuOpen(false);
+  }
+
   function handleAttachPress() {
     if (busy) return;
+    setEmojiOpen(false);
+    setAttachMenuOpen(true);
+  }
 
-    Alert.alert('Attach file', 'Choose what to send', [
-      { text: 'Photo Library', onPress: () => void pickFromLibrary() },
-      { text: 'Take Photo', onPress: () => void pickFromCamera() },
-      { text: 'Document', onPress: () => void pickDocument() },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+  function handleCameraPress() {
+    if (busy) return;
+    setEmojiOpen(false);
+    setCameraOpen(true);
+  }
+
+  function handlePickFromLibrary() {
+    closeAttachMenu();
+    void pickFromLibrary();
+  }
+
+  function handlePickDocument() {
+    closeAttachMenu();
+    void pickDocument();
   }
 
   return (
@@ -212,8 +207,18 @@ export function MessageComposer({
             <Pressable
               hitSlop={6}
               style={[styles.iconSlot, isMultiline && styles.iconSlotMultiline]}
+              onPress={handleCameraPress}
+              disabled={busy}
+              accessibilityLabel="Take photo"
+            >
+              <Ionicons name="camera-outline" size={22} color={colors.muted} />
+            </Pressable>
+            <Pressable
+              hitSlop={6}
+              style={[styles.iconSlot, isMultiline && styles.iconSlotMultiline]}
               onPress={handleAttachPress}
               disabled={busy}
+              accessibilityLabel="Attach file"
             >
               {uploading ? (
                 <ActivityIndicator size="small" color={colors.muted} />
@@ -238,6 +243,43 @@ export function MessageComposer({
           ) : null}
         </View>
       </View>
+
+      <Modal
+        visible={attachMenuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAttachMenu}
+      >
+        <Pressable style={styles.attachBackdrop} onPress={closeAttachMenu}>
+          <Pressable style={styles.attachSheet} onPress={(event) => event.stopPropagation()}>
+            <Text style={styles.attachTitle}>Attach file</Text>
+            <Text style={styles.attachSubtitle}>Choose what to send</Text>
+
+            <Pressable style={styles.attachOption} onPress={handlePickFromLibrary}>
+              <Ionicons name="images-outline" size={22} color={colors.accent} />
+              <Text style={styles.attachOptionText}>Photo Library</Text>
+            </Pressable>
+
+            <Pressable style={styles.attachOption} onPress={handlePickDocument}>
+              <Ionicons name="document-text-outline" size={22} color={colors.accent} />
+              <Text style={styles.attachOptionText}>Document</Text>
+            </Pressable>
+
+            <Pressable style={styles.attachCancel} onPress={closeAttachMenu}>
+              <Text style={styles.attachCancelText}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <CameraCaptureModal
+        visible={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onCapture={(attachment) => {
+          setCameraOpen(false);
+          onSelectAttachment(attachment);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -350,5 +392,59 @@ const styles = StyleSheet.create({
   },
   sendIcon: {
     marginLeft: 2,
+  },
+  attachBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  attachSheet: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  attachTitle: {
+    color: colors.textStrong,
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  attachSubtitle: {
+    color: colors.muted,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: spacing.md,
+  },
+  attachOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0, 0, 0, 0.08)',
+  },
+  attachOptionText: {
+    color: colors.textStrong,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  attachCancel: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0, 0, 0, 0.08)',
+  },
+  attachCancelText: {
+    color: colors.muted,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

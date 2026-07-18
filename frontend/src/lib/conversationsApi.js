@@ -25,8 +25,23 @@ export async function getConversations() {
   return parseResponse(res)
 }
 
+export async function getUnreadCount() {
+  const res = await fetch(`${API_BASE}/api/conversations/unread-count`, {
+    credentials: 'include',
+  })
+  return parseResponse(res)
+}
+
 export async function getConversationMessages(conversationId) {
   const res = await fetch(`${API_BASE}/api/conversations/${conversationId}/messages`, {
+    credentials: 'include',
+  })
+  return parseResponse(res)
+}
+
+export async function markConversationAsRead(conversationId) {
+  const res = await fetch(`${API_BASE}/api/conversations/${conversationId}/read`, {
+    method: 'POST',
     credentials: 'include',
   })
   return parseResponse(res)

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import { useAuth } from '../context/AuthContext'
+import { useMessageNotifications } from '../context/MessageNotificationsContext'
 import { getConversations } from '../lib/conversationsApi'
 import { formatConversationTime } from '../lib/messageFormat'
 import { getImageUrl } from '../lib/productsApi'
@@ -23,6 +24,7 @@ function getRowTitle(conversation, role) {
 export default function MessagesPage({ role }) {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { unreadCount } = useMessageNotifications()
   const [conversations, setConversations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -45,10 +47,12 @@ export default function MessagesPage({ role }) {
     }
 
     load()
+    const interval = setInterval(load, 10000)
     return () => {
       cancelled = true
+      clearInterval(interval)
     }
-  }, [])
+  }, [unreadCount])
 
   return (
     <AppShell role={role} title="Messages">
@@ -108,8 +112,15 @@ export default function MessagesPage({ role }) {
                     </span>
                   </div>
                   <div className="conversation-preview">
-                    {isMineLast ? <span className="conversation-preview-you">You: </span> : null}
-                    {getPreview(conversation)}
+                    <span className="conversation-preview-text">
+                      {isMineLast ? <span className="conversation-preview-you">You: </span> : null}
+                      {getPreview(conversation)}
+                    </span>
+                    {conversation.unreadCount > 0 ? (
+                      <span className="conversation-unread" aria-label={`${conversation.unreadCount} unread`}>
+                        {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </button>

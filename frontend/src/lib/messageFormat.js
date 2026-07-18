@@ -9,6 +9,16 @@ export function formatMessageTime(iso) {
   })
 }
 
+export function formatMessageInfoTime(iso) {
+  return new Date(iso).toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
 export function formatDateSeparator(iso) {
   const date = new Date(iso)
   const today = startOfDay(new Date())

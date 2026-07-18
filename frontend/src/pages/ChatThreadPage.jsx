@@ -2,9 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import ChatImageLightbox from '../components/messages/ChatImageLightbox'
+import MessageInfoModal from '../components/messages/MessageInfoModal'
+import MessageReceipt from '../components/messages/MessageReceipt'
 import { useAuth } from '../context/AuthContext'
+import { useMessageNotifications } from '../context/MessageNotificationsContext'
 import {
   getConversationMessages,
+  markConversationAsRead,
   sendMessage,
   sendMessageWithAttachment,
 } from '../lib/conversationsApi'
@@ -31,6 +35,7 @@ export default function ChatThreadPage({ role }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { refresh: refreshUnread } = useMessageNotifications()
 
   const [messages, setMessages] = useState([])
   const [product, setProduct] = useState(null)
@@ -41,10 +46,12 @@ export default function ChatThreadPage({ role }) {
   const [pendingAttachments, setPendingAttachments] = useState([])
   const [sending, setSending] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(null)
+  const [infoMessage, setInfoMessage] = useState(null)
 
   const listRef = useRef(null)
   const fileInputRef = useRef(null)
   const pendingAttachmentsRef = useRef([])
+  const longPressTimerRef = useRef(null)
 
   const listItems = useMemo(() => buildMessageListItems(messages, user?.id), [messages, user?.id])
   const imageUrls = useMemo(
@@ -76,6 +83,9 @@ export default function ChatThreadPage({ role }) {
   useEffect(() => {
     return () => {
       pendingAttachmentsRef.current.forEach(revokeAttachmentPreview)
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+      }
     }
   }, [])
 
@@ -86,12 +96,53 @@ export default function ChatThreadPage({ role }) {
       setProduct(data.conversation.product)
       setOtherParty(data.conversation.otherParty)
       setError('')
+      await markConversationAsRead(id).catch(() => {})
+      refreshUnread()
     } catch (err) {
       setError(err.message || 'Failed to load messages')
     } finally {
       setLoading(false)
     }
-  }, [id])
+  }, [id, refreshUnread])
+
+  useEffect(() => {
+    if (!infoMessage) return
+    const fresh = messages.find((message) => message.id === infoMessage.id)
+    if (
+      fresh &&
+      (fresh.status !== infoMessage.status ||
+        fresh.deliveredAt !== infoMessage.deliveredAt ||
+        fresh.readAt !== infoMessage.readAt)
+    ) {
+      setInfoMessage(fresh)
+    }
+  }, [messages, infoMessage])
+
+  function clearLongPressTimer() {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
+  function openMessageInfo(message, isMine) {
+    if (!isMine) return
+    setInfoMessage(message)
+  }
+
+  function handleBubbleContextMenu(event, message, isMine) {
+    if (!isMine) return
+    event.preventDefault()
+    openMessageInfo(message, true)
+  }
+
+  function handleBubblePointerDown(message, isMine) {
+    if (!isMine) return
+    clearLongPressTimer()
+    longPressTimerRef.current = setTimeout(() => {
+      openMessageInfo(message, true)
+    }, 400)
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -253,7 +304,14 @@ export default function ChatThreadPage({ role }) {
                   key={item.id}
                   className={`chat-bubble-row${isMine ? ' mine' : ''}${isGrouped ? ' grouped' : ''}`}
                 >
-                  <div className={`chat-bubble${isMine ? ' mine' : ''}`}>
+                  <div
+                    className={`chat-bubble${isMine ? ' mine' : ''}${isMine ? ' chat-bubble--receipt' : ''}`}
+                    onContextMenu={(event) => handleBubbleContextMenu(event, message, isMine)}
+                    onPointerDown={() => handleBubblePointerDown(message, isMine)}
+                    onPointerUp={clearLongPressTimer}
+                    onPointerLeave={clearLongPressTimer}
+                    onPointerCancel={clearLongPressTimer}
+                  >
                     {message.imageUrl ? (
                       <button
                         type="button"
@@ -277,7 +335,10 @@ export default function ChatThreadPage({ role }) {
                       </a>
                     ) : null}
                     {message.body ? <p className="chat-bubble-text">{message.body}</p> : null}
-                    <span className="chat-bubble-time">{formatMessageTime(message.createdAt)}</span>
+                    <span className="chat-bubble-meta">
+                      <span className="chat-bubble-time">{formatMessageTime(message.createdAt)}</span>
+                      {isMine ? <MessageReceipt status={message.status} /> : null}
+                    </span>
                   </div>
                 </div>
               )
@@ -354,6 +415,10 @@ export default function ChatThreadPage({ role }) {
           onClose={() => setLightboxIndex(null)}
           onChangeIndex={setLightboxIndex}
         />
+      ) : null}
+
+      {infoMessage ? (
+        <MessageInfoModal message={infoMessage} onClose={() => setInfoMessage(null)} />
       ) : null}
     </AppShell>
   )

@@ -3,6 +3,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import RoleRoute from './components/RoleRoute'
 import { AuthProvider } from './context/AuthContext'
 import { LocationProvider } from './context/LocationContext'
+import { MessageNotificationsProvider } from './context/MessageNotificationsContext'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import AuthPage from './pages/AuthPage'
 import LandingPage from './pages/LandingPage'
@@ -30,6 +31,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <LocationProvider>
+        <MessageNotificationsProvider>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/signin" element={<AuthPage />} />
@@ -171,6 +173,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </MessageNotificationsProvider>
         </LocationProvider>
       </AuthProvider>
     </BrowserRouter>

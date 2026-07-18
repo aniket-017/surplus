@@ -1,6 +1,7 @@
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import surplusLogo from '../assets/logo/surplus.png'
 import { useAuth } from '../context/AuthContext'
+import { useMessageNotifications } from '../context/MessageNotificationsContext'
 import RoleSwitchButton from './RoleSwitchButton'
 
 const BUYER_NAV = [
@@ -18,11 +19,27 @@ const SELLER_NAV = [
 
 export default function AppShell({ role, title, children }) {
   const { user } = useAuth()
+  const { unreadCount } = useMessageNotifications()
   const location = useLocation()
   const navItems = role === 'buyer' ? BUYER_NAV : SELLER_NAV
   const displayName = user?.name || user?.email || 'User'
+  const messagesPath = `/${role}/messages`
 
   const isAddProduct = location.pathname === '/seller/add-product'
+
+  function renderNavLabel(item) {
+    const isMessages = item.to === messagesPath
+    if (!isMessages || unreadCount <= 0) return item.label
+
+    return (
+      <span className="app-nav-label-with-badge">
+        {item.label}
+        <span className="app-nav-badge" aria-label={`${unreadCount} unread messages`}>
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      </span>
+    )
+  }
 
   return (
     <div className="app-shell">
@@ -39,7 +56,7 @@ export default function AppShell({ role, title, children }) {
               end={item.end}
               className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}
             >
-              {item.label}
+              {renderNavLabel(item)}
             </NavLink>
           ))}
         </nav>
@@ -85,7 +102,7 @@ export default function AppShell({ role, title, children }) {
               end={item.end}
               className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`}
             >
-              {item.label}
+              {renderNavLabel(item)}
             </NavLink>
           ))}
           <RoleSwitchButton role={role} variant="bottom-nav" />

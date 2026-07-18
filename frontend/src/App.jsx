@@ -23,6 +23,7 @@ import SellerProductDetailPage from './pages/seller/SellerProductDetailPage'
 import SuperAdminLayout from './pages/superadmin/SuperAdminLayout'
 import OverviewPage from './pages/superadmin/OverviewPage'
 import UsersPage from './pages/superadmin/UsersPage'
+import UserChatsPage from './pages/superadmin/UserChatsPage'
 import ProductsPage from './pages/superadmin/ProductsPage'
 import AdminsPage from './pages/superadmin/AdminsPage'
 
@@ -57,6 +58,7 @@ export default function App() {
           >
             <Route index element={<OverviewPage />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="users/:id/chats" element={<UserChatsPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="admins" element={<AdminsPage />} />
           </Route>

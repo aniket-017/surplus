@@ -3409,3 +3409,96 @@
 .sa-invite-form .sa-toolbar {
   margin-bottom: 0;
 }
+
+.sa-chats-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 1100px) {
+  .sa-chats-layout {
+    grid-template-columns: 1.4fr 1fr;
+    align-items: start;
+  }
+}
+
+.sa-actions-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+.sa-preview {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sa-row-active td {
+  background: var(--bg-subtle);
+}
+
+.sa-thread-panel {
+  min-height: 320px;
+  position: sticky;
+  top: 1rem;
+}
+
+.sa-thread-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.sa-thread-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  margin-top: 0.75rem;
+  padding-right: 0.25rem;
+}
+
+.sa-thread-message {
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--bg-subtle);
+}
+
+.sa-thread-message p {
+  margin: 0.35rem 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sa-thread-message-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.sa-thread-image {
+  display: block;
+  margin-top: 0.5rem;
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: 0.5rem;
+  object-fit: cover;
+}
+
+.sa-thread-file {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+}

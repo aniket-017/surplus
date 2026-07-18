@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   banSuperadminUser,
   getSuperadminUsers,
@@ -150,27 +151,34 @@ export default function UsersPage() {
                       </td>
                       <td>{formatDate(user.createdAt)}</td>
                       <td>
-                        {canBan ? (
-                          <button
-                            type="button"
+                        <div className="sa-actions-stack">
+                          <Link
+                            to={`/superadmin/users/${user.id}/chats`}
                             className="btn btn-outline sa-action-btn"
-                            disabled={busyId === user.id}
-                            onClick={() => handleBan(user)}
                           >
-                            Ban
-                          </button>
-                        ) : null}
-                        {canUnban ? (
-                          <button
-                            type="button"
-                            className="btn btn-primary sa-action-btn"
-                            disabled={busyId === user.id}
-                            onClick={() => handleUnban(user)}
-                          >
-                            Unban
-                          </button>
-                        ) : null}
-                        {!canBan && !canUnban ? <span className="sa-muted">—</span> : null}
+                            Chats
+                          </Link>
+                          {canBan ? (
+                            <button
+                              type="button"
+                              className="btn btn-outline sa-action-btn"
+                              disabled={busyId === user.id}
+                              onClick={() => handleBan(user)}
+                            >
+                              Ban
+                            </button>
+                          ) : null}
+                          {canUnban ? (
+                            <button
+                              type="button"
+                              className="btn btn-primary sa-action-btn"
+                              disabled={busyId === user.id}
+                              onClick={() => handleUnban(user)}
+                            >
+                              Unban
+                            </button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   )

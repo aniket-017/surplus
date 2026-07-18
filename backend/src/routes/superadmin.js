@@ -9,6 +9,7 @@ import {
 import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
 import { deleteProductImages as deleteProductImagesFromS3 } from "../lib/s3.js";
+import { formatMessage } from "../lib/conversations.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireSuperAdmin } from "../middleware/requireSuperAdmin.js";
 
@@ -26,6 +27,31 @@ function parsePagination(query) {
   return { page, limit, skip: (page - 1) * limit };
 }
 
+function formatLastMessagePreview(message) {
+  if (!message) return null;
+
+  const body = message.body?.trim();
+  if (body) return body;
+  if (message.imageUrl) return "Photo";
+  if (message.fileUrl) return message.fileName || "Document";
+  return "Inquiry sent";
+}
+
+async function deleteConversationsByIds(conversationIds) {
+  if (!conversationIds.length) {
+    return 0;
+  }
+
+  await prisma.message.deleteMany({
+    where: { conversationId: { in: conversationIds } },
+  });
+  const result = await prisma.conversation.deleteMany({
+    where: { id: { in: conversationIds } },
+  });
+
+  return result.count;
+}
+
 async function deleteProductWithRelations(productId) {
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -41,14 +67,7 @@ async function deleteProductWithRelations(productId) {
   });
   const conversationIds = conversations.map((c) => c.id);
 
-  if (conversationIds.length) {
-    await prisma.message.deleteMany({
-      where: { conversationId: { in: conversationIds } },
-    });
-    await prisma.conversation.deleteMany({
-      where: { id: { in: conversationIds } },
-    });
-  }
+  await deleteConversationsByIds(conversationIds);
 
   await prisma.savedListing.deleteMany({ where: { productId } });
   await deleteProductImagesFromS3(product.images);
@@ -378,6 +397,238 @@ router.post("/users/:id/unban", async (req, res) => {
   } catch (error) {
     console.error("Superadmin unban user failed:", error);
     res.status(500).json({ error: "Failed to unban user" });
+  }
+});
+
+router.get("/users/:id/conversations", async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const { page, limit, skip } = parsePagination(req.query);
+    const q = String(req.query.q || "").trim();
+
+    const where = {
+      OR: [{ buyerId: user.id }, { sellerId: user.id }],
+      ...(q
+        ? {
+            AND: [
+              {
+                OR: [
+                  { product: { title: { contains: q } } },
+                  { buyer: { email: { contains: q } } },
+                  { buyer: { name: { contains: q } } },
+                  { seller: { email: { contains: q } } },
+                  { seller: { name: { contains: q } } },
+                ],
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, conversations] = await Promise.all([
+      prisma.conversation.count({ where }),
+      prisma.conversation.findMany({
+        where,
+        orderBy: { lastMessageAt: "desc" },
+        skip,
+        take: limit,
+        include: {
+          buyer: {
+            select: { id: true, email: true, name: true },
+          },
+          seller: {
+            select: { id: true, email: true, name: true },
+          },
+          product: {
+            select: { id: true, title: true },
+          },
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: {
+              id: true,
+              body: true,
+              imageUrl: true,
+              fileUrl: true,
+              fileName: true,
+              createdAt: true,
+              senderId: true,
+            },
+          },
+          _count: {
+            select: { messages: true },
+          },
+        },
+      }),
+    ]);
+
+    res.json({
+      page,
+      limit,
+      total,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role ? user.role.toLowerCase() : null,
+      },
+      conversations: conversations.map((conversation) => {
+        const isBuyer = conversation.buyerId === user.id;
+        const counterpart = isBuyer ? conversation.seller : conversation.buyer;
+        const lastMessage = conversation.messages[0] || null;
+
+        return {
+          id: conversation.id,
+          product: conversation.product,
+          counterpart,
+          userRoleInChat: isBuyer ? "buyer" : "seller",
+          buyer: conversation.buyer,
+          seller: conversation.seller,
+          lastMessagePreview: formatLastMessagePreview(lastMessage),
+          lastMessageAt: conversation.lastMessageAt,
+          messageCount: conversation._count.messages,
+          createdAt: conversation.createdAt,
+        };
+      }),
+    });
+  } catch (error) {
+    console.error("Superadmin list user conversations failed:", error);
+    res.status(500).json({ error: "Failed to list conversations" });
+  }
+});
+
+router.delete("/users/:id/conversations", async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        OR: [{ buyerId: user.id }, { sellerId: user.id }],
+      },
+      select: { id: true },
+    });
+    const conversationIds = conversations.map((c) => c.id);
+    const deletedCount = await deleteConversationsByIds(conversationIds);
+
+    res.json({
+      message: "User chats cleared",
+      deletedCount,
+    });
+  } catch (error) {
+    console.error("Superadmin clear user conversations failed:", error);
+    res.status(500).json({ error: "Failed to clear user chats" });
+  }
+});
+
+router.get("/conversations/:id/messages", async (req, res) => {
+  try {
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: req.params.id },
+      include: {
+        buyer: {
+          select: { id: true, email: true, name: true },
+        },
+        seller: {
+          select: { id: true, email: true, name: true },
+        },
+        product: {
+          select: { id: true, title: true },
+        },
+      },
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    const { page, limit, skip } = parsePagination(req.query);
+
+    const [total, messagesDesc] = await Promise.all([
+      prisma.message.count({ where: { conversationId: conversation.id } }),
+      prisma.message.findMany({
+        where: { conversationId: conversation.id },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+        include: {
+          sender: {
+            select: { id: true, email: true, name: true },
+          },
+        },
+      }),
+    ]);
+
+    // Return chronological order (oldest → newest) within the page.
+    const messages = [...messagesDesc].reverse();
+
+    const formattedMessages = await Promise.all(
+      messages.map(async (message) => {
+        const formatted = await formatMessage(message);
+        return {
+          ...formatted,
+          sender: message.sender,
+        };
+      }),
+    );
+
+    res.json({
+      page,
+      limit,
+      total,
+      hasMore: skip + messagesDesc.length < total,
+      conversation: {
+        id: conversation.id,
+        product: conversation.product,
+        buyer: conversation.buyer,
+        seller: conversation.seller,
+        lastMessageAt: conversation.lastMessageAt,
+        createdAt: conversation.createdAt,
+      },
+      messages: formattedMessages,
+    });
+  } catch (error) {
+    console.error("Superadmin list conversation messages failed:", error);
+    res.status(500).json({ error: "Failed to list messages" });
+  }
+});
+
+router.delete("/conversations/:id", async (req, res) => {
+  try {
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    await deleteConversationsByIds([conversation.id]);
+
+    res.json({ message: "Conversation cleared" });
+  } catch (error) {
+    console.error("Superadmin clear conversation failed:", error);
+    res.status(500).json({ error: "Failed to clear conversation" });
   }
 });
 

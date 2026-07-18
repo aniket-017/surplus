@@ -100,6 +100,29 @@ export function unbanSuperadminUser(id) {
   })
 }
 
+export function getSuperadminUserConversations(userId, { page = 1, limit = 20, q = '' } = {}) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  if (q) params.set('q', q)
+  return apiFetch(`/api/superadmin/users/${userId}/conversations?${params}`)
+}
+
+export function getSuperadminConversationMessages(conversationId, { page = 1, limit = 50 } = {}) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  return apiFetch(`/api/superadmin/conversations/${conversationId}/messages?${params}`)
+}
+
+export function clearSuperadminConversation(conversationId) {
+  return apiFetch(`/api/superadmin/conversations/${conversationId}`, {
+    method: 'DELETE',
+  })
+}
+
+export function clearSuperadminUserChats(userId) {
+  return apiFetch(`/api/superadmin/users/${userId}/conversations`, {
+    method: 'DELETE',
+  })
+}
+
 export function getSuperadminProducts({ page = 1, limit = 20, q = '' } = {}) {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   if (q) params.set('q', q)

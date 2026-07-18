@@ -73,6 +73,10 @@ export type BrowseProductsParams = {
   sort?: BrowseSort;
   city?: string;
   state?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  condition?: ProductCondition;
+  negotiable?: boolean;
   limit?: number;
   skip?: number;
 };

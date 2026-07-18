@@ -6,9 +6,16 @@ import { colors, spacing } from '@/src/constants/theme';
 type BuyerSearchBarProps = {
   value: string;
   onChangeText: (value: string) => void;
+  onFilterPress?: () => void;
+  activeFilterCount?: number;
 };
 
-export function BuyerSearchBar({ value, onChangeText }: BuyerSearchBarProps) {
+export function BuyerSearchBar({
+  value,
+  onChangeText,
+  onFilterPress,
+  activeFilterCount = 0,
+}: BuyerSearchBarProps) {
   return (
     <View style={styles.container}>
       <View style={styles.searchWrap}>
@@ -21,9 +28,14 @@ export function BuyerSearchBar({ value, onChangeText }: BuyerSearchBarProps) {
           placeholderTextColor={colors.muted}
         />
       </View>
-      <Pressable style={styles.filterButton}>
+      <Pressable style={styles.filterButton} onPress={onFilterPress}>
         <Ionicons name="options-outline" size={18} color={colors.textStrong} />
         <Text style={styles.filterText}>Filters</Text>
+        {activeFilterCount > 0 ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{activeFilterCount}</Text>
+          </View>
+        ) : null}
       </Pressable>
     </View>
   );
@@ -68,5 +80,20 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
     fontSize: 13,
     fontWeight: '700',
+  },
+  badge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    marginLeft: 2,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '800',
   },
 });

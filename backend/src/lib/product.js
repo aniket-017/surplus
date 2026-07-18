@@ -193,7 +193,16 @@ export function buildBrowseOrderBy(sort) {
   return { createdAt: "desc" };
 }
 
-export function buildBrowseWhere({ search, category, city, state }) {
+export function buildBrowseWhere({
+  search,
+  category,
+  city,
+  state,
+  minPrice,
+  maxPrice,
+  condition,
+  negotiable,
+}) {
   const where = {};
 
   if (category) {
@@ -208,6 +217,25 @@ export function buildBrowseWhere({ search, category, city, state }) {
     where.location = {
       is: { state: { equals: state, mode: "insensitive" } },
     };
+  }
+
+  const priceFilter = {};
+  if (Number.isFinite(minPrice)) {
+    priceFilter.gte = minPrice;
+  }
+  if (Number.isFinite(maxPrice)) {
+    priceFilter.lte = maxPrice;
+  }
+  if (Object.keys(priceFilter).length) {
+    where.price = priceFilter;
+  }
+
+  if (condition) {
+    where.condition = condition;
+  }
+
+  if (negotiable) {
+    where.priceType = "NEGOTIABLE";
   }
 
   if (search) {

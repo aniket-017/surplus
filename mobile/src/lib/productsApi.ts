@@ -136,6 +136,10 @@ function buildBrowseQuery(params: BrowseProductsParams = {}) {
   if (params.sort) query.set('sort', params.sort);
   if (params.city) query.set('city', params.city);
   if (params.state) query.set('state', params.state);
+  if (params.minPrice !== undefined) query.set('minPrice', String(params.minPrice));
+  if (params.maxPrice !== undefined) query.set('maxPrice', String(params.maxPrice));
+  if (params.condition) query.set('condition', params.condition);
+  if (params.negotiable) query.set('negotiable', 'true');
   if (params.limit) query.set('limit', String(params.limit));
   if (params.skip) query.set('skip', String(params.skip));
 

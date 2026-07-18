@@ -19,6 +19,7 @@ import {
   formatProductListing,
   formatSellerProducts,
   parseBrowseSort,
+  parseCondition,
   parseProductPayload,
 } from "../lib/product.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -216,7 +217,33 @@ router.get("/browse", requireAuth, async (req, res) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
     const skip = Math.max(Number(req.query.skip) || 0, 0);
 
-    const where = buildBrowseWhere({ search, category, city, state });
+    const rawMinPrice = req.query.minPrice;
+    const rawMaxPrice = req.query.maxPrice;
+    const minPrice =
+      rawMinPrice !== undefined && rawMinPrice !== ""
+        ? Number(rawMinPrice)
+        : undefined;
+    const maxPrice =
+      rawMaxPrice !== undefined && rawMaxPrice !== ""
+        ? Number(rawMaxPrice)
+        : undefined;
+
+    const condition = parseCondition(req.query.condition);
+    const negotiableRaw = String(req.query.negotiable || "")
+      .trim()
+      .toLowerCase();
+    const negotiable = negotiableRaw === "true" || negotiableRaw === "1";
+
+    const where = buildBrowseWhere({
+      search,
+      category,
+      city,
+      state,
+      minPrice: Number.isFinite(minPrice) ? minPrice : undefined,
+      maxPrice: Number.isFinite(maxPrice) ? maxPrice : undefined,
+      condition: condition || undefined,
+      negotiable,
+    });
 
     const products = await prisma.product.findMany({
       where,

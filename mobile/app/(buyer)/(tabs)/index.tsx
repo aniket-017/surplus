@@ -15,6 +15,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { BuyerHomeHeader } from '@/src/components/buyer/BuyerHomeHeader';
 import { BuyerSearchBar } from '@/src/components/buyer/BuyerSearchBar';
 import { CategoryCarousel } from '@/src/components/buyer/CategoryCarousel';
+import {
+  countActiveFilters,
+  EMPTY_BROWSE_FILTERS,
+  FilterModal,
+  type BrowseFilters,
+} from '@/src/components/buyer/FilterModal';
 import { ListingFilterChips } from '@/src/components/buyer/ListingFilterChips';
 import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
 import { useAuth } from '@/src/context/AuthContext';
@@ -29,6 +35,20 @@ const GRID_GAP = spacing.sm;
 const CARD_WIDTH =
   (Dimensions.get('window').width - HORIZONTAL_PADDING * 2 - GRID_GAP) / 2;
 
+function parseOptionalPrice(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function chipIdFromFilters(filters: BrowseFilters): string {
+  if (filters.nearMe) return 'near';
+  if (filters.sort === 'price_asc') return 'price';
+  if (filters.sort === 'recent') return 'all';
+  return 'recent';
+}
+
 export default function BuyerHomeTab() {
   const { token, user } = useAuth();
   const { location } = useBuyerLocation();
@@ -36,18 +56,21 @@ export default function BuyerHomeTab() {
 
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [sort, setSort] = useState<BrowseSort>('recent');
+  const [filters, setFilters] = useState<BrowseFilters>(EMPTY_BROWSE_FILTERS);
+  const [filtersVisible, setFiltersVisible] = useState(false);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [products, setProducts] = useState<ProductListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
+  const activeCategory = filters.category;
+  const activeFilter = chipIdFromFilters(filters);
+  const activeFilterCount = countActiveFilters(filters);
+
   useEffect(() => {
     if (typeof categoryParam === 'string' && categoryParam.length > 0) {
-      setActiveCategory(categoryParam);
+      setFilters((prev) => ({ ...prev, category: categoryParam }));
     }
   }, [categoryParam]);
 
@@ -80,9 +103,13 @@ export default function BuyerHomeTab() {
           getProductCategories(token),
           browseProducts(token, {
             search: debouncedSearch || undefined,
-            category: activeCategory || undefined,
-            sort,
-            city: activeFilter === 'near' && nearMeCity ? nearMeCity : undefined,
+            category: filters.category || undefined,
+            sort: filters.sort,
+            city: filters.nearMe && nearMeCity ? nearMeCity : undefined,
+            minPrice: parseOptionalPrice(filters.minPrice),
+            maxPrice: parseOptionalPrice(filters.maxPrice),
+            condition: filters.condition || undefined,
+            negotiable: filters.negotiable || undefined,
             limit: 40,
           }),
         ]);
@@ -90,7 +117,7 @@ export default function BuyerHomeTab() {
         setCategories(categoriesData.categories);
         setProducts(productsData.products);
 
-        if (activeFilter === 'near' && !nearMeCity) {
+        if (filters.nearMe && !nearMeCity) {
           setError('Tap the location at the top to choose where "Near Me" should look.');
         }
       } catch (err) {
@@ -101,7 +128,7 @@ export default function BuyerHomeTab() {
         setRefreshing(false);
       }
     },
-    [token, debouncedSearch, activeCategory, sort, activeFilter, nearMeCity],
+    [token, debouncedSearch, filters, nearMeCity],
   );
 
   useFocusEffect(
@@ -112,19 +139,31 @@ export default function BuyerHomeTab() {
   );
 
   function handleCategorySelect(category: string) {
-    setActiveCategory(category);
+    setFilters((prev) => ({ ...prev, category }));
   }
 
   function handleFilterChange(filterId: string, nextSort: BrowseSort) {
-    setActiveFilter(filterId);
-    setSort(nextSort);
+    setFilters((prev) => ({
+      ...prev,
+      sort: nextSort,
+      nearMe: filterId === 'near',
+    }));
+  }
+
+  function handleApplyFilters(next: BrowseFilters) {
+    setFilters(next);
   }
 
   const listHeader = useMemo(
     () => (
       <View style={styles.headerContent}>
         <BuyerHomeHeader />
-        <BuyerSearchBar value={search} onChangeText={setSearch} />
+        <BuyerSearchBar
+          value={search}
+          onChangeText={setSearch}
+          onFilterPress={() => setFiltersVisible(true)}
+          activeFilterCount={activeFilterCount}
+        />
         <CategoryCarousel
           categories={categories}
           activeCategory={activeCategory}
@@ -134,7 +173,7 @@ export default function BuyerHomeTab() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
     ),
-    [search, categories, activeCategory, activeFilter, error],
+    [search, categories, activeCategory, activeFilter, activeFilterCount, error],
   );
 
   return (
@@ -181,6 +220,15 @@ export default function BuyerHomeTab() {
           />
         }
         showsVerticalScrollIndicator={false}
+      />
+
+      <FilterModal
+        visible={filtersVisible}
+        onClose={() => setFiltersVisible(false)}
+        filters={filters}
+        categories={categories}
+        nearMeCity={nearMeCity}
+        onApply={handleApplyFilters}
       />
     </SafeAreaView>
   );

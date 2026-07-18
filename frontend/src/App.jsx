@@ -14,6 +14,7 @@ import MessagesPage from './pages/MessagesPage'
 import BuyerHomePage from './pages/buyer/BuyerHomePage'
 import BuyerProductDetailPage from './pages/buyer/BuyerProductDetailPage'
 import CategoriesPage from './pages/buyer/CategoriesPage'
+import SavedListingsPage from './pages/buyer/SavedListingsPage'
 import AddProductPage from './pages/seller/AddProductPage'
 import SellerDashboardPage from './pages/seller/SellerDashboardPage'
 import SellerProductDetailPage from './pages/seller/SellerProductDetailPage'
@@ -75,6 +76,16 @@ export default function App() {
               <ProtectedRoute>
                 <RoleRoute role="buyer">
                   <BuyerProductDetailPage />
+                </RoleRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/buyer/saved"
+            element={
+              <ProtectedRoute>
+                <RoleRoute role="buyer">
+                  <SavedListingsPage />
                 </RoleRoute>
               </ProtectedRoute>
             }

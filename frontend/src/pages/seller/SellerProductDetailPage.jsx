@@ -59,10 +59,12 @@ export default function SellerProductDetailPage() {
   if (error || !product) {
     return (
       <AppShell role="seller" title="Listing details">
-        <button type="button" className="detail-back" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
-        <p className="dash-error">{error || 'Product not found'}</p>
+        <div className="detail-page">
+          <button type="button" className="detail-back" onClick={() => navigate(-1)}>
+            ← Back
+          </button>
+          <p className="dash-error">{error || 'Product not found'}</p>
+        </div>
       </AppShell>
     )
   }
@@ -76,96 +78,99 @@ export default function SellerProductDetailPage() {
 
   return (
     <AppShell role="seller" title="Listing details">
-      <button type="button" className="detail-back" onClick={() => navigate(-1)}>
-        ← Back
-      </button>
+      <div className="detail-page">
+        <div className="detail-top-row">
+          <button type="button" className="detail-back" onClick={() => navigate(-1)}>
+            ← Back
+          </button>
+        </div>
 
-      <div className="detail-gallery">
-        {product.images.length > 0 ? (
-          <>
-            <img src={getImageUrl(product.images[activeImage])} alt={product.title} />
-            {product.images.length > 1 && (
-              <div style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem', flexWrap: 'wrap' }}>
-                {product.images.map((image, index) => (
-                  <button
-                    key={image}
-                    type="button"
-                    onClick={() => setActiveImage(index)}
-                    style={{
-                      border: index === activeImage ? '2px solid var(--accent)' : '1px solid var(--border)',
-                      borderRadius: 8,
-                      padding: 0,
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      width: 64,
-                      height: 64,
-                    }}
-                  >
-                    <img
-                      src={getImageUrl(image)}
-                      alt=""
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  </button>
-                ))}
-              </div>
+        <div className="detail-hero">
+          <div className="detail-gallery">
+            {product.images.length > 0 ? (
+              <>
+                <img src={getImageUrl(product.images[activeImage])} alt={product.title} />
+                {product.images.length > 1 ? (
+                  <div className="detail-thumbs">
+                    {product.images.map((image, index) => (
+                      <button
+                        key={image}
+                        type="button"
+                        className={`detail-thumb${index === activeImage ? ' is-active' : ''}`}
+                        onClick={() => setActiveImage(index)}
+                        aria-label={`View photo ${index + 1}`}
+                      >
+                        <img src={getImageUrl(image)} alt="" />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div className="detail-gallery-fallback">No image</div>
             )}
-          </>
-        ) : (
-          <div className="detail-gallery-fallback">No image</div>
-        )}
-      </div>
-
-      <div className="detail-summary">
-        <div className="detail-chips">
-          <span className="detail-chip">{product.category}</span>
-          <span className="detail-chip muted">{product.subCategory}</span>
-        </div>
-        <h2 className="detail-title">{product.title}</h2>
-        <div className="detail-price-row">
-          <span className="detail-price">{formatPrice(product.price)}</span>
-          <span className="detail-price-type">{getPriceTypeLabel(product.priceType)}</span>
-        </div>
-        <div className="detail-stats">
-          <div>
-            <div className="detail-stat-label">Condition</div>
-            <div className="detail-stat-value">{getConditionLabel(product.condition)}</div>
           </div>
-          <div>
-            <div className="detail-stat-label">Available</div>
-            <div className="detail-stat-value">
-              {product.quantity} {product.quantityUnit}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="detail-section">
-        <h3>Description</h3>
-        <p className="detail-body">{product.description}</p>
-      </div>
-
-      <div className="detail-section">
-        <h3>Specifications</h3>
-        {product.attributes.length === 0 ? (
-          <p className="detail-section-sub">No attributes were added for this listing.</p>
-        ) : (
-          product.attributes.map((attribute, index) => (
-            <div key={`${attribute.key}-${index}`} className="detail-attr-row">
-              <div className="detail-attr-badge">{index + 1}</div>
-              <div>
-                <div className="detail-attr-key">{formatAttributeKey(attribute.key)}</div>
-                <div className="detail-attr-value">{attribute.value}</div>
+          <div className="detail-hero-side">
+            <div className="detail-summary">
+              <div className="detail-chips">
+                <span className="detail-chip">{product.category}</span>
+                <span className="detail-chip muted">{product.subCategory}</span>
+              </div>
+              <h2 className="detail-title">{product.title}</h2>
+              <div className="detail-price-row">
+                <span className="detail-price">{formatPrice(product.price)}</span>
+                <span className="detail-price-type">{getPriceTypeLabel(product.priceType)}</span>
+              </div>
+              <div className="detail-stats">
+                <div>
+                  <div className="detail-stat-label">Condition</div>
+                  <div className="detail-stat-value">{getConditionLabel(product.condition)}</div>
+                </div>
+                <div>
+                  <div className="detail-stat-label">Available</div>
+                  <div className="detail-stat-value">
+                    {product.quantity} {product.quantityUnit}
+                  </div>
+                </div>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          </div>
+        </div>
 
-      <div className="detail-section">
-        <h3>Location</h3>
-        <p className="detail-body">{locationPrimary}</p>
-        {locationSecondary ? <p className="detail-section-sub">{locationSecondary}</p> : null}
+        <div className="detail-section">
+          <h3>Description</h3>
+          <p className="detail-section-sub">Product overview</p>
+          <p className="detail-body">{product.description}</p>
+        </div>
+
+        <div className="detail-section">
+          <h3>Specifications</h3>
+          <p className="detail-section-sub">
+            {product.attributes.length
+              ? `${product.attributes.length} material-specific properties`
+              : 'No specifications listed'}
+          </p>
+          {product.attributes.length === 0 ? (
+            <p className="detail-section-sub">No attributes were added for this listing.</p>
+          ) : (
+            <div className="detail-attrs">
+              {product.attributes.map((attribute, index) => (
+                <div key={`${attribute.key}-${index}`} className="detail-attr-row">
+                  <div className="detail-attr-key">{formatAttributeKey(attribute.key)}</div>
+                  <div className="detail-attr-value">{attribute.value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="detail-section">
+          <h3>Location</h3>
+          <p className="detail-section-sub">Pickup availability</p>
+          <p className="detail-body">{locationPrimary}</p>
+          {locationSecondary ? <p className="detail-section-sub">{locationSecondary}</p> : null}
+        </div>
       </div>
     </AppShell>
   )

@@ -189,6 +189,15 @@ export default function ProfilePage({ role }) {
 
       <div className="dash-card profile-actions">
         <h3 className="dash-section-title">Account actions</h3>
+        {role === 'buyer' ? (
+          <button
+            type="button"
+            className="btn btn-outline btn-block"
+            onClick={() => navigate('/buyer/saved')}
+          >
+            Saved listings
+          </button>
+        ) : null}
         <button
           type="button"
           className="btn btn-outline btn-block"

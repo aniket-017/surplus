@@ -9,6 +9,7 @@ import ProductListingCard from '../../components/buyer/ProductListingCard'
 import { useAuth } from '../../context/AuthContext'
 import { useBuyerLocation } from '../../context/LocationContext'
 import { browseProducts, getCategories } from '../../lib/productsApi'
+import { getSavedListings, toggleSavedListing } from '../../lib/savedApi'
 
 export default function BuyerHomePage() {
   const navigate = useNavigate()
@@ -24,9 +25,11 @@ export default function BuyerHomePage() {
   const [sort, setSort] = useState('recent')
   const [categories, setCategories] = useState([])
   const [products, setProducts] = useState([])
+  const [savedIds, setSavedIds] = useState(() => new Set())
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState('')
+  const [togglingId, setTogglingId] = useState(null)
 
   const abortRef = useRef(null)
   const requestIdRef = useRef(0)
@@ -72,20 +75,24 @@ export default function BuyerHomePage() {
       setError('')
 
       try {
-        const productsData = await browseProducts(
-          {
-            search: debouncedSearch || undefined,
-            category: activeCategory || undefined,
-            sort,
-            city: activeFilter === 'near' && nearMeCity ? nearMeCity : undefined,
-            limit: 40,
-          },
-          { signal: controller.signal },
-        )
+        const [productsData, savedData] = await Promise.all([
+          browseProducts(
+            {
+              search: debouncedSearch || undefined,
+              category: activeCategory || undefined,
+              sort,
+              city: activeFilter === 'near' && nearMeCity ? nearMeCity : undefined,
+              limit: 40,
+            },
+            { signal: controller.signal },
+          ),
+          getSavedListings().catch(() => ({ products: [] })),
+        ])
 
         if (requestId !== requestIdRef.current) return
 
         setProducts(productsData.products)
+        setSavedIds(new Set((savedData.products || []).map((item) => item.id)))
         hasLoadedOnceRef.current = true
 
         if (activeFilter === 'near' && !nearMeCity) {
@@ -132,6 +139,40 @@ export default function BuyerHomePage() {
   function handleSearchClear() {
     setSearch('')
     setDebouncedSearch('')
+  }
+
+  async function handleToggleSave(productId) {
+    if (togglingId) return
+
+    setTogglingId(productId)
+    const wasSaved = savedIds.has(productId)
+
+    setSavedIds((current) => {
+      const next = new Set(current)
+      if (wasSaved) next.delete(productId)
+      else next.add(productId)
+      return next
+    })
+
+    try {
+      const result = await toggleSavedListing(productId)
+      setSavedIds((current) => {
+        const next = new Set(current)
+        if (result.saved) next.add(productId)
+        else next.delete(productId)
+        return next
+      })
+    } catch (err) {
+      setSavedIds((current) => {
+        const next = new Set(current)
+        if (wasSaved) next.add(productId)
+        else next.delete(productId)
+        return next
+      })
+      setError(err.message || 'Failed to update saved listing')
+    } finally {
+      setTogglingId(null)
+    }
   }
 
   const searchStatus = debouncedSearch
@@ -213,6 +254,8 @@ export default function BuyerHomePage() {
             <ProductListingCard
               key={product.id}
               product={product}
+              saved={savedIds.has(product.id)}
+              onToggleSave={() => handleToggleSave(product.id)}
               onClick={() => navigate(`/buyer/products/${product.id}`)}
             />
           ))}

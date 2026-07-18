@@ -1,20 +1,20 @@
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { KeyboardAwareScrollView } from '@/src/components/KeyboardAwareScrollView';
 import { Logo } from '@/src/components/Logo';
 import { ProductForm } from '@/src/components/ProductForm';
+import { ProductImageSourceSheet } from '@/src/components/ProductImageSourceSheet';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
 import { analyzeProductImages, createProduct } from '@/src/lib/productsApi';
@@ -36,6 +36,7 @@ export default function AddProductScreen() {
   const [analyzing, setAnalyzing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [sourceSheetOpen, setSourceSheetOpen] = useState(false);
 
   useEffect(() => {
     if (user?.address && isCompleteLocation(user.address)) {
@@ -46,28 +47,7 @@ export default function AddProductScreen() {
     }
   }, [user?.address]);
 
-  async function pickImages() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Allow photo library access to upload product images.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      selectionLimit: MAX_IMAGES - images.length,
-      quality: 0.85,
-    });
-
-    if (result.canceled) return;
-
-    const picked = result.assets.map((asset, index) => ({
-      uri: asset.uri,
-      name: asset.fileName || `product-${Date.now()}-${index}.jpg`,
-      type: asset.mimeType || 'image/jpeg',
-    }));
-
+  function handleImagesSelected(picked: LocalImage[]) {
     setImages((current) => [...current, ...picked].slice(0, MAX_IMAGES));
   }
 
@@ -168,8 +148,17 @@ export default function AddProductScreen() {
               </View>
             ))}
             {images.length < MAX_IMAGES ? (
-              <Pressable style={styles.addImageBtn} onPress={pickImages}>
-                <Text style={styles.addImageText}>+ Add</Text>
+              <Pressable
+                style={styles.addImageBtn}
+                onPress={() => setSourceSheetOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Add product photos"
+              >
+                <View style={styles.addImageIcon}>
+                  <Ionicons name="camera-outline" size={22} color={colors.accent} />
+                </View>
+                <Text style={styles.addImageText}>Add</Text>
+                <Text style={styles.addImageHint}>Camera or gallery</Text>
               </Pressable>
             ) : null}
           </View>
@@ -205,6 +194,13 @@ export default function AddProductScreen() {
           </Pressable>
         </View>
       </KeyboardAwareScrollView>
+
+      <ProductImageSourceSheet
+        visible={sourceSheetOpen}
+        remainingSlots={MAX_IMAGES - images.length}
+        onClose={() => setSourceSheetOpen(false)}
+        onImagesSelected={handleImagesSelected}
+      />
     </SafeAreaView>
   );
 }
@@ -287,15 +283,33 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: colors.borderAccent,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: 'rgba(92, 179, 53, 0.06)',
+    gap: 2,
+    paddingHorizontal: 4,
+  },
+  addImageIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(92, 179, 53, 0.14)',
+    marginBottom: 2,
   },
   addImageText: {
     color: colors.accent,
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  addImageHint: {
+    color: colors.muted,
+    fontSize: 9,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   button: {
     backgroundColor: colors.accent,

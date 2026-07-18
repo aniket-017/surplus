@@ -20,6 +20,7 @@ type CameraCaptureModalProps = {
   visible: boolean;
   onClose: () => void;
   onCapture: (attachment: ChatAttachment) => void;
+  permissionMessage?: string;
 };
 
 const FLASH_ORDER: FlashMode[] = ['off', 'auto', 'on'];
@@ -34,7 +35,12 @@ const FLASH_LABEL: Record<FlashMode, string> = {
   on: 'On',
 };
 
-export function CameraCaptureModal({ visible, onClose, onCapture }: CameraCaptureModalProps) {
+export function CameraCaptureModal({
+  visible,
+  onClose,
+  onCapture,
+  permissionMessage = 'Allow camera access to take and send photos in chat.',
+}: CameraCaptureModalProps) {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
@@ -101,9 +107,7 @@ export function CameraCaptureModal({ visible, onClose, onCapture }: CameraCaptur
           <SafeAreaView style={styles.centered}>
             <Ionicons name="camera-outline" size={56} color="rgba(255,255,255,0.7)" />
             <Text style={styles.permissionTitle}>Camera access needed</Text>
-            <Text style={styles.permissionText}>
-              Allow camera access to take and send photos in chat.
-            </Text>
+            <Text style={styles.permissionText}>{permissionMessage}</Text>
             <Pressable style={styles.permissionButton} onPress={() => void requestPermission()}>
               <Text style={styles.permissionButtonText}>Grant access</Text>
             </Pressable>

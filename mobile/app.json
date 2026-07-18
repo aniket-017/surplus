@@ -45,14 +45,14 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Surplus to access your photos to send images in chat.",
-          "cameraPermission": "Allow Surplus to use your camera to send photos in chat."
+          "photosPermission": "Allow Surplus to access your photos for product listings and chat.",
+          "cameraPermission": "Allow Surplus to use your camera for product listings and chat."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Surplus to use your camera to take and send photos in chat."
+          "cameraPermission": "Allow Surplus to use your camera to photograph products and send photos in chat."
         }
       ],
       [

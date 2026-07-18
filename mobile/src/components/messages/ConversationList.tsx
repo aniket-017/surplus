@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -15,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
 import { useUnreadMessages } from '@/src/context/UnreadMessagesContext';
 import { colors, spacing } from '@/src/constants/theme';
+import { getCachedConversations, setCachedConversations } from '@/src/lib/chatCache';
 import { getConversations, type ConversationSummary } from '@/src/lib/conversationsApi';
 import { formatConversationTime } from '@/src/lib/messageFormat';
 import { getImageUrl } from '@/src/lib/productsApi';
@@ -40,11 +42,66 @@ type ConversationListProps = {
   emptySubtitle: string;
 };
 
+type ConversationRowProps = {
+  item: ConversationSummary;
+  role: 'buyer' | 'seller' | null | undefined;
+};
+
+const ConversationRow = memo(function ConversationRow({ item, role }: ConversationRowProps) {
+  const title = getRowTitle(item, role);
+  const productImage = item.product?.images?.[0];
+  const unread = (item.unreadCount || 0) > 0;
+
+  return (
+    <Pressable
+      style={[styles.row, unread && styles.rowUnread]}
+      onPress={() => {
+        if (role === 'seller') {
+          router.push(`/(seller)/messages/${item.id}` as never);
+        } else {
+          router.push({ pathname: '/messages/[id]', params: { id: item.id } });
+        }
+      }}
+    >
+      {productImage ? (
+        <Image source={{ uri: getImageUrl(productImage) }} style={styles.avatar} contentFit="cover" />
+      ) : (
+        <View style={[styles.avatar, styles.avatarFallback]}>
+          <Ionicons name="cube-outline" size={22} color={colors.muted} />
+        </View>
+      )}
+      <View style={styles.content}>
+        <View style={styles.topRow}>
+          <Text style={[styles.name, unread && styles.nameUnread]} numberOfLines={1}>
+            {title}
+          </Text>
+          <Text style={[styles.time, unread && styles.timeUnread]}>
+            {formatConversationTime(item.lastMessageAt)}
+          </Text>
+        </View>
+        <View style={styles.previewRow}>
+          <Text style={[styles.preview, unread && styles.previewUnread]} numberOfLines={1}>
+            {getPreview(item)}
+          </Text>
+          {unread ? (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadBadgeText}>
+                {item.unreadCount > 99 ? '99+' : item.unreadCount}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+    </Pressable>
+  );
+});
+
 export function ConversationList({ emptySubtitle }: ConversationListProps) {
   const { token, user } = useAuth();
   const { refreshUnreadCount } = useUnreadMessages();
-  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = getCachedConversations();
+  const [conversations, setConversations] = useState<ConversationSummary[]>(cached ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
@@ -57,10 +114,13 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
     try {
       const data = await getConversations(token);
       setConversations(data.conversations);
+      setCachedConversations(data.conversations);
       setError('');
-      await refreshUnreadCount();
+      void refreshUnreadCount();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load messages');
+      if (!getCachedConversations()?.length) {
+        setError(err instanceof Error ? err.message : 'Failed to load messages');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -69,16 +129,28 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
 
   useFocusEffect(
     useCallback(() => {
-      load();
+      const existing = getCachedConversations();
+      if (existing) {
+        setConversations(existing);
+        setLoading(false);
+      }
+      void load();
     }, [load]),
   );
 
   function handleRefresh() {
     setRefreshing(true);
-    load();
+    void load();
   }
 
-  if (loading) {
+  const renderItem = useCallback(
+    ({ item }: { item: ConversationSummary }) => (
+      <ConversationRow item={item} role={user?.role} />
+    ),
+    [user?.role],
+  );
+
+  if (loading && conversations.length === 0) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator color={colors.accent} size="large" />
@@ -86,7 +158,7 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
     );
   }
 
-  if (error) {
+  if (error && conversations.length === 0) {
     return (
       <View style={styles.centered}>
         <Text style={styles.error}>{error}</Text>
@@ -111,57 +183,11 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
       }
-      renderItem={({ item }) => {
-        const title = getRowTitle(item, user?.role);
-        const productImage = item.product?.images?.[0];
-        const unread = (item.unreadCount || 0) > 0;
-
-        return (
-          <Pressable
-            style={[styles.row, unread && styles.rowUnread]}
-            onPress={() => {
-              if (user?.role === 'seller') {
-                router.push(`/(seller)/messages/${item.id}` as never);
-              } else {
-                router.push({ pathname: '/messages/[id]', params: { id: item.id } });
-              }
-            }}
-          >
-            {productImage ? (
-              <Image source={{ uri: getImageUrl(productImage) }} style={styles.avatar} contentFit="cover" />
-            ) : (
-              <View style={[styles.avatar, styles.avatarFallback]}>
-                <Ionicons name="cube-outline" size={22} color={colors.muted} />
-              </View>
-            )}
-            <View style={styles.content}>
-              <View style={styles.topRow}>
-                <Text style={[styles.name, unread && styles.nameUnread]} numberOfLines={1}>
-                  {title}
-                </Text>
-                <Text style={[styles.time, unread && styles.timeUnread]}>
-                  {formatConversationTime(item.lastMessageAt)}
-                </Text>
-              </View>
-              <View style={styles.previewRow}>
-                <Text
-                  style={[styles.preview, unread && styles.previewUnread]}
-                  numberOfLines={1}
-                >
-                  {getPreview(item)}
-                </Text>
-                {unread ? (
-                  <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadBadgeText}>
-                      {item.unreadCount > 99 ? '99+' : item.unreadCount}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            </View>
-          </Pressable>
-        );
-      }}
+      windowSize={7}
+      maxToRenderPerBatch={10}
+      initialNumToRender={12}
+      removeClippedSubviews={Platform.OS === 'android'}
+      renderItem={renderItem}
     />
   );
 }

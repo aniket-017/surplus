@@ -110,10 +110,39 @@ export function getUnreadCountFilter(conversation, userId) {
   };
 }
 
-export async function countUnreadForConversation(conversation, userId) {
+export function getUnreadFieldForUser(conversation, userId) {
+  if (conversation.buyerId === userId) return "buyerUnreadCount";
+  if (conversation.sellerId === userId) return "sellerUnreadCount";
+  return null;
+}
+
+export function getUnreadFieldForRecipient(conversation, senderId) {
+  if (conversation.buyerId === senderId) return "sellerUnreadCount";
+  if (conversation.sellerId === senderId) return "buyerUnreadCount";
+  return null;
+}
+
+export async function countUnreadFromMessages(conversation, userId) {
   return prisma.message.count({
     where: getUnreadCountFilter(conversation, userId),
   });
+}
+
+/** @deprecated Prefer denormalized counters; kept for lazy backfill. */
+export async function countUnreadForConversation(conversation, userId) {
+  const field = getUnreadFieldForUser(conversation, userId);
+  if (field && typeof conversation[field] === "number") {
+    return conversation[field];
+  }
+
+  const count = await countUnreadFromMessages(conversation, userId);
+  if (field) {
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { [field]: count },
+    });
+  }
+  return count;
 }
 
 export async function countTotalUnreadForUser(userId) {
@@ -127,16 +156,43 @@ export async function countTotalUnreadForUser(userId) {
       sellerId: true,
       buyerLastReadAt: true,
       sellerLastReadAt: true,
+      buyerUnreadCount: true,
+      sellerUnreadCount: true,
     },
   });
 
   if (conversations.length === 0) return 0;
 
-  const counts = await Promise.all(
-    conversations.map((conversation) => countUnreadForConversation(conversation, userId)),
-  );
+  let total = 0;
+  const backfills = [];
 
-  return counts.reduce((sum, count) => sum + count, 0);
+  for (const conversation of conversations) {
+    const field = getUnreadFieldForUser(conversation, userId);
+    const stored = field ? conversation[field] : null;
+
+    if (typeof stored === "number") {
+      total += stored;
+    } else {
+      backfills.push(
+        countUnreadFromMessages(conversation, userId).then(async (count) => {
+          if (field) {
+            await prisma.conversation.update({
+              where: { id: conversation.id },
+              data: { [field]: count },
+            });
+          }
+          return count;
+        }),
+      );
+    }
+  }
+
+  if (backfills.length > 0) {
+    const counts = await Promise.all(backfills);
+    total += counts.reduce((sum, count) => sum + count, 0);
+  }
+
+  return total;
 }
 
 export async function formatConversationSummary(conversation, currentUserId) {
@@ -178,22 +234,24 @@ export async function formatConversationSummary(conversation, currentUserId) {
   };
 }
 
-async function advanceParticipantWatermark(conversation, userId, fields) {
+async function advanceParticipantWatermark(conversation, userId, fields, extraData = {}) {
   const latestMessage = await prisma.message.findFirst({
     where: { conversationId: conversation.id },
     orderBy: { createdAt: "desc" },
     select: { createdAt: true },
   });
 
-  if (!latestMessage) {
+  if (!latestMessage && Object.keys(extraData).length === 0) {
     return conversation;
   }
 
-  const data = {};
-  for (const field of fields) {
-    const current = conversation[field];
-    if (!current || current.getTime() < latestMessage.createdAt.getTime()) {
-      data[field] = latestMessage.createdAt;
+  const data = { ...extraData };
+  if (latestMessage) {
+    for (const field of fields) {
+      const current = conversation[field];
+      if (!current || current.getTime() < latestMessage.createdAt.getTime()) {
+        data[field] = latestMessage.createdAt;
+      }
     }
   }
 
@@ -225,5 +283,35 @@ export async function markConversationRead(conversation, userId) {
   const readField = conversation.buyerId === userId ? "buyerLastReadAt" : "sellerLastReadAt";
   const deliveredField =
     conversation.buyerId === userId ? "buyerLastDeliveredAt" : "sellerLastDeliveredAt";
-  return advanceParticipantWatermark(conversation, userId, [readField, deliveredField]);
+  const unreadField = getUnreadFieldForUser(conversation, userId);
+  const extra = unreadField ? { [unreadField]: 0 } : {};
+  return advanceParticipantWatermark(conversation, userId, [readField, deliveredField], extra);
+}
+
+function isMongoObjectId(value) {
+  return typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
+}
+
+/**
+ * Resolve message cursor for after/before pagination.
+ * Accepts a message ObjectId or an ISO timestamp.
+ * Invalid / optimistic ids (e.g. temp-*) return null instead of throwing.
+ */
+export async function resolveMessageCursor(cursor, conversationId) {
+  if (!cursor) return null;
+
+  if (isMongoObjectId(cursor)) {
+    const byId = await prisma.message.findFirst({
+      where: { id: cursor, conversationId },
+      select: { id: true, createdAt: true },
+    });
+    if (byId) return byId;
+  }
+
+  const parsed = Date.parse(cursor);
+  if (!Number.isNaN(parsed)) {
+    return { id: null, createdAt: new Date(parsed) };
+  }
+
+  return null;
 }

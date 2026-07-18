@@ -139,6 +139,8 @@ model Conversation {
   sellerLastReadAt     DateTime? @map("seller_last_read_at")
   buyerLastDeliveredAt DateTime? @map("buyer_last_delivered_at")
   sellerLastDeliveredAt DateTime? @map("seller_last_delivered_at")
+  buyerUnreadCount     Int       @default(0) @map("buyer_unread_count")
+  sellerUnreadCount    Int       @default(0) @map("seller_unread_count")
   lastMessageAt        DateTime  @default(now()) @map("last_message_at")
   createdAt            DateTime  @default(now()) @map("created_at")
 

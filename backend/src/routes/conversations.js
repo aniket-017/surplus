@@ -4,8 +4,10 @@ import {
   countTotalUnreadForUser,
   formatMessage,
   formatConversationSummary,
+  getUnreadFieldForRecipient,
   markConversationDelivered,
   markConversationRead,
+  resolveMessageCursor,
 } from "../lib/conversations.js";
 import { optimizeProductImage } from "../lib/imageOptimize.js";
 import { notifyNewMessage } from "../lib/pushNotifications.js";
@@ -34,79 +36,11 @@ async function notifyRecipientOfMessage({ conversation, message, sender }) {
   });
 }
 
-// Test endpoint for debugging connectivity
-router.post("/:id/test-upload", requireAuth, (req, res) => {
-  console.log("=== TEST UPLOAD ENDPOINT HIT ===");
-  console.log("Conversation ID:", req.params.id);
-  console.log("Headers:", req.headers);
-  console.log("Body:", req.body);
-  res.json({ success: true, message: "Test endpoint reached successfully" });
-});
-
-// Test endpoint for debugging file uploads specifically
-router.post("/:id/test-file-upload", requireAuth, handleMessageUpload, async (req, res) => {
-  console.log("=== TEST FILE UPLOAD ENDPOINT HIT ===");
-  console.log("Conversation ID:", req.params.id);
-  console.log("Headers:", req.headers);
-  console.log("Files:", req.files);
-  console.log("Body:", req.body);
-  
-  try {
-    const uploadedFile = getMessageUploadFile(req);
-    console.log("Found uploaded file:", uploadedFile ? {
-      fieldname: uploadedFile.fieldname,
-      originalname: uploadedFile.originalname,
-      mimetype: uploadedFile.mimetype,
-      size: uploadedFile.size,
-      hasBuffer: !!uploadedFile.buffer,
-    } : "No file");
-
-    if (uploadedFile) {
-      console.log("Testing image processing...");
-      if (isImageUpload(uploadedFile)) {
-        console.log("Processing as image...");
-        const optimized = await optimizeProductImage(uploadedFile, 0);
-        console.log("Image optimization successful");
-        
-        // Test S3 upload without saving to database
-        console.log("Testing S3 upload...");
-        const testUrl = await uploadMessageImageToS3('test-conversation-id', optimized);
-        console.log("S3 upload successful:", testUrl);
-        
-        return res.json({ 
-          success: true, 
-          message: "File upload test successful",
-          fileType: "image",
-          optimized: {
-            mimetype: optimized.mimetype,
-            size: optimized.buffer.length
-          },
-          s3Url: testUrl
-        });
-      } else {
-        console.log("Processing as document...");
-        const testUrl = await uploadMessageFile('test-conversation-id', uploadedFile);
-        console.log("Document upload successful:", testUrl);
-        
-        return res.json({ 
-          success: true, 
-          message: "File upload test successful",
-          fileType: "document",
-          s3Url: testUrl
-        });
-      }
-    }
-    
-    res.json({ success: true, message: "No file provided for test" });
-  } catch (error) {
-    console.error("Test file upload failed:", error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message,
-      stack: error.stack
-    });
-  }
-});
+function fireAndForgetNotify(payload) {
+  notifyRecipientOfMessage(payload).catch((error) => {
+    console.error("Push notification failed:", error);
+  });
+}
 
 async function getConversationForUser(conversationId, userId) {
   const conversation = await prisma.conversation.findUnique({
@@ -130,25 +64,15 @@ async function getConversationForUser(conversationId, userId) {
 }
 
 function handleMessageUpload(req, res, next) {
-  console.log("=== MESSAGE UPLOAD REQUEST ===");
-  console.log("Method:", req.method);
-  console.log("URL:", req.url);
-  console.log("Content-Type:", req.headers["content-type"]);
-  console.log("User-Agent:", req.headers["user-agent"]);
-
   const contentType = (req.headers["content-type"] || "").toLowerCase();
   if (contentType.includes("application/json")) {
-    console.log("Detected JSON content, skipping multer");
     return next();
   }
 
-  console.log("Processing multipart upload...");
   uploadMessageAttachment(req, res, (error) => {
     if (error) {
-      console.error("Multer error:", error);
       return res.status(400).json({ error: error.message || "Invalid upload" });
     }
-    console.log("Multer processing completed successfully");
     next();
   });
 }
@@ -208,6 +132,8 @@ router.post("/", requireAuth, async (req, res) => {
       data: {
         lastMessageAt: message.createdAt,
         buyerLastReadAt: message.createdAt,
+        buyerUnreadCount: 0,
+        sellerUnreadCount: (conversation.sellerUnreadCount ?? 0) + 1,
       },
       include: {
         product: { select: { id: true, title: true, images: true } },
@@ -219,7 +145,9 @@ router.post("/", requireAuth, async (req, res) => {
       select: { id: true, name: true, email: true },
     });
 
-    await notifyRecipientOfMessage({
+    const formattedMessage = await formatMessage(message, conversation, req.user.id);
+
+    fireAndForgetNotify({
       conversation,
       message,
       sender: sender || { id: req.user.id, name: null, email: null },
@@ -227,7 +155,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     res.status(201).json({
       conversationId: conversation.id,
-      message: await formatMessage(message, conversation, req.user.id),
+      message: formattedMessage,
       isNew: !messageBody && conversation.createdAt.getTime() === message.createdAt.getTime(),
     });
   } catch (error) {
@@ -285,11 +213,11 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Conversation not found" });
     }
 
-    const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
-    const skip = Math.max(Number(req.query.skip) || 0, 0);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 100);
+    const after = req.query.after ? String(req.query.after) : null;
+    const before = req.query.before ? String(req.query.before) : null;
 
     // Opening/fetching the thread counts as delivered for the other party's ticks.
-    // Don't fail the whole fetch if delivery watermark update errors.
     let receiptConversation = conversation;
     try {
       receiptConversation = await markConversationDelivered(conversation, req.user.id);
@@ -297,14 +225,53 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
       console.error("Mark conversation delivered failed:", deliveryError);
     }
 
-    const messages = await prisma.message.findMany({
-      where: { conversationId: conversation.id },
-      orderBy: { createdAt: "asc" },
-      take: limit,
-      skip,
-    });
+    let messages;
+    let hasMoreOlder = false;
 
-    const otherParty = conversation.buyerId === req.user.id ? conversation.seller : conversation.buyer;
+    if (after) {
+      const cursor = await resolveMessageCursor(after, conversation.id);
+      // Unknown/optimistic cursors → empty delta (avoid Prisma ObjectId errors).
+      if (!cursor) {
+        messages = [];
+      } else {
+        messages = await prisma.message.findMany({
+          where: {
+            conversationId: conversation.id,
+            createdAt: { gt: cursor.createdAt },
+          },
+          orderBy: { createdAt: "asc" },
+          take: limit,
+        });
+      }
+    } else if (before) {
+      const cursor = await resolveMessageCursor(before, conversation.id);
+      if (!cursor) {
+        messages = [];
+        hasMoreOlder = false;
+      } else {
+        messages = await prisma.message.findMany({
+          where: {
+            conversationId: conversation.id,
+            createdAt: { lt: cursor.createdAt },
+          },
+          orderBy: { createdAt: "desc" },
+          take: limit,
+        });
+        hasMoreOlder = messages.length === limit;
+        messages.reverse();
+      }
+    } else {
+      messages = await prisma.message.findMany({
+        where: { conversationId: conversation.id },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      });
+      hasMoreOlder = messages.length === limit;
+      messages.reverse();
+    }
+
+    const otherParty =
+      conversation.buyerId === req.user.id ? conversation.seller : conversation.buyer;
 
     res.json({
       conversation: {
@@ -330,6 +297,7 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
       messages: await Promise.all(
         messages.map((message) => formatMessage(message, receiptConversation, req.user.id)),
       ),
+      hasMoreOlder,
     });
   } catch (error) {
     console.error("List messages failed:", error);
@@ -356,113 +324,74 @@ router.post("/:id/read", requireAuth, async (req, res) => {
 });
 
 router.post("/:id/messages", requireAuth, handleMessageUpload, async (req, res) => {
-  console.log("🚀 UPLOAD ROUTE HIT! Conversation ID:", req.params.id);
-  console.log("📋 Request Headers:", req.headers);
-  console.log("📁 Files:", req.files);
-  console.log("📝 Body:", req.body);
-  
   try {
-    console.log("Message upload request:", {
-      conversationId: req.params.id,
-      contentType: req.headers["content-type"],
-      hasFiles: !!req.files,
-      filesType: Array.isArray(req.files) ? "array" : typeof req.files,
-      filesLength: Array.isArray(req.files) ? req.files.length : Object.keys(req.files || {}).length,
-      bodyKeys: Object.keys(req.body || {}),
-    });
-
-    console.log("🔍 Step 1: Getting conversation...");
     const conversation = await getConversationForUser(req.params.id, req.user.id);
 
     if (!conversation) {
-      console.log("❌ Conversation not found");
       return res.status(404).json({ error: "Conversation not found" });
     }
-    console.log("✅ Conversation found:", conversation.id);
 
     const body = req.body.body ? String(req.body.body).trim() : "";
     let imageUrl = null;
     let fileUrl = null;
     let fileName = null;
 
-    console.log("🔍 Step 2: Processing uploaded file...");
     const uploadedFile = getMessageUploadFile(req);
-    console.log(
-      "Uploaded file:",
-      uploadedFile
-        ? {
-            fieldname: uploadedFile.fieldname,
-            originalname: uploadedFile.originalname,
-            mimetype: uploadedFile.mimetype,
-            size: uploadedFile.size,
-          }
-        : "No file found",
-    );
 
     if (uploadedFile) {
-      console.log("🔍 Step 3: Processing file based on type...");
       try {
         if (isImageUpload(uploadedFile)) {
-          console.log("📷 Processing image upload...");
-          console.log("🔧 Step 3a: Optimizing image...");
           const optimized = await optimizeProductImage(uploadedFile, 0);
-          console.log("✅ Image optimization complete");
-          
-          console.log("☁️ Step 3b: Uploading to S3...");
           imageUrl = await uploadMessageImageToS3(conversation.id, optimized);
-          console.log("✅ Image uploaded to S3:", imageUrl);
         } else {
-          console.log("📄 Processing document upload...");
-          fileName = uploadedFile.originalname || (req.body.fileName ? String(req.body.fileName) : "document");
-          console.log("☁️ Step 3c: Uploading document to S3...");
+          fileName =
+            uploadedFile.originalname ||
+            (req.body.fileName ? String(req.body.fileName) : "document");
           fileUrl = await uploadMessageFile(conversation.id, uploadedFile);
-          console.log("✅ Document uploaded to S3:", fileUrl);
         }
       } catch (uploadError) {
-        console.error("❌ File processing failed:", uploadError);
-        console.error("❌ Upload error details:", uploadError.message);
-        console.error("❌ Upload error stack:", uploadError.stack);
+        console.error("File processing failed:", uploadError);
         throw new Error(`File upload failed: ${uploadError.message}`);
       }
     }
 
     if (!body && !imageUrl && !fileUrl) {
-      console.log("❌ No content provided");
       return res.status(400).json({ error: "Message body or attachment is required" });
     }
 
-    console.log("🔍 Step 4: Creating message in database...");
-    const messageData = {
-      conversationId: conversation.id,
-      senderId: req.user.id,
-      body: body || null,
-      imageUrl,
-      fileUrl,
-      fileName,
-    };
-    console.log("💾 Message data:", messageData);
-
     const message = await prisma.message.create({
-      data: messageData,
+      data: {
+        conversationId: conversation.id,
+        senderId: req.user.id,
+        body: body || null,
+        imageUrl,
+        fileUrl,
+        fileName,
+      },
     });
-    console.log("✅ Message created:", message.id);
 
-    console.log("🔍 Step 5: Updating conversation timestamp...");
     const readField =
       conversation.buyerId === req.user.id ? "buyerLastReadAt" : "sellerLastReadAt";
+    const unreadField = getUnreadFieldForRecipient(conversation, req.user.id);
+    const senderUnreadField =
+      conversation.buyerId === req.user.id ? "buyerUnreadCount" : "sellerUnreadCount";
+    const updateData = {
+      lastMessageAt: message.createdAt,
+      [readField]: message.createdAt,
+      [senderUnreadField]: 0,
+    };
+    if (unreadField) {
+      updateData[unreadField] = (conversation[unreadField] ?? 0) + 1;
+    }
+
     const updatedConversation = await prisma.conversation.update({
       where: { id: conversation.id },
-      data: {
-        lastMessageAt: message.createdAt,
-        [readField]: message.createdAt,
-      },
+      data: updateData,
       include: {
         product: { select: { id: true, title: true, images: true } },
       },
     });
-    console.log("✅ Conversation updated");
 
-    console.log("🔍 Step 6: Formatting message response...");
     const formattedMessage = await formatMessage(message, updatedConversation, req.user.id);
 
     const sender = await prisma.user.findUnique({
@@ -470,27 +399,15 @@ router.post("/:id/messages", requireAuth, handleMessageUpload, async (req, res) 
       select: { id: true, name: true, email: true },
     });
 
-    await notifyRecipientOfMessage({
+    fireAndForgetNotify({
       conversation: updatedConversation,
       message,
       sender: sender || { id: req.user.id, name: null, email: null },
     });
 
-    console.log("✅ Message saved successfully:", message.id);
     res.status(201).json({ message: formattedMessage });
   } catch (error) {
-    console.error("❌ Send message failed:", error);
-    console.error("❌ Error message:", error.message);
-    console.error("❌ Error stack:", error.stack);
-    
-    // More detailed error information
-    if (error.code) {
-      console.error("❌ Error code:", error.code);
-    }
-    if (error.meta) {
-      console.error("❌ Error meta:", error.meta);
-    }
-    
+    console.error("Send message failed:", error);
     res.status(500).json({ error: "Failed to send message" });
   }
 });

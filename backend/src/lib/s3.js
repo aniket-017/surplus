@@ -129,9 +129,24 @@ export async function getReadableImageUrl(storedUrl) {
     return storedUrl;
   }
 
+  const { publicBaseUrl } = getConfig();
+
+  // Already a stable public URL — avoid re-presigning (defeats CDN/browser cache).
+  if (publicBaseUrl && storedUrl.startsWith(`${publicBaseUrl}/`)) {
+    return storedUrl;
+  }
+
+  if (/^https?:\/\//i.test(storedUrl) && !/[?&]X-Amz-/i.test(storedUrl)) {
+    return storedUrl;
+  }
+
   const key = extractKeyFromStoredUrl(storedUrl);
   if (!key) {
     return storedUrl;
+  }
+
+  if (publicBaseUrl) {
+    return `${publicBaseUrl}/${key}`;
   }
 
   const client = getS3Client();

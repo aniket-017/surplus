@@ -1,8 +1,7 @@
-import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import {
-  Alert,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -12,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { CameraCaptureModal } from '@/src/components/messages/CameraCaptureModal';
 import { colors, spacing } from '@/src/constants/theme';
+import { pickImagesFromLibrary } from '@/src/lib/pickImages';
 import type { LocalImage } from '@/src/types/product';
 
 type ProductImageSourceSheetProps = {
@@ -37,30 +37,26 @@ export function ProductImageSourceSheet({
   async function pickFromLibrary() {
     if (remainingSlots <= 0) return;
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Allow photo library access to upload product images.');
-      return;
-    }
-
     onClose();
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+    // Wait for the sheet to dismiss before launching the system picker.
+    await new Promise((resolve) => setTimeout(resolve, Platform.OS === 'android' ? 280 : 0));
+
+    const picked = await pickImagesFromLibrary({
       allowsMultipleSelection: true,
       selectionLimit: remainingSlots,
       quality: 0.85,
+      permissionMessage: 'Allow photo library access to upload product images.',
     });
+    if (!picked?.length) return;
 
-    if (result.canceled) return;
-
-    const picked = result.assets.map((asset, index) => ({
-      uri: asset.uri,
-      name: asset.fileName || `product-${Date.now()}-${index}.jpg`,
-      type: asset.mimeType || 'image/jpeg',
-    }));
-
-    onImagesSelected(picked.slice(0, remainingSlots));
+    onImagesSelected(
+      picked.slice(0, remainingSlots).map((asset) => ({
+        uri: asset.uri,
+        name: asset.name,
+        type: asset.mimeType || 'image/jpeg',
+      })),
+    );
   }
 
   function openCamera() {

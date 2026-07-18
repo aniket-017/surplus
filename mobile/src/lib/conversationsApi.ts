@@ -124,30 +124,52 @@ export async function unregisterPushToken(token: string, pushToken: string) {
   return parseResponse<{ success: boolean }>(res);
 }
 
-export async function getConversationMessages(token: string, conversationId: string) {
-  const res = await fetch(`${API_BASE}/api/conversations/${conversationId}/messages`, {
+export type ConversationMessagesResult = {
+  conversation: {
+    id: string;
+    productId: string;
+    buyerId: string;
+    sellerId: string;
+    otherParty: {
+      id: string;
+      name: string;
+      avatarUrl: string | null;
+    } | null;
+    product: {
+      id: string;
+      title: string;
+      images: string[];
+    } | null;
+  };
+  messages: ChatMessage[];
+  hasMoreOlder?: boolean;
+};
+
+export type GetMessagesOptions = {
+  limit?: number;
+  after?: string;
+  before?: string;
+};
+
+export async function getConversationMessages(
+  token: string,
+  conversationId: string,
+  options: GetMessagesOptions = {},
+) {
+  const params = new URLSearchParams();
+  if (options.limit) params.set('limit', String(options.limit));
+  if (options.after) params.set('after', options.after);
+  if (options.before) params.set('before', options.before);
+  const query = params.toString();
+  const url = `${API_BASE}/api/conversations/${conversationId}/messages${
+    query ? `?${query}` : ''
+  }`;
+
+  const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  return parseResponse<{
-    conversation: {
-      id: string;
-      productId: string;
-      buyerId: string;
-      sellerId: string;
-      otherParty: {
-        id: string;
-        name: string;
-        avatarUrl: string | null;
-      } | null;
-      product: {
-        id: string;
-        title: string;
-        images: string[];
-      } | null;
-    };
-    messages: ChatMessage[];
-  }>(res);
+  return parseResponse<ConversationMessagesResult>(res);
 }
 
 export async function sendMessage(token: string, conversationId: string, body: string) {

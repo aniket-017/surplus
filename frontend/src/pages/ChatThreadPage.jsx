@@ -7,6 +7,15 @@ import MessageReceipt from '../components/messages/MessageReceipt'
 import { useAuth } from '../context/AuthContext'
 import { useMessageNotifications } from '../context/MessageNotificationsContext'
 import {
+  appendThreadMessage,
+  getCachedThread,
+  mergeThreadMessages,
+  removeMessage,
+  replaceOptimisticMessage,
+  setActiveThread,
+  setCachedThread,
+} from '../lib/chatCache'
+import {
   getConversationMessages,
   markConversationAsRead,
   sendMessage,
@@ -16,6 +25,8 @@ import { buildMessageListItems, formatMessageTime } from '../lib/messageFormat'
 import { getImageUrl } from '../lib/productsApi'
 
 const MAX_PENDING_ATTACHMENTS = 10
+const PAGE_SIZE = 30
+const POLL_INTERVAL_MS = 10000
 
 function createPendingAttachment(file) {
   return {
@@ -37,10 +48,13 @@ export default function ChatThreadPage({ role }) {
   const { user } = useAuth()
   const { refresh: refreshUnread } = useMessageNotifications()
 
-  const [messages, setMessages] = useState([])
-  const [product, setProduct] = useState(null)
-  const [otherParty, setOtherParty] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const cached = id ? getCachedThread(id) : null
+  const [messages, setMessages] = useState(cached?.messages ?? [])
+  const [product, setProduct] = useState(cached?.conversation?.product ?? null)
+  const [otherParty, setOtherParty] = useState(cached?.conversation?.otherParty ?? null)
+  const [loading, setLoading] = useState(!cached)
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const [hasMoreOlder, setHasMoreOlder] = useState(cached?.hasMoreOlder ?? false)
   const [error, setError] = useState('')
   const [draft, setDraft] = useState('')
   const [pendingAttachments, setPendingAttachments] = useState([])
@@ -52,6 +66,8 @@ export default function ChatThreadPage({ role }) {
   const fileInputRef = useRef(null)
   const pendingAttachmentsRef = useRef([])
   const longPressTimerRef = useRef(null)
+  const messagesRef = useRef(messages)
+  const loadingOlderRef = useRef(false)
 
   const listItems = useMemo(() => buildMessageListItems(messages, user?.id), [messages, user?.id])
   const imageUrls = useMemo(
@@ -59,6 +75,10 @@ export default function ChatThreadPage({ role }) {
     [messages],
   )
   const canSend = Boolean(draft.trim() || pendingAttachments.length)
+
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
 
   function openImageLightbox(imageUrl) {
     const index = imageUrls.indexOf(imageUrl)
@@ -89,21 +109,143 @@ export default function ChatThreadPage({ role }) {
     }
   }, [])
 
-  const loadMessages = useCallback(async () => {
-    try {
-      const data = await getConversationMessages(id)
-      setMessages(data.messages)
+  useEffect(() => {
+    const nextCached = id ? getCachedThread(id) : null
+    if (nextCached) {
+      setMessages(nextCached.messages)
+      setProduct(nextCached.conversation.product)
+      setOtherParty(nextCached.conversation.otherParty)
+      setHasMoreOlder(nextCached.hasMoreOlder)
+      setLoading(false)
+    } else {
+      setMessages([])
+      setProduct(null)
+      setOtherParty(null)
+      setHasMoreOlder(false)
+      setLoading(true)
+    }
+    setError('')
+    setDraft('')
+    setPendingAttachments((prev) => {
+      prev.forEach(revokeAttachmentPreview)
+      return []
+    })
+  }, [id])
+
+  const applyThreadData = useCallback(
+    (data, mode) => {
+      if (!id) return
+
+      if (mode === 'replace') {
+        setCachedThread(id, {
+          messages: data.messages,
+          conversation: data.conversation,
+          hasMoreOlder: Boolean(data.hasMoreOlder),
+        })
+        setMessages(data.messages)
+        setHasMoreOlder(Boolean(data.hasMoreOlder))
+      } else if (mode === 'prepend') {
+        const merged = mergeThreadMessages(id, data.messages, {
+          prepend: true,
+          hasMoreOlder: Boolean(data.hasMoreOlder),
+          conversation: data.conversation,
+        })
+        if (merged) {
+          setMessages(merged.messages)
+          setHasMoreOlder(merged.hasMoreOlder)
+        }
+      } else {
+        const merged = mergeThreadMessages(id, data.messages, {
+          conversation: data.conversation,
+        })
+        if (merged) {
+          setMessages(merged.messages)
+        } else {
+          setCachedThread(id, {
+            messages: data.messages,
+            conversation: data.conversation,
+            hasMoreOlder: Boolean(data.hasMoreOlder),
+          })
+          setMessages(data.messages)
+          setHasMoreOlder(Boolean(data.hasMoreOlder))
+        }
+      }
+
       setProduct(data.conversation.product)
       setOtherParty(data.conversation.otherParty)
       setError('')
-      await markConversationAsRead(id).catch(() => {})
-      refreshUnread()
-    } catch (err) {
-      setError(err.message || 'Failed to load messages')
+    },
+    [id],
+  )
+
+  const loadMessages = useCallback(
+    async (mode = 'full') => {
+      if (!id) return
+
+      try {
+        if (mode === 'delta') {
+          const last = [...messagesRef.current]
+            .reverse()
+            .find((message) => !String(message.id).startsWith('temp-'))
+          if (!last) {
+            const data = await getConversationMessages(id, { limit: PAGE_SIZE })
+            applyThreadData(data, 'replace')
+          } else {
+            const data = await getConversationMessages(id, {
+              after: last.id,
+              limit: PAGE_SIZE,
+            })
+            if (data.messages.length > 0) {
+              applyThreadData(data, 'merge')
+            }
+          }
+        } else {
+          const data = await getConversationMessages(id, { limit: PAGE_SIZE })
+          applyThreadData(data, 'replace')
+        }
+
+        markConversationAsRead(id).catch(() => {})
+        refreshUnread()
+      } catch (err) {
+        if (messagesRef.current.length === 0) {
+          setError(err.message || 'Failed to load messages')
+        }
+      } finally {
+        setLoading(false)
+      }
+    },
+    [id, refreshUnread, applyThreadData],
+  )
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!id || !hasMoreOlder || loadingOlderRef.current) return
+    const oldest = messagesRef.current.find(
+      (message) => !String(message.id).startsWith('temp-'),
+    )
+    if (!oldest) return
+
+    loadingOlderRef.current = true
+    setLoadingOlder(true)
+    const previousHeight = listRef.current?.scrollHeight || 0
+    try {
+      const data = await getConversationMessages(id, {
+        before: oldest.id,
+        limit: PAGE_SIZE,
+      })
+      applyThreadData(data, 'prepend')
+      requestAnimationFrame(() => {
+        if (listRef.current) {
+          const nextHeight = listRef.current.scrollHeight
+          listRef.current.scrollTop = nextHeight - previousHeight
+        }
+      })
+    } catch {
+      // Keep current messages if older page fails.
     } finally {
-      setLoading(false)
+      loadingOlderRef.current = false
+      setLoadingOlder(false)
     }
-  }, [id, refreshUnread])
+  }, [id, hasMoreOlder, applyThreadData])
 
   useEffect(() => {
     if (!infoMessage) return
@@ -145,17 +287,26 @@ export default function ChatThreadPage({ role }) {
   }
 
   useEffect(() => {
-    setLoading(true)
-    loadMessages()
-    const interval = setInterval(loadMessages, 10000)
-    return () => clearInterval(interval)
-  }, [loadMessages])
+    void loadMessages('full')
+    const interval = setInterval(() => {
+      void loadMessages('delta')
+    }, POLL_INTERVAL_MS)
+
+    setActiveThread(id, () => {
+      void loadMessages('delta')
+    })
+
+    return () => {
+      clearInterval(interval)
+      setActiveThread(null, null)
+    }
+  }, [loadMessages, id])
 
   useEffect(() => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight
     }
-  }, [listItems.length])
+  }, [listItems.length, loading])
 
   useEffect(() => {
     const vv = window.visualViewport
@@ -179,6 +330,12 @@ export default function ChatThreadPage({ role }) {
       document.documentElement.style.removeProperty('--keyboard-inset')
     }
   }, [])
+
+  function handleChatScroll(event) {
+    if (event.currentTarget.scrollTop < 80) {
+      void loadOlderMessages()
+    }
+  }
 
   function handleAttach(event) {
     const files = Array.from(event.target.files || [])
@@ -215,22 +372,66 @@ export default function ChatThreadPage({ role }) {
 
     const attachmentsToSend = pendingAttachments
     setSending(true)
-    try {
-      const sentMessages = []
 
-      if (attachmentsToSend.length === 0) {
-        const result = await sendMessage(id, body)
-        sentMessages.push(result.message)
-      } else {
-        for (let index = 0; index < attachmentsToSend.length; index += 1) {
-          const attachment = attachmentsToSend[index]
-          const messageBody = index === 0 ? body || undefined : undefined
-          const result = await sendMessageWithAttachment(id, attachment.file, messageBody)
-          sentMessages.push(result.message)
-        }
+    if (attachmentsToSend.length === 0) {
+      const tempId = `temp-${Date.now()}`
+      const optimistic = {
+        id: tempId,
+        conversationId: id,
+        senderId: user?.id || '',
+        body,
+        imageUrl: null,
+        fileUrl: null,
+        fileName: null,
+        createdAt: new Date().toISOString(),
+        status: 'sent',
       }
 
-      setMessages((prev) => [...prev, ...sentMessages])
+      setDraft('')
+      setMessages((prev) => {
+        const next = [...prev, optimistic]
+        appendThreadMessage(id, optimistic)
+        return next
+      })
+
+      try {
+        const result = await sendMessage(id, body)
+        setMessages((prev) => {
+          const next = prev.map((message) =>
+            message.id === tempId ? result.message : message,
+          )
+          replaceOptimisticMessage(id, tempId, result.message)
+          return next
+        })
+        setError('')
+      } catch (err) {
+        setMessages((prev) => {
+          const next = prev.filter((message) => message.id !== tempId)
+          removeMessage(id, tempId)
+          return next
+        })
+        setDraft(body)
+        setError(err.message || 'Failed to send message')
+      } finally {
+        setSending(false)
+      }
+      return
+    }
+
+    try {
+      const sentMessages = []
+      for (let index = 0; index < attachmentsToSend.length; index += 1) {
+        const attachment = attachmentsToSend[index]
+        const messageBody = index === 0 ? body || undefined : undefined
+        const result = await sendMessageWithAttachment(id, attachment.file, messageBody)
+        sentMessages.push(result.message)
+      }
+
+      setMessages((prev) => {
+        const next = [...prev, ...sentMessages]
+        sentMessages.forEach((message) => appendThreadMessage(id, message))
+        return next
+      })
       attachmentsToSend.forEach(revokeAttachmentPreview)
       setPendingAttachments([])
       setDraft('')
@@ -279,7 +480,12 @@ export default function ChatThreadPage({ role }) {
           ) : null}
         </div>
 
-        <div className="chat-body" ref={listRef}>
+        <div className="chat-body" ref={listRef} onScroll={handleChatScroll}>
+          {loadingOlder ? (
+            <div className="chat-empty" style={{ padding: '8px 0' }}>
+              <div className="app-spinner" aria-label="Loading older messages" />
+            </div>
+          ) : null}
           {loading && messages.length === 0 ? (
             <div className="empty-state">
               <div className="app-spinner" aria-label="Loading" />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import { useAuth } from '../context/AuthContext'
 import { useMessageNotifications } from '../context/MessageNotificationsContext'
+import { getCachedConversations, setCachedConversations } from '../lib/chatCache'
 import { getConversations } from '../lib/conversationsApi'
 import { formatConversationTime } from '../lib/messageFormat'
 import { getImageUrl } from '../lib/productsApi'
@@ -25,29 +26,39 @@ export default function MessagesPage({ role }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { unreadCount } = useMessageNotifications()
-  const [conversations, setConversations] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cached = getCachedConversations()
+  const [conversations, setConversations] = useState(cached ?? [])
+  const [loading, setLoading] = useState(!cached)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const existing = getCachedConversations()
+    if (existing) {
+      setConversations(existing)
+      setLoading(false)
+    }
+
     let cancelled = false
 
-    async function load() {
+    async function run() {
       try {
         const data = await getConversations()
         if (!cancelled) {
           setConversations(data.conversations)
+          setCachedConversations(data.conversations)
           setError('')
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load messages')
+        if (!cancelled && !getCachedConversations()?.length) {
+          setError(err.message || 'Failed to load messages')
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
 
-    load()
-    const interval = setInterval(load, 10000)
+    run()
+    const interval = setInterval(run, 30000)
     return () => {
       cancelled = true
       clearInterval(interval)
@@ -65,11 +76,11 @@ export default function MessagesPage({ role }) {
         </p>
       </div>
 
-      {loading ? (
+      {loading && conversations.length === 0 ? (
         <div className="empty-state">
           <div className="app-spinner" aria-label="Loading" />
         </div>
-      ) : error ? (
+      ) : error && conversations.length === 0 ? (
         <p className="dash-error">{error}</p>
       ) : conversations.length === 0 ? (
         <div className="empty-state">
@@ -87,12 +98,13 @@ export default function MessagesPage({ role }) {
             const productImage = conversation.product?.images?.[0]
             const otherName = conversation.otherParty?.name || ''
             const isMineLast = conversation.lastMessage?.senderId === user?.id
+            const unread = (conversation.unreadCount || 0) > 0
 
             return (
               <button
                 key={conversation.id}
                 type="button"
-                className="conversation-row"
+                className={`conversation-row${unread ? ' unread' : ''}`}
                 onClick={() => navigate(`/${role}/messages/${conversation.id}`)}
               >
                 <div className="conversation-thumb">

@@ -12,6 +12,7 @@ import {
 import { AppState, Platform, type AppStateStatus } from 'react-native';
 
 import { useAuth } from '@/src/context/AuthContext';
+import { notifyActiveThreadRefresh } from '@/src/lib/chatCache';
 import {
   getUnreadCount,
   markConversationAsRead,
@@ -29,7 +30,7 @@ import {
 } from '@/src/lib/notifications';
 import { saveStoredPushToken } from '@/src/lib/pushTokenStorage';
 
-const POLL_INTERVAL_MS = 15000;
+const POLL_INTERVAL_MS = 45000;
 
 type UnreadMessagesContextValue = {
   unreadCount: number;
@@ -147,6 +148,10 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
           setAppBadgeCount(data.unreadCount);
         } else {
           refreshUnreadCount();
+        }
+
+        if (typeof data.conversationId === 'string' && data.conversationId) {
+          notifyActiveThreadRefresh(data.conversationId);
         }
       });
 

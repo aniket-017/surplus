@@ -1,5 +1,4 @@
 import * as DocumentPicker from 'expo-document-picker';
-import * as ImagePicker from 'expo-image-picker';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,6 +21,7 @@ import { EmojiPickerPanel } from '@/src/components/messages/EmojiPickerPanel';
 import { chatTheme } from '@/src/constants/chatTheme';
 import { colors, spacing } from '@/src/constants/theme';
 import { buildAttachmentFromUri, type ChatAttachment } from '@/src/lib/chatAttachments';
+import { pickImagesFromLibrary } from '@/src/lib/pickImages';
 
 type MessageComposerProps = {
   draft: string;
@@ -73,28 +73,15 @@ export function MessageComposer({
   }
 
   async function pickFromLibrary() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Allow photo library access to send images.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+    const picked = await pickImagesFromLibrary({
       allowsMultipleSelection: false,
       quality: 0.85,
+      permissionMessage: 'Allow photo library access to send images.',
     });
+    if (!picked?.[0]) return;
 
-    if (result.canceled || !result.assets[0]) return;
-
-    const asset = result.assets[0];
-    onSelectAttachment(
-      buildAttachmentFromUri(
-        asset.uri,
-        asset.fileName || `photo-${Date.now()}.jpg`,
-        asset.mimeType,
-      ),
-    );
+    const asset = picked[0];
+    onSelectAttachment(buildAttachmentFromUri(asset.uri, asset.name, asset.mimeType));
   }
 
   async function pickDocument() {
@@ -138,12 +125,21 @@ export function MessageComposer({
 
   function handlePickFromLibrary() {
     closeAttachMenu();
-    void pickFromLibrary();
+    // Let the attach modal finish dismissing before opening the system picker
+    // (avoids Android PhotoPicker parse failures).
+    setTimeout(() => {
+      void pickFromLibrary();
+    }, Platform.OS === 'android' ? 280 : 0);
   }
 
   function handlePickDocument() {
     closeAttachMenu();
-    void pickDocument();
+    setTimeout(() => {
+      void pickDocument().catch((error) => {
+        console.warn('Document picker failed:', error);
+        Alert.alert('Could not open files', 'Please try again.');
+      });
+    }, Platform.OS === 'android' ? 280 : 0);
   }
 
   return (

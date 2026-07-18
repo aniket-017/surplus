@@ -25,6 +25,15 @@ import { useUnreadMessages } from '@/src/context/UnreadMessagesContext';
 import { chatTheme } from '@/src/constants/chatTheme';
 import { colors, spacing } from '@/src/constants/theme';
 import {
+  appendThreadMessage,
+  getCachedThread,
+  mergeThreadMessages,
+  removeMessage,
+  replaceOptimisticMessage,
+  setActiveThread,
+  setCachedThread,
+} from '@/src/lib/chatCache';
+import {
   getConversationMessages,
   sendMessage,
   sendMessageWithAttachment,
@@ -37,6 +46,9 @@ import { getImageUrl } from '@/src/lib/productsApi';
 type ThreadProduct = { id: string; title: string; images: string[] } | null;
 type ThreadOtherParty = { id: string; name: string; avatarUrl: string | null } | null;
 
+const PAGE_SIZE = 30;
+const POLL_INTERVAL_MS = 10000;
+
 export function ChatThreadScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { token, user } = useAuth();
@@ -44,11 +56,19 @@ export function ChatThreadScreen() {
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<MessageListItem>>(null);
   const pendingInitialScrollRef = useRef(true);
+  const loadingOlderRef = useRef(false);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [product, setProduct] = useState<ThreadProduct>(null);
-  const [otherParty, setOtherParty] = useState<ThreadOtherParty>(null);
-  const [loading, setLoading] = useState(true);
+  const cached = id ? getCachedThread(id) : null;
+  const messagesRef = useRef<ChatMessage[]>(cached?.messages ?? []);
+
+  const [messages, setMessages] = useState<ChatMessage[]>(cached?.messages ?? []);
+  const [product, setProduct] = useState<ThreadProduct>(cached?.conversation.product ?? null);
+  const [otherParty, setOtherParty] = useState<ThreadOtherParty>(
+    cached?.conversation.otherParty ?? null,
+  );
+  const [loading, setLoading] = useState(!cached);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMoreOlder, setHasMoreOlder] = useState(cached?.hasMoreOlder ?? false);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [draft, setDraft] = useState('');
@@ -60,13 +80,14 @@ export function ChatThreadScreen() {
   const [infoMessage, setInfoMessage] = useState<ChatMessage | null>(null);
   const keyboardVisible = keyboardHeight > 0;
 
-  // In Expo Go's edge-to-edge mode the safe-area top inset can report 0, letting
-  // the header slide under the status bar. Fall back to the native status bar
-  // height on Android so the header always clears the clock/battery icons.
   const topInset =
     Platform.OS === 'android'
       ? Math.max(insets.top, StatusBar.currentHeight ?? 0)
       : insets.top;
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const listItems = useMemo(
     () => buildMessageListItems(messages, user?.id),
@@ -83,19 +104,21 @@ export function ChatThreadScreen() {
     [messages],
   );
 
-  function openImageViewer(messageId: string) {
-    const index = viewerImages.findIndex((image) => image.id === messageId);
-    if (index < 0) return;
+  const openImageViewer = useCallback(
+    (messageId: string) => {
+      const index = viewerImages.findIndex((image) => image.id === messageId);
+      if (index < 0) return;
 
-    setViewerInitialIndex(index);
-    setViewerVisible(true);
-  }
+      setViewerInitialIndex(index);
+      setViewerVisible(true);
+    },
+    [viewerImages],
+  );
 
   const scrollToEnd = useCallback((animated = true) => {
     const list = listRef.current;
     if (!list) return;
 
-    // Multiple passes so we still land on the last message after layout/images settle.
     requestAnimationFrame(() => list.scrollToEnd({ animated }));
     setTimeout(() => list.scrollToEnd({ animated }), 50);
     setTimeout(() => list.scrollToEnd({ animated }), 200);
@@ -115,10 +138,22 @@ export function ChatThreadScreen() {
 
   useEffect(() => {
     pendingInitialScrollRef.current = true;
-    setMessages([]);
-    setProduct(null);
-    setOtherParty(null);
-    setLoading(true);
+    const nextCached = id ? getCachedThread(id) : null;
+    if (nextCached) {
+      messagesRef.current = nextCached.messages;
+      setMessages(nextCached.messages);
+      setProduct(nextCached.conversation.product);
+      setOtherParty(nextCached.conversation.otherParty);
+      setHasMoreOlder(nextCached.hasMoreOlder);
+      setLoading(false);
+    } else {
+      messagesRef.current = [];
+      setMessages([]);
+      setProduct(null);
+      setOtherParty(null);
+      setHasMoreOlder(false);
+      setLoading(true);
+    }
     setError('');
     setDraft('');
     setPendingAttachment(null);
@@ -130,8 +165,6 @@ export function ChatThreadScreen() {
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSub = Keyboard.addListener(showEvent, (event) => {
-      // On Android (edge-to-edge) the reported keyboard height excludes the
-      // navigation bar, so add the bottom inset so the composer clears it fully.
       const extra = Platform.OS === 'android' ? insets.bottom : 0;
       setKeyboardHeight(event.endCoordinates.height + extra);
       scrollToEnd(true);
@@ -144,38 +177,136 @@ export function ChatThreadScreen() {
     };
   }, [scrollToEnd, insets.bottom]);
 
-  const loadMessages = useCallback(async () => {
-    if (!token || !id) {
-      setLoading(false);
-      return;
-    }
+  const applyThreadData = useCallback(
+    (
+      data: Awaited<ReturnType<typeof getConversationMessages>>,
+      mode: 'replace' | 'merge' | 'prepend',
+    ) => {
+      if (!id) return;
 
-    try {
-      const data = await getConversationMessages(token, id);
-      setMessages(data.messages);
+      if (mode === 'replace') {
+        setCachedThread(id, {
+          messages: data.messages,
+          conversation: data.conversation,
+          hasMoreOlder: Boolean(data.hasMoreOlder),
+        });
+        setMessages(data.messages);
+        setHasMoreOlder(Boolean(data.hasMoreOlder));
+      } else if (mode === 'prepend') {
+        const merged = mergeThreadMessages(id, data.messages, {
+          prepend: true,
+          hasMoreOlder: Boolean(data.hasMoreOlder),
+          conversation: data.conversation,
+        });
+        if (merged) {
+          setMessages(merged.messages);
+          setHasMoreOlder(merged.hasMoreOlder);
+        }
+      } else {
+        const merged = mergeThreadMessages(id, data.messages, {
+          conversation: data.conversation,
+        });
+        if (merged) {
+          setMessages(merged.messages);
+        } else {
+          setCachedThread(id, {
+            messages: data.messages,
+            conversation: data.conversation,
+            hasMoreOlder: Boolean(data.hasMoreOlder),
+          });
+          setMessages(data.messages);
+          setHasMoreOlder(Boolean(data.hasMoreOlder));
+        }
+      }
+
       setProduct(data.conversation.product);
       setOtherParty(data.conversation.otherParty);
       setError('');
-      await markConversationRead(id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load messages');
+    },
+    [id],
+  );
+
+  const loadMessages = useCallback(
+    async (mode: 'full' | 'delta' = 'full') => {
+      if (!token || !id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        if (mode === 'delta') {
+          const last = [...messagesRef.current]
+            .reverse()
+            .find((message) => !message.id.startsWith('temp-'));
+          if (!last) {
+            const data = await getConversationMessages(token, id, { limit: PAGE_SIZE });
+            applyThreadData(data, 'replace');
+          } else {
+            const data = await getConversationMessages(token, id, {
+              after: last.id,
+              limit: PAGE_SIZE,
+            });
+            if (data.messages.length > 0) {
+              applyThreadData(data, 'merge');
+            }
+          }
+        } else {
+          const data = await getConversationMessages(token, id, { limit: PAGE_SIZE });
+          applyThreadData(data, 'replace');
+        }
+
+        void markConversationRead(id);
+      } catch (err) {
+        if (messagesRef.current.length === 0) {
+          setError(err instanceof Error ? err.message : 'Failed to load messages');
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token, id, markConversationRead, applyThreadData],
+  );
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!token || !id || !hasMoreOlder || loadingOlderRef.current) return;
+    const oldest = messagesRef.current.find((message) => !message.id.startsWith('temp-'));
+    if (!oldest) return;
+
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    try {
+      const data = await getConversationMessages(token, id, {
+        before: oldest.id,
+        limit: PAGE_SIZE,
+      });
+      applyThreadData(data, 'prepend');
+    } catch {
+      // Keep current messages if older page fails.
     } finally {
-      setLoading(false);
+      loadingOlderRef.current = false;
+      setLoadingOlder(false);
     }
-  }, [token, id, markConversationRead]);
+  }, [token, id, hasMoreOlder, applyThreadData]);
 
   useFocusEffect(
     useCallback(() => {
       pendingInitialScrollRef.current = true;
-      loadMessages();
-      const interval = setInterval(loadMessages, 10000);
+      void loadMessages('full');
+      const interval = setInterval(() => {
+        void loadMessages('delta');
+      }, POLL_INTERVAL_MS);
       const focusScroll = setTimeout(() => scrollToEnd(false), 100);
+
+      setActiveThread(id ?? null, () => {
+        void loadMessages('delta');
+      });
 
       return () => {
         clearInterval(interval);
         clearTimeout(focusScroll);
+        setActiveThread(null, null);
       };
-    }, [loadMessages, scrollToEnd]),
+    }, [loadMessages, scrollToEnd, id]),
   );
 
   useEffect(() => {
@@ -212,7 +343,11 @@ export function ChatThreadScreen() {
           pendingAttachment,
           draft.trim() || undefined,
         );
-        setMessages((prev) => [...prev, result.message]);
+        setMessages((prev) => {
+          const next = [...prev, result.message];
+          appendThreadMessage(id, result.message);
+          return next;
+        });
         setDraft('');
         setPendingAttachment(null);
         setError('');
@@ -229,13 +364,45 @@ export function ChatThreadScreen() {
 
     if (!draft.trim()) return;
 
+    const body = draft.trim();
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: ChatMessage = {
+      id: tempId,
+      conversationId: id,
+      senderId: user?.id || '',
+      body,
+      imageUrl: null,
+      fileUrl: null,
+      fileName: null,
+      createdAt: new Date().toISOString(),
+      status: 'sent',
+    };
+
+    setDraft('');
     setSending(true);
+    setMessages((prev) => {
+      const next = [...prev, optimistic];
+      appendThreadMessage(id, optimistic);
+      return next;
+    });
+    scrollToEnd(true);
+
     try {
-      const result = await sendMessage(token, id, draft.trim());
-      setMessages((prev) => [...prev, result.message]);
-      setDraft('');
-      scrollToEnd(true);
+      const result = await sendMessage(token, id, body);
+      setMessages((prev) => {
+        const next = prev.map((message) =>
+          message.id === tempId ? result.message : message,
+        );
+        replaceOptimisticMessage(id, tempId, result.message);
+        return next;
+      });
     } catch (err) {
+      setMessages((prev) => {
+        const next = prev.filter((message) => message.id !== tempId);
+        removeMessage(id, tempId);
+        return next;
+      });
+      setDraft(body);
       setError(err instanceof Error ? err.message : 'Failed to send message');
     } finally {
       setSending(false);
@@ -251,6 +418,25 @@ export function ChatThreadScreen() {
       router.push({ pathname: '/products/[id]', params: { id: product.id } });
     }
   }
+
+  const renderItem = useCallback(
+    ({ item }: { item: MessageListItem }) => {
+      if (item.type === 'date') {
+        return <DateSeparator label={item.label} />;
+      }
+
+      return (
+        <MessageBubble
+          message={item.message}
+          isMine={item.isMine}
+          isGrouped={item.isGrouped}
+          onImagePress={openImageViewer}
+          onLongPress={setInfoMessage}
+        />
+      );
+    },
+    [openImageViewer],
+  );
 
   if (loading && messages.length === 0) {
     return (
@@ -293,30 +479,27 @@ export function ChatThreadScreen() {
             keyboardDismissMode="interactive"
             onLayout={() => scrollToEndIfPending(false)}
             onContentSizeChange={() => scrollToEndIfPending(false)}
-            renderItem={({ item }) => {
-              if (item.type === 'date') {
-                return <DateSeparator label={item.label} />;
+            onScroll={(event) => {
+              if (event.nativeEvent.contentOffset.y < 80) {
+                void loadOlderMessages();
               }
-
-              return (
-                <MessageBubble
-                  message={item.message}
-                  isMine={item.isMine}
-                  isGrouped={item.isGrouped}
-                  onImagePress={openImageViewer}
-                  onLongPress={setInfoMessage}
-                />
-              );
             }}
+            scrollEventThrottle={200}
+            ListHeaderComponent={
+              loadingOlder ? (
+                <View style={styles.olderLoader}>
+                  <ActivityIndicator color={colors.accent} size="small" />
+                </View>
+              ) : null
+            }
+            windowSize={7}
+            maxToRenderPerBatch={8}
+            initialNumToRender={16}
+            removeClippedSubviews={Platform.OS === 'android'}
+            renderItem={renderItem}
           />
         </ChatWallpaper>
 
-        {/*
-          Composer lives in normal flex flow. A spacer below it grows to the
-          keyboard height when the keyboard is open (lifting the composer above
-          it) and collapses to exactly 0 when closed — so no residual gap remains
-          after the keyboard is dismissed.
-        */}
         <View style={styles.composerHost}>
           <MessageComposer
             draft={draft}
@@ -383,6 +566,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     flexGrow: 1,
+  },
+  olderLoader: {
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
   },
   composerHost: {
     backgroundColor: chatTheme.headerBg,

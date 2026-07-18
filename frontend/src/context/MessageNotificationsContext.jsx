@@ -10,6 +10,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom'
 import MessageToast from '../components/messages/MessageToast'
 import { useAuth } from './AuthContext'
+import { notifyActiveThreadRefresh } from '../lib/chatCache'
 import { getConversations } from '../lib/conversationsApi'
 import {
   ensureNotificationPermission,
@@ -18,7 +19,7 @@ import {
 } from '../lib/webNotifications'
 
 const MessageNotificationsContext = createContext(null)
-const POLL_MS = 10000
+const POLL_MS = 45000
 const TOAST_MS = 6000
 
 function previewText(conversation) {
@@ -145,6 +146,7 @@ export function MessageNotificationsProvider({ children }) {
 
         if (isNewConversation || isNewer || unreadIncreased) {
           notifyForConversation(conversation, location.pathname)
+          notifyActiveThreadRefresh(conversation.id)
         }
       }
     } catch {

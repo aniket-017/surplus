@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import * as WebBrowser from 'expo-web-browser';
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -32,7 +33,7 @@ function ReceiptCheck({ status }: { status?: MessageReceiptStatus | null }) {
   );
 }
 
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   message,
   isMine,
   isGrouped,
@@ -107,7 +108,7 @@ export function MessageBubble({
       </Pressable>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrap: {

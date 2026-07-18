@@ -32,8 +32,17 @@ export async function getUnreadCount() {
   return parseResponse(res)
 }
 
-export async function getConversationMessages(conversationId) {
-  const res = await fetch(`${API_BASE}/api/conversations/${conversationId}/messages`, {
+export async function getConversationMessages(conversationId, options = {}) {
+  const params = new URLSearchParams()
+  if (options.limit) params.set('limit', String(options.limit))
+  if (options.after) params.set('after', options.after)
+  if (options.before) params.set('before', options.before)
+  const query = params.toString()
+  const url = `${API_BASE}/api/conversations/${conversationId}/messages${
+    query ? `?${query}` : ''
+  }`
+
+  const res = await fetch(url, {
     credentials: 'include',
   })
   return parseResponse(res)

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import AppShell from '../components/AppShell'
+import ChatImageLightbox from '../components/messages/ChatImageLightbox'
 import { useAuth } from '../context/AuthContext'
 import {
   getConversationMessages,
@@ -9,6 +10,22 @@ import {
 } from '../lib/conversationsApi'
 import { buildMessageListItems, formatMessageTime } from '../lib/messageFormat'
 import { getImageUrl } from '../lib/productsApi'
+
+const MAX_PENDING_ATTACHMENTS = 10
+
+function createPendingAttachment(file) {
+  return {
+    id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+    file,
+    previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+  }
+}
+
+function revokeAttachmentPreview(attachment) {
+  if (attachment?.previewUrl) {
+    URL.revokeObjectURL(attachment.previewUrl)
+  }
+}
 
 export default function ChatThreadPage({ role }) {
   const { id } = useParams()
@@ -21,12 +38,46 @@ export default function ChatThreadPage({ role }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [draft, setDraft] = useState('')
+  const [pendingAttachments, setPendingAttachments] = useState([])
   const [sending, setSending] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(null)
 
   const listRef = useRef(null)
   const fileInputRef = useRef(null)
+  const pendingAttachmentsRef = useRef([])
 
   const listItems = useMemo(() => buildMessageListItems(messages, user?.id), [messages, user?.id])
+  const imageUrls = useMemo(
+    () => messages.map((message) => message.imageUrl).filter(Boolean),
+    [messages],
+  )
+  const canSend = Boolean(draft.trim() || pendingAttachments.length)
+
+  function openImageLightbox(imageUrl) {
+    const index = imageUrls.indexOf(imageUrl)
+    if (index >= 0) setLightboxIndex(index)
+  }
+
+  useEffect(() => {
+    if (lightboxIndex === null) return
+    if (imageUrls.length === 0) {
+      setLightboxIndex(null)
+      return
+    }
+    if (lightboxIndex >= imageUrls.length) {
+      setLightboxIndex(imageUrls.length - 1)
+    }
+  }, [imageUrls, lightboxIndex])
+
+  useEffect(() => {
+    pendingAttachmentsRef.current = pendingAttachments
+  }, [pendingAttachments])
+
+  useEffect(() => {
+    return () => {
+      pendingAttachmentsRef.current.forEach(revokeAttachmentPreview)
+    }
+  }, [])
 
   const loadMessages = useCallback(async () => {
     try {
@@ -78,37 +129,63 @@ export default function ChatThreadPage({ role }) {
     }
   }, [])
 
+  function handleAttach(event) {
+    const files = Array.from(event.target.files || [])
+    event.target.value = ''
+    if (!files.length || sending) return
+
+    const remaining = MAX_PENDING_ATTACHMENTS - pendingAttachments.length
+    if (remaining <= 0) {
+      setError(`You can attach up to ${MAX_PENDING_ATTACHMENTS} files at a time`)
+      return
+    }
+
+    const accepted = files.slice(0, remaining).map(createPendingAttachment)
+    setPendingAttachments((prev) => [...prev, ...accepted])
+    setError(
+      files.length > remaining
+        ? `Only ${MAX_PENDING_ATTACHMENTS} files can be attached at a time`
+        : '',
+    )
+  }
+
+  function removePendingAttachment(attachmentId) {
+    setPendingAttachments((prev) => {
+      const target = prev.find((item) => item.id === attachmentId)
+      revokeAttachmentPreview(target)
+      return prev.filter((item) => item.id !== attachmentId)
+    })
+  }
+
   async function handleSend(event) {
     event?.preventDefault()
     const body = draft.trim()
-    if (!body || sending) return
+    if (sending || (!body && pendingAttachments.length === 0)) return
 
+    const attachmentsToSend = pendingAttachments
     setSending(true)
     try {
-      const result = await sendMessage(id, body)
-      setMessages((prev) => [...prev, result.message])
+      const sentMessages = []
+
+      if (attachmentsToSend.length === 0) {
+        const result = await sendMessage(id, body)
+        sentMessages.push(result.message)
+      } else {
+        for (let index = 0; index < attachmentsToSend.length; index += 1) {
+          const attachment = attachmentsToSend[index]
+          const messageBody = index === 0 ? body || undefined : undefined
+          const result = await sendMessageWithAttachment(id, attachment.file, messageBody)
+          sentMessages.push(result.message)
+        }
+      }
+
+      setMessages((prev) => [...prev, ...sentMessages])
+      attachmentsToSend.forEach(revokeAttachmentPreview)
+      setPendingAttachments([])
       setDraft('')
       setError('')
     } catch (err) {
       setError(err.message || 'Failed to send message')
-    } finally {
-      setSending(false)
-    }
-  }
-
-  async function handleAttach(event) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file || sending) return
-
-    setSending(true)
-    try {
-      const result = await sendMessageWithAttachment(id, file, draft.trim() || undefined)
-      setMessages((prev) => [...prev, result.message])
-      setDraft('')
-      setError('')
-    } catch (err) {
-      setError(err.message || 'Failed to send attachment')
     } finally {
       setSending(false)
     }
@@ -178,14 +255,13 @@ export default function ChatThreadPage({ role }) {
                 >
                   <div className={`chat-bubble${isMine ? ' mine' : ''}`}>
                     {message.imageUrl ? (
-                      <a
-                        href={message.imageUrl}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        type="button"
                         className="chat-bubble-image"
+                        onClick={() => openImageLightbox(message.imageUrl)}
                       >
                         <img src={message.imageUrl} alt="Attachment" />
-                      </a>
+                      </button>
                     ) : null}
                     {message.fileUrl ? (
                       <a
@@ -212,35 +288,73 @@ export default function ChatThreadPage({ role }) {
         {error ? <p className="dash-error chat-error">{error}</p> : null}
 
         <form className="chat-composer" onSubmit={handleSend}>
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="chat-file-input"
-            onChange={handleAttach}
-            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
-          />
-          <button
-            type="button"
-            className="chat-attach-btn"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={sending}
-            aria-label="Attach file"
-          >
-            📎
-          </button>
-          <input
-            type="text"
-            className="chat-input"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder="Type a message…"
-            disabled={sending}
-          />
-          <button type="submit" className="chat-send-btn" disabled={sending || !draft.trim()}>
-            {sending ? '…' : 'Send'}
-          </button>
+          {pendingAttachments.length > 0 ? (
+            <div className="chat-attach-preview" aria-label="Selected attachments">
+              {pendingAttachments.map((attachment) => (
+                <div key={attachment.id} className="chat-attach-preview-item">
+                  {attachment.previewUrl ? (
+                    <img src={attachment.previewUrl} alt={attachment.file.name} />
+                  ) : (
+                    <div className="chat-attach-preview-file" title={attachment.file.name}>
+                      <span aria-hidden="true">📄</span>
+                      <span>{attachment.file.name}</span>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="chat-attach-preview-remove"
+                    onClick={() => removePendingAttachment(attachment.id)}
+                    disabled={sending}
+                    aria-label={`Remove ${attachment.file.name}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="chat-composer-row">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="chat-file-input"
+              onChange={handleAttach}
+              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+              multiple
+            />
+            <button
+              type="button"
+              className="chat-attach-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending || pendingAttachments.length >= MAX_PENDING_ATTACHMENTS}
+              aria-label="Attach files"
+            >
+              📎
+            </button>
+            <input
+              type="text"
+              className="chat-input"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="Type a message…"
+              disabled={sending}
+            />
+            <button type="submit" className="chat-send-btn" disabled={sending || !canSend}>
+              {sending ? '…' : 'Send'}
+            </button>
+          </div>
         </form>
       </div>
+
+      {lightboxIndex !== null ? (
+        <ChatImageLightbox
+          images={imageUrls}
+          index={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onChangeIndex={setLightboxIndex}
+        />
+      ) : null}
     </AppShell>
   )
 }

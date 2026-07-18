@@ -1,8 +1,6 @@
 import { Image } from 'expo-image';
 import * as WebBrowser from 'expo-web-browser';
-import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import ImageView from 'react-native-image-viewing';
 import { Ionicons } from '@expo/vector-icons';
 
 import { chatTheme } from '@/src/constants/chatTheme';
@@ -15,10 +13,15 @@ type MessageBubbleProps = {
   message: ChatMessage;
   isMine: boolean;
   isGrouped?: boolean;
+  onImagePress?: (messageId: string) => void;
 };
 
-export function MessageBubble({ message, isMine, isGrouped }: MessageBubbleProps) {
-  const [viewerOpen, setViewerOpen] = useState(false);
+export function MessageBubble({
+  message,
+  isMine,
+  isGrouped,
+  onImagePress,
+}: MessageBubbleProps) {
   const body = message.body?.trim();
   const imageUri = message.imageUrl ? getImageUrl(message.imageUrl) : null;
   const fileUri = message.fileUrl ? getImageUrl(message.fileUrl) : null;
@@ -32,60 +35,53 @@ export function MessageBubble({ message, isMine, isGrouped }: MessageBubbleProps
   }
 
   return (
-    <>
+    <View
+      style={[
+        styles.wrap,
+        isMine ? styles.wrapMine : styles.wrapOther,
+        isGrouped && styles.wrapGrouped,
+      ]}
+    >
       <View
         style={[
-          styles.wrap,
-          isMine ? styles.wrapMine : styles.wrapOther,
-          isGrouped && styles.wrapGrouped,
+          styles.bubble,
+          isMine ? styles.bubbleMine : styles.bubbleOther,
+          hasImage && styles.bubbleWithImage,
         ]}
       >
-        <View
-          style={[
-            styles.bubble,
-            isMine ? styles.bubbleMine : styles.bubbleOther,
-            hasImage && styles.bubbleWithImage,
-          ]}
-        >
-          {hasImage ? (
-            <Pressable onPress={() => setViewerOpen(true)}>
-              <Image source={{ uri: imageUri! }} style={styles.image} contentFit="cover" />
-            </Pressable>
+        {hasImage ? (
+          <Pressable
+            onPress={() => onImagePress?.(message.id)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel="Open image"
+          >
+            <Image source={{ uri: imageUri! }} style={styles.image} contentFit="cover" />
+          </Pressable>
+        ) : null}
+
+        {hasFile ? (
+          <Pressable style={styles.fileRow} onPress={() => void openDocument()}>
+            <View style={styles.fileIconWrap}>
+              <Ionicons name="document-text-outline" size={22} color={colors.accent} />
+            </View>
+            <Text style={styles.fileName} numberOfLines={2}>
+              {message.fileName}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        {body ? <Text style={[styles.body, (hasImage || hasFile) && styles.caption]}>{body}</Text> : null}
+
+        {!hasContent ? <Text style={styles.body}>Inquiry sent</Text> : null}
+
+        <View style={styles.meta}>
+          <Text style={styles.time}>{formatMessageTime(message.createdAt)}</Text>
+          {isMine ? (
+            <Ionicons name="checkmark-done" size={14} color={chatTheme.checkmark} style={styles.check} />
           ) : null}
-
-          {hasFile ? (
-            <Pressable style={styles.fileRow} onPress={() => void openDocument()}>
-              <View style={styles.fileIconWrap}>
-                <Ionicons name="document-text-outline" size={22} color={colors.accent} />
-              </View>
-              <Text style={styles.fileName} numberOfLines={2}>
-                {message.fileName}
-              </Text>
-            </Pressable>
-          ) : null}
-
-          {body ? <Text style={[styles.body, (hasImage || hasFile) && styles.caption]}>{body}</Text> : null}
-
-          {!hasContent ? <Text style={styles.body}>Inquiry sent</Text> : null}
-
-          <View style={styles.meta}>
-            <Text style={styles.time}>{formatMessageTime(message.createdAt)}</Text>
-            {isMine ? (
-              <Ionicons name="checkmark-done" size={14} color={chatTheme.checkmark} style={styles.check} />
-            ) : null}
-          </View>
         </View>
       </View>
-
-      {hasImage ? (
-        <ImageView
-          images={[{ uri: imageUri! }]}
-          imageIndex={0}
-          visible={viewerOpen}
-          onRequestClose={() => setViewerOpen(false)}
-        />
-      ) : null}
-    </>
+    </View>
   );
 }
 

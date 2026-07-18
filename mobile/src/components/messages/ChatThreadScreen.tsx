@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChatHeader } from '@/src/components/messages/ChatHeader';
+import { ChatImageViewer } from '@/src/components/messages/ChatImageViewer';
 import { ChatWallpaper } from '@/src/components/messages/ChatWallpaper';
 import { DateSeparator } from '@/src/components/messages/DateSeparator';
 import { MessageBubble } from '@/src/components/messages/MessageBubble';
@@ -29,6 +30,7 @@ import {
 } from '@/src/lib/conversationsApi';
 import { buildMessageListItems, type MessageListItem } from '@/src/lib/messageFormat';
 import type { ChatAttachment } from '@/src/lib/chatAttachments';
+import { getImageUrl } from '@/src/lib/productsApi';
 
 type ThreadProduct = { id: string; title: string; images: string[] } | null;
 type ThreadOtherParty = { id: string; name: string; avatarUrl: string | null } | null;
@@ -50,6 +52,8 @@ export function ChatThreadScreen() {
   const [pendingAttachment, setPendingAttachment] = useState<ChatAttachment | null>(null);
   const [error, setError] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
   const keyboardVisible = keyboardHeight > 0;
 
   // In Expo Go's edge-to-edge mode the safe-area top inset can report 0, letting
@@ -64,6 +68,24 @@ export function ChatThreadScreen() {
     () => buildMessageListItems(messages, user?.id),
     [messages, user?.id],
   );
+  const viewerImages = useMemo(
+    () =>
+      messages
+        .filter((message) => Boolean(message.imageUrl))
+        .map((message) => ({
+          id: message.id,
+          uri: getImageUrl(message.imageUrl!),
+        })),
+    [messages],
+  );
+
+  function openImageViewer(messageId: string) {
+    const index = viewerImages.findIndex((image) => image.id === messageId);
+    if (index < 0) return;
+
+    setViewerInitialIndex(index);
+    setViewerVisible(true);
+  }
 
   const scrollToEnd = useCallback((animated = true) => {
     const list = listRef.current;
@@ -96,6 +118,7 @@ export function ChatThreadScreen() {
     setError('');
     setDraft('');
     setPendingAttachment(null);
+    setViewerVisible(false);
   }, [id]);
 
   useEffect(() => {
@@ -262,6 +285,7 @@ export function ChatThreadScreen() {
                   message={item.message}
                   isMine={item.isMine}
                   isGrouped={item.isGrouped}
+                  onImagePress={openImageViewer}
                 />
               );
             }}
@@ -291,6 +315,13 @@ export function ChatThreadScreen() {
 
         <View style={{ height: keyboardHeight }} />
       </View>
+
+      <ChatImageViewer
+        images={viewerImages}
+        initialIndex={viewerInitialIndex}
+        visible={viewerVisible}
+        onClose={() => setViewerVisible(false)}
+      />
     </View>
   );
 }

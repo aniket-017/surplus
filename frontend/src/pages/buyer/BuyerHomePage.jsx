@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppShell from '../../components/AppShell'
+import BuyerLocationHeader from '../../components/buyer/BuyerLocationHeader'
 import BuyerSearchBar from '../../components/buyer/BuyerSearchBar'
 import CategoryCarousel from '../../components/buyer/CategoryCarousel'
 import ListingFilterChips from '../../components/buyer/ListingFilterChips'
 import ProductListingCard from '../../components/buyer/ProductListingCard'
+import { useAuth } from '../../context/AuthContext'
+import { useBuyerLocation } from '../../context/LocationContext'
 import { browseProducts, getCategories } from '../../lib/productsApi'
 
 export default function BuyerHomePage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { location } = useBuyerLocation()
   const [searchParams] = useSearchParams()
   const categoryParam = searchParams.get('category') || ''
 
@@ -21,6 +26,8 @@ export default function BuyerHomePage() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const nearMeCity = location?.city || user?.address?.city || ''
 
   useEffect(() => {
     if (categoryParam) {
@@ -46,19 +53,24 @@ export default function BuyerHomePage() {
           search: debouncedSearch || undefined,
           category: activeCategory || undefined,
           sort,
+          city: activeFilter === 'near' && nearMeCity ? nearMeCity : undefined,
           limit: 40,
         }),
       ])
 
       setCategories(categoriesData.categories)
       setProducts(productsData.products)
+
+      if (activeFilter === 'near' && !nearMeCity) {
+        setError('Choose a location above so "Near Me" can filter listings near you.')
+      }
     } catch (err) {
       setError(err.message || 'Failed to load listings')
       setProducts([])
     } finally {
       setLoading(false)
     }
-  }, [debouncedSearch, activeCategory, sort])
+  }, [debouncedSearch, activeCategory, sort, activeFilter, nearMeCity])
 
   useEffect(() => {
     loadFeed()
@@ -72,8 +84,11 @@ export default function BuyerHomePage() {
   return (
     <AppShell role="buyer" title="Browse">
       <div className="buyer-home-header">
-        <h2>Discover surplus</h2>
-        <p>Find materials and equipment from verified sellers</p>
+        <div className="buyer-home-header-text">
+          <h2>Discover surplus</h2>
+          <p>Find materials and equipment from verified sellers</p>
+        </div>
+        <BuyerLocationHeader />
       </div>
 
       <BuyerSearchBar value={search} onChange={setSearch} />

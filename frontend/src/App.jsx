@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import RoleRoute from './components/RoleRoute'
 import { AuthProvider } from './context/AuthContext'
+import { LocationProvider } from './context/LocationContext'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import AuthPage from './pages/AuthPage'
 import LandingPage from './pages/LandingPage'
@@ -28,6 +29,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <LocationProvider>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/signin" element={<AuthPage />} />
@@ -169,6 +171,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </LocationProvider>
       </AuthProvider>
     </BrowserRouter>
   )

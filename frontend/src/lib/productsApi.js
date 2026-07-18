@@ -22,6 +22,8 @@ function buildBrowseQuery(params = {}) {
   if (params.search) query.set('search', params.search)
   if (params.category) query.set('category', params.category)
   if (params.sort) query.set('sort', params.sort)
+  if (params.city) query.set('city', params.city)
+  if (params.state) query.set('state', params.state)
   if (params.limit) query.set('limit', String(params.limit))
   if (params.skip) query.set('skip', String(params.skip))
 

@@ -2,6 +2,7 @@ import { Router } from "express";
 import passport from "../config/passport.js";
 import { isGoogleAuthEnabled, isOtpAuthEnabled, getAuthMethods } from "../config/auth.js";
 import { prisma } from "../lib/prisma.js";
+import { withPrismaRetry } from "../lib/prismaRetry.js";
 import {
   setAuthCookie,
   clearAuthCookie,
@@ -215,11 +216,13 @@ router.patch("/profile", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "No profile fields to update" });
     }
 
-    const user = await prisma.user.update({
-      where: { id: req.user.id },
-      data: updateData,
-      select: userSelect,
-    });
+    const user = await withPrismaRetry(() =>
+      prisma.user.update({
+        where: { id: req.user.id },
+        data: updateData,
+        select: userSelect,
+      })
+    );
 
     res.json({ user: formatUser(user) });
   } catch (error) {
@@ -236,11 +239,13 @@ router.patch("/role", requireAuth, async (req, res) => {
   }
 
   try {
-    const user = await prisma.user.update({
-      where: { id: req.user.id },
-      data: { role },
-      select: userSelect,
-    });
+    const user = await withPrismaRetry(() =>
+      prisma.user.update({
+        where: { id: req.user.id },
+        data: { role },
+        select: userSelect,
+      })
+    );
 
     res.json({ user: formatUser(user) });
   } catch (error) {

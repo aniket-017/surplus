@@ -20,6 +20,8 @@ export default function RoleSelectScreen() {
   const [error, setError] = useState('');
 
   async function handleSelect(role: UserRole) {
+    if (loadingRole) return;
+
     setLoadingRole(role);
     setError('');
 

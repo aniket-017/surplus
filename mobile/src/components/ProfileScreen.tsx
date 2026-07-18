@@ -148,6 +148,8 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
   }
 
   async function handleSwitchRole() {
+    if (switching) return;
+
     const nextRole = role === 'buyer' ? 'seller' : 'buyer';
     setSwitching(true);
     setError('');

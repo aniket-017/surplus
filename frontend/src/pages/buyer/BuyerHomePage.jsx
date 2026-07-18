@@ -157,11 +157,6 @@ export default function BuyerHomePage() {
         onClear={handleSearchClear}
       />
 
-      <div className="buyer-banner">
-        <h3>Turn surplus into value</h3>
-        <p>Browse verified listings across metals, plastics, machinery, and more.</p>
-      </div>
-
       <CategoryCarousel
         categories={categories}
         activeCategory={activeCategory}

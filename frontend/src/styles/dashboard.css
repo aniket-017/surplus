@@ -811,25 +811,6 @@
   transition: opacity 0.15s ease;
 }
 
-.buyer-banner {
-  background: linear-gradient(135deg, var(--navy) 0%, #1a2f4a 100%);
-  border-radius: 14px;
-  padding: 1.25rem 1.5rem;
-  color: white;
-  margin-bottom: 1rem;
-}
-
-.buyer-banner h3 {
-  font-size: 1.1rem;
-  font-weight: 800;
-  margin-bottom: 0.25rem;
-}
-
-.buyer-banner p {
-  font-size: 0.85rem;
-  opacity: 0.85;
-}
-
 .category-carousel {
   display: flex;
   gap: 0.5rem;

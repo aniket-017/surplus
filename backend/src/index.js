@@ -11,10 +11,46 @@ import { verifySmtpConnection } from "./lib/mail.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
 import conversationRoutes from "./routes/conversations.js";
+import pushTokenRoutes from "./routes/pushTokens.js";
 import savedRoutes from "./routes/saved.js";
 import { backfillCategoryMeta } from "./lib/category.js";
 import { CATEGORY_ASSETS_DIR, getCategoryImageManifest } from "./lib/categoryAssets.js";
+import { prisma } from "./lib/prisma.js";
 import { assertS3Config } from "./lib/s3.js";
+
+async function backfillConversationReadState() {
+  // Existing conversations may omit last-read fields entirely. MongoDB/Prisma
+  // does not reliably match missing fields with `{ field: null }`, so filter in JS.
+  // Treat prior history as already read so unread badges are not flooded.
+  const conversations = await prisma.conversation.findMany({
+    select: {
+      id: true,
+      lastMessageAt: true,
+      buyerLastReadAt: true,
+      sellerLastReadAt: true,
+    },
+  });
+
+  const needsBackfill = conversations.filter(
+    (conversation) => conversation.buyerLastReadAt == null && conversation.sellerLastReadAt == null,
+  );
+
+  if (needsBackfill.length === 0) return;
+
+  await Promise.all(
+    needsBackfill.map((conversation) =>
+      prisma.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          buyerLastReadAt: conversation.lastMessageAt,
+          sellerLastReadAt: conversation.lastMessageAt,
+        },
+      }),
+    ),
+  );
+
+  console.log(`Backfilled read state for ${needsBackfill.length} conversations`);
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND_DIST = path.resolve(__dirname, "../../frontend/dist");
@@ -128,6 +164,7 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/conversations", conversationRoutes);
+app.use("/api/push-tokens", pushTokenRoutes);
 app.use("/api/saved", savedRoutes);
 
 if (FRONTEND_DIST_EXISTS) {
@@ -163,5 +200,9 @@ app.listen(PORT, () => {
 
   backfillCategoryMeta().catch((error) => {
     console.error("Category meta backfill failed:", error.message);
+  });
+
+  backfillConversationReadState().catch((error) => {
+    console.error("Conversation read-state backfill failed:", error.message);
   });
 });

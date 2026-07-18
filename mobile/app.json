@@ -61,7 +61,14 @@
           "locationWhenInUsePermission": "Allow Surplus to use your location to show listings near you."
         }
       ],
-      "expo-document-picker"
+      "expo-document-picker",
+      [
+        "expo-notifications",
+        {
+          "color": "#16A34A",
+          "defaultChannel": "messages"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

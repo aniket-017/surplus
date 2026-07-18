@@ -1,12 +1,37 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
-import { formatMessage, formatConversationSummary } from "../lib/conversations.js";
+import {
+  countTotalUnreadForUser,
+  formatMessage,
+  formatConversationSummary,
+  markConversationRead,
+} from "../lib/conversations.js";
 import { optimizeProductImage } from "../lib/imageOptimize.js";
+import { notifyNewMessage } from "../lib/pushNotifications.js";
 import { uploadMessageFile, uploadMessageImage as uploadMessageImageToS3 } from "../lib/s3.js";
 import { getMessageUploadFile, isImageUpload, uploadMessageAttachment } from "../lib/upload.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
+
+async function notifyRecipientOfMessage({ conversation, message, sender }) {
+  const recipientId =
+    conversation.buyerId === sender.id ? conversation.sellerId : conversation.buyerId;
+  const recipientRole = conversation.buyerId === recipientId ? "buyer" : "seller";
+  const senderName = sender.name || sender.email?.split("@")[0] || "Someone";
+  const productTitle = conversation.product?.title || null;
+  const unreadCount = await countTotalUnreadForUser(recipientId);
+
+  await notifyNewMessage({
+    recipientId,
+    recipientRole,
+    conversationId: conversation.id,
+    senderName,
+    productTitle,
+    message,
+    unreadCount,
+  });
+}
 
 // Test endpoint for debugging connectivity
 router.post("/:id/test-upload", requireAuth, (req, res) => {
@@ -176,9 +201,27 @@ router.post("/", requireAuth, async (req, res) => {
       },
     });
 
-    await prisma.conversation.update({
+    // Buyer has seen their own inquiry; seller still has it unread.
+    conversation = await prisma.conversation.update({
       where: { id: conversation.id },
-      data: { lastMessageAt: message.createdAt },
+      data: {
+        lastMessageAt: message.createdAt,
+        buyerLastReadAt: message.createdAt,
+      },
+      include: {
+        product: { select: { id: true, title: true, images: true } },
+      },
+    });
+
+    const sender = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, name: true, email: true },
+    });
+
+    await notifyRecipientOfMessage({
+      conversation,
+      message,
+      sender: sender || { id: req.user.id, name: null, email: null },
     });
 
     res.status(201).json({
@@ -189,6 +232,16 @@ router.post("/", requireAuth, async (req, res) => {
   } catch (error) {
     console.error("Create conversation failed:", error);
     res.status(500).json({ error: "Failed to start inquiry" });
+  }
+});
+
+router.get("/unread-count", requireAuth, async (req, res) => {
+  try {
+    const unreadCount = await countTotalUnreadForUser(req.user.id);
+    res.json({ unreadCount });
+  } catch (error) {
+    console.error("Get unread count failed:", error);
+    res.status(500).json({ error: "Failed to fetch unread count" });
   }
 });
 
@@ -269,6 +322,24 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
   } catch (error) {
     console.error("List messages failed:", error);
     res.status(500).json({ error: "Failed to fetch messages" });
+  }
+});
+
+router.post("/:id/read", requireAuth, async (req, res) => {
+  try {
+    const conversation = await getConversationForUser(req.params.id, req.user.id);
+
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    await markConversationRead(conversation, req.user.id);
+    const unreadCount = await countTotalUnreadForUser(req.user.id);
+
+    res.json({ success: true, unreadCount });
+  } catch (error) {
+    console.error("Mark conversation read failed:", error);
+    res.status(500).json({ error: "Failed to mark conversation as read" });
   }
 });
 
@@ -365,14 +436,34 @@ router.post("/:id/messages", requireAuth, handleMessageUpload, async (req, res) 
     console.log("✅ Message created:", message.id);
 
     console.log("🔍 Step 5: Updating conversation timestamp...");
-    await prisma.conversation.update({
+    const readField =
+      conversation.buyerId === req.user.id ? "buyerLastReadAt" : "sellerLastReadAt";
+    const updatedConversation = await prisma.conversation.update({
       where: { id: conversation.id },
-      data: { lastMessageAt: message.createdAt },
+      data: {
+        lastMessageAt: message.createdAt,
+        [readField]: message.createdAt,
+      },
+      include: {
+        product: { select: { id: true, title: true, images: true } },
+      },
     });
     console.log("✅ Conversation updated");
 
     console.log("🔍 Step 6: Formatting message response...");
     const formattedMessage = await formatMessage(message);
+
+    const sender = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, name: true, email: true },
+    });
+
+    await notifyRecipientOfMessage({
+      conversation: updatedConversation,
+      message,
+      sender: sender || { id: req.user.id, name: null, email: null },
+    });
+
     console.log("✅ Message saved successfully:", message.id);
     res.status(201).json({ message: formattedMessage });
   } catch (error) {

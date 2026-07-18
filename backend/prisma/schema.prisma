@@ -59,11 +59,25 @@ model User {
   sellerConversations Conversation[] @relation("SellerConversations")
   messages            Message[]
   savedListings       SavedListing[]
+  pushTokens          PushToken[]
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@index([googleId])
   @@map("users")
+}
+
+model PushToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @map("user_id") @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("push_tokens")
 }
 
 model Otp {
@@ -113,16 +127,18 @@ model Product {
 }
 
 model Conversation {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  buyerId       String    @map("buyer_id") @db.ObjectId
-  sellerId      String    @map("seller_id") @db.ObjectId
-  productId     String    @map("product_id") @db.ObjectId
-  buyer         User      @relation("BuyerConversations", fields: [buyerId], references: [id])
-  seller        User      @relation("SellerConversations", fields: [sellerId], references: [id])
-  product       Product   @relation(fields: [productId], references: [id])
-  messages      Message[]
-  lastMessageAt DateTime  @default(now()) @map("last_message_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  buyerId         String    @map("buyer_id") @db.ObjectId
+  sellerId        String    @map("seller_id") @db.ObjectId
+  productId       String    @map("product_id") @db.ObjectId
+  buyer           User      @relation("BuyerConversations", fields: [buyerId], references: [id])
+  seller          User      @relation("SellerConversations", fields: [sellerId], references: [id])
+  product         Product   @relation(fields: [productId], references: [id])
+  messages        Message[]
+  buyerLastReadAt DateTime? @map("buyer_last_read_at")
+  sellerLastReadAt DateTime? @map("seller_last_read_at")
+  lastMessageAt   DateTime  @default(now()) @map("last_message_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
 
   @@unique([buyerId, productId])
   @@index([buyerId])

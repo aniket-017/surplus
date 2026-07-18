@@ -17,6 +17,8 @@ import {
   verifyOtp,
 } from '@/src/lib/api';
 import type { AuthIntent } from '@/src/lib/api';
+import { unregisterPushToken } from '@/src/lib/conversationsApi';
+import { clearStoredPushToken, loadStoredPushToken } from '@/src/lib/pushTokenStorage';
 import type { UpdateProfilePayload, User, UserRole } from '@/src/types/auth';
 
 const TOKEN_KEY = 'surplus_auth_token';
@@ -99,12 +101,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     if (token) {
       try {
+        const pushToken = await loadStoredPushToken();
+        if (pushToken) {
+          await unregisterPushToken(token, pushToken);
+        }
+      } catch {
+        // Ignore push unregister failures during logout.
+      }
+
+      try {
         await logoutRequest(token);
       } catch {
         // Ignore logout API errors and clear local session anyway.
       }
     }
 
+    await clearStoredPushToken();
     await clearToken();
     setToken(null);
     setUser(null);

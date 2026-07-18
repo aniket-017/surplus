@@ -26,6 +26,7 @@ export type ConversationSummary = {
     senderId: string;
     createdAt: string;
   } | null;
+  unreadCount: number;
   lastMessageAt: string;
   createdAt: string;
 };
@@ -68,6 +69,53 @@ export async function getConversations(token: string) {
   });
 
   return parseResponse<{ conversations: ConversationSummary[] }>(res);
+}
+
+export async function getUnreadCount(token: string) {
+  const res = await fetch(`${API_BASE}/api/conversations/unread-count`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  return parseResponse<{ unreadCount: number }>(res);
+}
+
+export async function markConversationAsRead(token: string, conversationId: string) {
+  const res = await fetch(`${API_BASE}/api/conversations/${conversationId}/read`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  return parseResponse<{ success: boolean; unreadCount: number }>(res);
+}
+
+export async function registerPushToken(
+  token: string,
+  pushToken: string,
+  platform?: string | null,
+) {
+  const res = await fetch(`${API_BASE}/api/push-tokens`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token: pushToken, platform }),
+  });
+
+  return parseResponse<{ token: { id: string; token: string; platform: string | null } }>(res);
+}
+
+export async function unregisterPushToken(token: string, pushToken: string) {
+  const res = await fetch(`${API_BASE}/api/push-tokens`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token: pushToken }),
+  });
+
+  return parseResponse<{ success: boolean }>(res);
 }
 
 export async function getConversationMessages(token: string, conversationId: string) {
@@ -234,24 +282,6 @@ export async function sendMessageWithAttachment(
     console.log('Sending XMLHttpRequest with FormData...');
     xhr.send(formData);
   });
-
-  console.log('Upload response status:', response.status);
-
-  if (!response.ok) {
-    let errorMessage = 'Upload failed';
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.error || `Server error: ${response.status}`;
-      console.error('Server error response:', errorData);
-    } catch {
-      errorMessage = `Server returned status ${response.status}`;
-    }
-    throw new Error(errorMessage);
-  }
-
-  const result = await response.json();
-  console.log('Upload successful');
-  return result as { message: ChatMessage };
 }
 
 /** @deprecated Use sendMessageWithAttachment */

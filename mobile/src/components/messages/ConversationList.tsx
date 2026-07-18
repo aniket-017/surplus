@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/src/context/AuthContext';
+import { useUnreadMessages } from '@/src/context/UnreadMessagesContext';
 import { colors, spacing } from '@/src/constants/theme';
 import { getConversations, type ConversationSummary } from '@/src/lib/conversationsApi';
 import { formatConversationTime } from '@/src/lib/messageFormat';
@@ -41,6 +42,7 @@ type ConversationListProps = {
 
 export function ConversationList({ emptySubtitle }: ConversationListProps) {
   const { token, user } = useAuth();
+  const { refreshUnreadCount } = useUnreadMessages();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,17 +58,20 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
       const data = await getConversations(token);
       setConversations(data.conversations);
       setError('');
+      await refreshUnreadCount();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load messages');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, refreshUnreadCount]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   function handleRefresh() {
     setRefreshing(true);
@@ -109,10 +114,11 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
       renderItem={({ item }) => {
         const title = getRowTitle(item, user?.role);
         const productImage = item.product?.images?.[0];
+        const unread = (item.unreadCount || 0) > 0;
 
         return (
           <Pressable
-            style={styles.row}
+            style={[styles.row, unread && styles.rowUnread]}
             onPress={() => {
               if (user?.role === 'seller') {
                 router.push(`/(seller)/messages/${item.id}` as never);
@@ -130,14 +136,28 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
             )}
             <View style={styles.content}>
               <View style={styles.topRow}>
-                <Text style={styles.name} numberOfLines={1}>
+                <Text style={[styles.name, unread && styles.nameUnread]} numberOfLines={1}>
                   {title}
                 </Text>
-                <Text style={styles.time}>{formatConversationTime(item.lastMessageAt)}</Text>
+                <Text style={[styles.time, unread && styles.timeUnread]}>
+                  {formatConversationTime(item.lastMessageAt)}
+                </Text>
               </View>
-              <Text style={styles.preview} numberOfLines={1}>
-                {getPreview(item)}
-              </Text>
+              <View style={styles.previewRow}>
+                <Text
+                  style={[styles.preview, unread && styles.previewUnread]}
+                  numberOfLines={1}
+                >
+                  {getPreview(item)}
+                </Text>
+                {unread ? (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadBadgeText}>
+                      {item.unreadCount > 99 ? '99+' : item.unreadCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
           </Pressable>
         );
@@ -168,6 +188,9 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0, 0, 0, 0.08)',
     minHeight: 76,
   },
+  rowUnread: {
+    backgroundColor: 'rgba(22, 163, 74, 0.06)',
+  },
   avatar: {
     width: 52,
     height: 52,
@@ -196,14 +219,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.2,
   },
+  nameUnread: {
+    fontWeight: '800',
+  },
   time: {
     color: colors.muted,
     fontSize: 12,
   },
+  timeUnread: {
+    color: colors.accent,
+    fontWeight: '700',
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   preview: {
+    flex: 1,
     color: colors.muted,
     fontSize: 14,
     lineHeight: 19,
+  },
+  previewUnread: {
+    color: colors.textStrong,
+    fontWeight: '600',
+  },
+  unreadBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
   },
   emptyTitle: {
     color: colors.textStrong,

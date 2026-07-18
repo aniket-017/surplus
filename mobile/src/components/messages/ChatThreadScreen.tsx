@@ -20,6 +20,7 @@ import { DateSeparator } from '@/src/components/messages/DateSeparator';
 import { MessageBubble } from '@/src/components/messages/MessageBubble';
 import { MessageComposer } from '@/src/components/messages/MessageComposer';
 import { useAuth } from '@/src/context/AuthContext';
+import { useUnreadMessages } from '@/src/context/UnreadMessagesContext';
 import { chatTheme } from '@/src/constants/chatTheme';
 import { colors, spacing } from '@/src/constants/theme';
 import {
@@ -38,6 +39,7 @@ type ThreadOtherParty = { id: string; name: string; avatarUrl: string | null } |
 export function ChatThreadScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { token, user } = useAuth();
+  const { markConversationRead } = useUnreadMessages();
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<MessageListItem>>(null);
   const pendingInitialScrollRef = useRef(true);
@@ -152,12 +154,13 @@ export function ChatThreadScreen() {
       setProduct(data.conversation.product);
       setOtherParty(data.conversation.otherParty);
       setError('');
+      await markConversationRead(id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load messages');
     } finally {
       setLoading(false);
     }
-  }, [token, id]);
+  }, [token, id, markConversationRead]);
 
   useFocusEffect(
     useCallback(() => {

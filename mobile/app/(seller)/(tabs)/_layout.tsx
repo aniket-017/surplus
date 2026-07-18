@@ -2,10 +2,12 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTabSafeAreaInsets, useTabScreenOptions } from '@/src/constants/tabBar';
+import { useUnreadMessages } from '@/src/context/UnreadMessagesContext';
 
 export default function SellerTabsLayout() {
   const screenOptions = useTabScreenOptions();
   const safeAreaInsets = useTabSafeAreaInsets();
+  const { unreadCount } = useUnreadMessages();
 
   return (
     <Tabs screenOptions={screenOptions} safeAreaInsets={safeAreaInsets}>
@@ -31,6 +33,7 @@ export default function SellerTabsLayout() {
         name="messages"
         options={{
           title: 'Messages',
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubble-outline" size={size} color={color} />
           ),

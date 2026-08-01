@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Logo } from '@/src/components/Logo';
 import { useAuth } from '@/src/context/AuthContext';
-import { colors, spacing } from '@/src/constants/theme';
+import { cardShadow, colors, radius, spacing } from '@/src/constants/theme';
 import type { UserRole } from '@/src/types/auth';
 
 export default function RoleSelectScreen() {
@@ -38,7 +38,9 @@ export default function RoleSelectScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Logo size="lg" />
+        <View style={styles.brand}>
+          <Logo size="lg" />
+        </View>
 
         <View style={styles.header}>
           <Text style={styles.title}>How will you use Surplus?</Text>
@@ -48,7 +50,11 @@ export default function RoleSelectScreen() {
         </View>
 
         <Pressable
-          style={styles.card}
+          style={({ pressed }) => [
+            styles.card,
+            pressed && styles.cardPressed,
+            loadingRole === 'buyer' && styles.cardActive,
+          ]}
           onPress={() => handleSelect('buyer')}
           disabled={!!loadingRole}
         >
@@ -57,11 +63,17 @@ export default function RoleSelectScreen() {
           <Text style={styles.cardText}>
             Browse surplus inventory, place orders, and recover value for your business.
           </Text>
-          {loadingRole === 'buyer' ? <ActivityIndicator color={colors.accent} /> : null}
+          {loadingRole === 'buyer' ? (
+            <ActivityIndicator color={colors.accent} style={styles.cardLoader} />
+          ) : null}
         </Pressable>
 
         <Pressable
-          style={styles.card}
+          style={({ pressed }) => [
+            styles.card,
+            pressed && styles.cardPressed,
+            loadingRole === 'seller' && styles.cardActive,
+          ]}
           onPress={() => handleSelect('seller')}
           disabled={!!loadingRole}
         >
@@ -70,7 +82,9 @@ export default function RoleSelectScreen() {
           <Text style={styles.cardText}>
             List surplus stock, manage listings, and connect with industrial buyers.
           </Text>
-          {loadingRole === 'seller' ? <ActivityIndicator color={colors.accent} /> : null}
+          {loadingRole === 'seller' ? (
+            <ActivityIndicator color={colors.accent} style={styles.cardLoader} />
+          ) : null}
         </Pressable>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -86,18 +100,25 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: spacing.lg,
-    gap: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    gap: spacing.md,
     justifyContent: 'center',
+  },
+  brand: {
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   header: {
     gap: spacing.xs,
+    marginBottom: spacing.sm,
   },
   title: {
     color: colors.textStrong,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
   subtitle: {
     color: colors.muted,
@@ -107,37 +128,56 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.accent,
     gap: spacing.sm,
+    ...cardShadow,
+  },
+  cardPressed: {
+    borderColor: colors.borderAccent,
+    backgroundColor: colors.surfaceMuted,
+    opacity: 0.96,
+  },
+  cardActive: {
+    borderColor: colors.borderAccent,
   },
   cardBadge: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(92, 179, 53, 0.12)',
-    color: colors.accent,
+    color: colors.accentHover,
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingVertical: 5,
+    borderRadius: radius.sm,
     overflow: 'hidden',
   },
   cardTitle: {
     color: colors.textStrong,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
+    letterSpacing: -0.2,
   },
   cardText: {
     color: colors.muted,
     fontSize: 15,
     lineHeight: 22,
   },
+  cardLoader: {
+    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
+  },
   error: {
     color: colors.error,
     textAlign: 'center',
     fontSize: 14,
+    lineHeight: 20,
+    marginTop: spacing.xs,
   },
 });

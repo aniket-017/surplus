@@ -23,10 +23,16 @@ export const spacing = {
   xl: 32,
 } as const;
 
+export const radius = {
+  sm: 10,
+  md: 14,
+  lg: 20,
+} as const;
+
 export const cardShadow = {
   shadowColor: '#0F1B2D',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  elevation: 2,
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.08,
+  shadowRadius: 16,
+  elevation: 3,
 } as const;

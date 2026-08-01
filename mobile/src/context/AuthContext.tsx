@@ -16,7 +16,6 @@ import {
   updateRole,
   verifyFirebasePhone,
 } from '@/src/lib/api';
-import { signOutFirebaseAuth } from '@/src/lib/firebaseAuth';
 import { unregisterPushToken } from '@/src/lib/conversationsApi';
 import { clearStoredPushToken, loadStoredPushToken } from '@/src/lib/pushTokenStorage';
 import type { UpdateProfilePayload, User, UserRole } from '@/src/types/auth';
@@ -117,9 +116,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      // Lazy-load so Expo Go does not crash on AuthProvider mount.
+      const { signOutFirebaseAuth } = await import('@/src/lib/firebaseAuth');
       await signOutFirebaseAuth();
     } catch {
-      // Ignore Firebase sign-out errors.
+      // Ignore Firebase sign-out errors (including missing native modules).
     }
 
     await clearStoredPushToken();

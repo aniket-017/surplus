@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { isExpoGo } from '@/src/lib/notifications';
 import { toIndianLocalDigits } from '@/src/lib/phone';
 
 /**
@@ -8,7 +9,8 @@ import { toIndianLocalDigits } from '@/src/lib/phone';
  * unavailable / cancelled / not applicable.
  */
 export async function requestPhoneNumberHintLocal(): Promise<string | null> {
-  if (Platform.OS !== 'android') {
+  // Native module is not in Expo Go — skip import entirely to avoid LogBox spam.
+  if (Platform.OS !== 'android' || isExpoGo()) {
     return null;
   }
 
@@ -30,7 +32,7 @@ export async function requestPhoneNumberHintLocal(): Promise<string | null> {
 
     return toIndianLocalDigits(selected);
   } catch {
-    // Hint not linked (Expo Go), cancelled, or no numbers — fall back to manual entry.
+    // Hint not linked, cancelled, or no numbers — fall back to manual entry.
     return null;
   }
 }

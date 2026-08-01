@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -14,16 +14,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Logo } from '@/src/components/Logo';
 import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
 import { useAuth } from '@/src/context/AuthContext';
-import {
-  confirmFirebasePhoneOtp,
-  sendFirebasePhoneOtp,
-  type PhoneConfirmation,
-} from '@/src/lib/firebaseAuth';
 import { formatPhoneForDisplay, toE164Phone } from '@/src/lib/phone';
 import { requestPhoneNumberHintLocal } from '@/src/lib/phoneHint';
-import { colors, spacing } from '@/src/constants/theme';
+import { isExpoGo } from '@/src/lib/notifications';
+import { cardShadow, colors, radius, spacing } from '@/src/constants/theme';
 
 type Step = 'phone' | 'otp';
+
+/** Avoid static RNFirebase imports — they crash Expo Go at module load. */
+type PhoneConfirmation = {
+  confirm: (code: string) => Promise<unknown>;
+};
+
+const EXPO_GO_PHONE_AUTH_MSG =
+  'Phone OTP needs a native build (EAS preview/dev). Expo Go cannot load React Native Firebase.';
+
+async function loadFirebaseAuth() {
+  return import('@/src/lib/firebaseAuth');
+}
 
 function navigateAfterAuth(user: { role: 'buyer' | 'seller' | null }) {
   if (!user.role) {
@@ -35,6 +43,15 @@ function navigateAfterAuth(user: { role: 'buyer' | 'seller' | null }) {
 }
 
 function mapFirebaseError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  if (
+    message.includes('NativeRNFBTurboApp') ||
+    message.includes('Native module') ||
+    message.includes('not registered')
+  ) {
+    return EXPO_GO_PHONE_AUTH_MSG;
+  }
+
   const code =
     typeof error === 'object' && error && 'code' in error
       ? String((error as { code?: string }).code || '')
@@ -53,7 +70,7 @@ function mapFirebaseError(error: unknown): string {
     case 'auth/app-not-authorized':
       return 'Phone auth is not configured for this app build. Add SHA keys in Firebase and rebuild.';
     default:
-      return error instanceof Error ? error.message : 'Something went wrong';
+      return message || 'Something went wrong';
   }
 }
 
@@ -70,6 +87,7 @@ export default function SignInScreen() {
   const [info, setInfo] = useState('');
   const confirmationRef = useRef<PhoneConfirmation | null>(null);
   const hintAttemptedRef = useRef(false);
+  const completingRef = useRef(false);
 
   useEffect(() => {
     if (token && user) {
@@ -78,7 +96,14 @@ export default function SignInScreen() {
   }, [token, user]);
 
   useEffect(() => {
-    if (Platform.OS !== 'android' || hintAttemptedRef.current) {
+    if (isExpoGo()) {
+      setError(EXPO_GO_PHONE_AUTH_MSG);
+      setHintAvailable(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android' || isExpoGo() || hintAttemptedRef.current) {
       return;
     }
 
@@ -105,6 +130,74 @@ export default function SignInScreen() {
     };
   }, []);
 
+  const completeWithIdToken = useCallback(
+    async (idToken: string) => {
+      if (completingRef.current) {
+        return;
+      }
+
+      completingRef.current = true;
+      setLoading(true);
+      setError('');
+      setInfo('Verified. Signing you in…');
+
+      try {
+        const signedInUser = await signInWithPhone(idToken);
+        navigateAfterAuth(signedInUser);
+      } catch (err) {
+        setError(mapFirebaseError(err));
+        completingRef.current = false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [signInWithPhone],
+  );
+
+  // Android can auto-retrieve the SMS and sign in without typing the OTP.
+  useEffect(() => {
+    if (step !== 'otp' || isExpoGo()) {
+      return;
+    }
+
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { subscribeFirebaseAuth, getCurrentFirebaseIdToken } = await loadFirebaseAuth();
+        if (cancelled) {
+          return;
+        }
+
+        unsubscribe = subscribeFirebaseAuth(async (signedIn) => {
+          if (!signedIn || completingRef.current) {
+            return;
+          }
+
+          try {
+            const idToken = await getCurrentFirebaseIdToken();
+            if (idToken) {
+              setInfo('Code verified automatically. Signing you in…');
+              await completeWithIdToken(idToken);
+            }
+          } catch (err) {
+            setError(mapFirebaseError(err));
+          }
+        });
+      } catch (err) {
+        if (!cancelled) {
+          setError(mapFirebaseError(err));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [step, completeWithIdToken]);
+
   async function handleUseMyNumber() {
     setError('');
     setHintLoading(true);
@@ -126,6 +219,12 @@ export default function SignInScreen() {
   async function handleSendOtp() {
     setError('');
     setInfo('');
+    completingRef.current = false;
+
+    if (isExpoGo()) {
+      setError(EXPO_GO_PHONE_AUTH_MSG);
+      return;
+    }
 
     const normalized = toE164Phone(phoneInput);
     if (!normalized) {
@@ -136,10 +235,17 @@ export default function SignInScreen() {
     setLoading(true);
 
     try {
+      const { sendFirebasePhoneOtp, getCurrentFirebaseIdToken } = await loadFirebaseAuth();
       confirmationRef.current = await sendFirebasePhoneOtp(normalized);
       setE164Phone(normalized);
       setStep('otp');
       setInfo('We sent a 6-digit code to your phone.');
+
+      const existingToken = await getCurrentFirebaseIdToken();
+      if (existingToken) {
+        setInfo('Code verified automatically. Signing you in…');
+        await completeWithIdToken(existingToken);
+      }
     } catch (err) {
       setError(mapFirebaseError(err));
     } finally {
@@ -147,26 +253,60 @@ export default function SignInScreen() {
     }
   }
 
-  async function handleVerifyOtp() {
+  async function handleVerifyOtp(codeOverride?: string) {
+    const code = (codeOverride ?? otp).trim();
     setError('');
     setInfo('');
 
-    if (!confirmationRef.current) {
-      setError('Request a new OTP and try again.');
-      setStep('phone');
+    if (isExpoGo()) {
+      setError(EXPO_GO_PHONE_AUTH_MSG);
       return;
     }
 
-    setLoading(true);
-
     try {
-      const idToken = await confirmFirebasePhoneOtp(confirmationRef.current, otp.trim());
-      const signedInUser = await signInWithPhone(idToken);
-      navigateAfterAuth(signedInUser);
+      const {
+        confirmFirebasePhoneOtp,
+        getCurrentFirebaseIdToken,
+      } = await loadFirebaseAuth();
+
+      if (!confirmationRef.current) {
+        const existingToken = await getCurrentFirebaseIdToken();
+        if (existingToken) {
+          await completeWithIdToken(existingToken);
+          return;
+        }
+
+        setError('Request a new OTP and try again.');
+        setStep('phone');
+        return;
+      }
+
+      if (!/^\d{6}$/.test(code)) {
+        setError('Enter the 6-digit verification code.');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const idToken = await confirmFirebasePhoneOtp(confirmationRef.current, code);
+        await completeWithIdToken(idToken);
+      } catch (err) {
+        try {
+          const existingToken = await getCurrentFirebaseIdToken();
+          if (existingToken) {
+            await completeWithIdToken(existingToken);
+            return;
+          }
+        } catch {
+          // Fall through to original error.
+        }
+        setError(mapFirebaseError(err));
+      } finally {
+        setLoading(false);
+      }
     } catch (err) {
       setError(mapFirebaseError(err));
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -176,6 +316,7 @@ export default function SignInScreen() {
     setError('');
     setInfo('');
     confirmationRef.current = null;
+    completingRef.current = false;
   }
 
   const phoneReady = Boolean(toE164Phone(phoneInput));
@@ -186,24 +327,31 @@ export default function SignInScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <Logo size="lg" />
+        <View style={styles.brand}>
+          <Logo size="lg" />
+        </View>
 
         <View style={styles.card}>
-          <Text style={styles.title}>Welcome to Surplus</Text>
-          <Text style={styles.subtitle}>
-            Enter your mobile number to continue. We’ll send a one-time code to verify it’s you.
-          </Text>
+          <View style={styles.header}>
+            <Text style={styles.title}>
+              {step === 'phone' ? 'Welcome to Surplus' : 'Enter verification code'}
+            </Text>
+            <Text style={styles.subtitle}>
+              {step === 'phone'
+                ? 'Enter your mobile number to continue. We’ll send a one-time code to verify it’s you.'
+                : `Code sent to ${formatPhoneForDisplay(e164Phone)}`}
+            </Text>
+          </View>
 
           {step === 'phone' ? (
             <View style={styles.form}>
               <Text style={styles.label}>Mobile number</Text>
               <ScrollIntoView>
-                <View style={styles.phoneRow}>
-                  <View style={styles.countryCode}>
-                    <Text style={styles.countryCodeText}>+91</Text>
-                  </View>
+                <View style={styles.phoneField}>
+                  <Text style={styles.countryCodeText}>+91</Text>
+                  <View style={styles.phoneDivider} />
                   <TextInput
-                    style={[styles.input, styles.phoneInput]}
+                    style={styles.phoneInput}
                     value={phoneInput}
                     onChangeText={(value) => setPhoneInput(value.replace(/\D/g, '').slice(0, 10))}
                     placeholder="98765 43210"
@@ -223,7 +371,7 @@ export default function SignInScreen() {
                   style={styles.hintLinkWrap}
                 >
                   {hintLoading ? (
-                    <ActivityIndicator color={colors.accent} />
+                    <ActivityIndicator color={colors.accent} size="small" />
                   ) : (
                     <Text style={styles.link}>Use my number</Text>
                   )}
@@ -234,7 +382,11 @@ export default function SignInScreen() {
               {info ? <Text style={styles.info}>{info}</Text> : null}
 
               <Pressable
-                style={[styles.button, (loading || !phoneReady) && styles.buttonDisabled]}
+                style={({ pressed }) => [
+                  styles.button,
+                  pressed && styles.buttonPressed,
+                  (loading || !phoneReady) && styles.buttonDisabled,
+                ]}
                 onPress={handleSendOtp}
                 disabled={loading || !phoneReady}
               >
@@ -247,21 +399,26 @@ export default function SignInScreen() {
             </View>
           ) : (
             <View style={styles.form}>
-              <Text style={styles.hint}>
-                Code sent to{' '}
-                <Text style={styles.hintStrong}>{formatPhoneForDisplay(e164Phone)}</Text>
-              </Text>
-
               <Text style={styles.label}>Verification code</Text>
               <ScrollIntoView>
                 <TextInput
-                  style={[styles.input, styles.otpInput]}
+                  style={styles.otpInput}
                   value={otp}
-                  onChangeText={(value) => setOtp(value.replace(/\D/g, '').slice(0, 6))}
+                  onChangeText={(value) => {
+                    const digits = value.replace(/\D/g, '').slice(0, 6);
+                    setOtp(digits);
+                    if (digits.length === 6 && !loading && !completingRef.current) {
+                      void handleVerifyOtp(digits);
+                    }
+                  }}
                   placeholder="000000"
                   placeholderTextColor={colors.muted}
                   keyboardType="number-pad"
                   maxLength={6}
+                  autoComplete="sms-otp"
+                  textContentType="oneTimeCode"
+                  importantForAutofill="yes"
+                  autoFocus
                 />
               </ScrollIntoView>
 
@@ -269,8 +426,12 @@ export default function SignInScreen() {
               {info ? <Text style={styles.info}>{info}</Text> : null}
 
               <Pressable
-                style={[styles.button, (loading || otp.length !== 6) && styles.buttonDisabled]}
-                onPress={handleVerifyOtp}
+                style={({ pressed }) => [
+                  styles.button,
+                  pressed && styles.buttonPressed,
+                  (loading || otp.length !== 6) && styles.buttonDisabled,
+                ]}
+                onPress={() => void handleVerifyOtp()}
                 disabled={loading || otp.length !== 6}
               >
                 {loading ? (
@@ -280,7 +441,7 @@ export default function SignInScreen() {
                 )}
               </Pressable>
 
-              <Pressable onPress={resetToPhoneStep}>
+              <Pressable onPress={resetToPhoneStep} style={styles.secondaryLinkWrap}>
                 <Text style={styles.link}>Use a different number</Text>
               </Pressable>
             </View>
@@ -299,21 +460,31 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: spacing.lg,
-    gap: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    gap: spacing.xl,
+  },
+  brand: {
+    alignItems: 'center',
+    paddingTop: spacing.sm,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: spacing.md,
+    gap: spacing.lg,
+    ...cardShadow,
+  },
+  header: {
+    gap: spacing.xs,
   },
   title: {
     color: colors.textStrong,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
+    letterSpacing: -0.3,
   },
   subtitle: {
     color: colors.muted,
@@ -324,89 +495,97 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   label: {
-    color: colors.textStrong,
+    color: colors.muted,
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 12,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
-  phoneRow: {
+  phoneField: {
     flexDirection: 'row',
-    gap: 8,
     alignItems: 'center',
-  },
-  countryCode: {
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md,
+    backgroundColor: colors.bg,
+    paddingHorizontal: spacing.sm,
+    minHeight: 52,
   },
   countryCodeText: {
     color: colors.textStrong,
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 16,
+    paddingHorizontal: spacing.xs,
   },
-  input: {
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: colors.textStrong,
-    backgroundColor: colors.bg,
+  phoneDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.xs,
   },
   phoneInput: {
     flex: 1,
+    fontSize: 16,
+    color: colors.textStrong,
     letterSpacing: 1,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.xs,
   },
   otpInput: {
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.bg,
     textAlign: 'center',
-    letterSpacing: 8,
-    fontSize: 22,
+    letterSpacing: 10,
+    fontSize: 24,
     fontWeight: '700',
-  },
-  hint: {
-    color: colors.muted,
-    fontSize: 14,
-  },
-  hintStrong: {
     color: colors.textStrong,
-    fontWeight: '700',
+    paddingVertical: 16,
+    minHeight: 56,
   },
   hintLinkWrap: {
     alignSelf: 'flex-start',
-    minHeight: 24,
+    minHeight: 28,
     justifyContent: 'center',
+    paddingVertical: 2,
+  },
+  secondaryLinkWrap: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
   },
   error: {
     color: colors.error,
     fontSize: 14,
+    lineHeight: 20,
   },
   info: {
     color: colors.accentHover,
     fontSize: 14,
+    lineHeight: 20,
   },
   button: {
     backgroundColor: colors.accent,
-    borderRadius: 8,
-    paddingVertical: 14,
+    borderRadius: radius.md,
+    paddingVertical: 16,
     alignItems: 'center',
     marginTop: spacing.xs,
   },
+  buttonPressed: {
+    backgroundColor: colors.accentHover,
+  },
   buttonDisabled: {
-    opacity: 0.7,
+    opacity: 0.55,
   },
   buttonText: {
     color: colors.white,
     fontWeight: '700',
-    fontSize: 15,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    fontSize: 16,
+    letterSpacing: 0.2,
   },
   link: {
     color: colors.accent,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

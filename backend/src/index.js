@@ -7,6 +7,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import passport, { configurePassport } from "./config/passport.js";
 import { isGoogleAuthEnabled, isOtpAuthEnabled } from "./config/auth.js";
+import { isFirebaseAuthConfigured } from "./lib/firebaseAdmin.js";
 import { verifySmtpConnection } from "./lib/mail.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
@@ -199,6 +200,9 @@ app.listen(PORT, () => {
 
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Auth methods: ${methods.join(", ")}`);
+  console.log(
+    `[startup] Firebase Admin: ${isFirebaseAuthConfigured() ? "configured" : "MISSING FIREBASE_* env"}`,
+  );
   console.log(`[startup] Gemini: ${process.env.GEMINI_API_KEY ? "configured" : "MISSING GEMINI_API_KEY"}`);
   if (FRONTEND_DIST_EXISTS) {
     console.log(`Serving frontend from ${FRONTEND_DIST}`);

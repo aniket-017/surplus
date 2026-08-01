@@ -12,7 +12,11 @@ import {
 } from "../lib/auth.js";
 import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
-import { isFirebaseAuthConfigured, verifyFirebaseIdToken } from "../lib/firebaseAdmin.js";
+import {
+  getFirebaseErrorCode,
+  isFirebaseAuthConfigured,
+  verifyFirebaseIdToken,
+} from "../lib/firebaseAdmin.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -141,15 +145,33 @@ router.post("/firebase/phone", async (req, res) => {
       });
     }
 
+    const firebaseCode = getFirebaseErrorCode(error);
+
     if (
-      error.code === "auth/id-token-expired" ||
-      error.code === "auth/argument-error" ||
-      error.code === "auth/invalid-id-token"
+      firebaseCode === "auth/id-token-expired" ||
+      firebaseCode === "auth/argument-error" ||
+      firebaseCode === "auth/invalid-id-token" ||
+      firebaseCode === "auth/invalid-token"
     ) {
       return res.status(401).json({ error: "Invalid or expired Firebase token" });
     }
 
-    res.status(500).json({ error: "Failed to sign in with phone number" });
+    if (
+      String(error.message || "").includes("Failed to parse private key") ||
+      String(error.message || "").includes("error:1E08010C") ||
+      firebaseCode === "app/invalid-credential"
+    ) {
+      return res.status(503).json({
+        error:
+          "Phone authentication is misconfigured on the server. Check FIREBASE_PRIVATE_KEY in backend/.env.",
+      });
+    }
+
+    res.status(500).json({
+      error: error.message
+        ? `Failed to sign in with phone number: ${error.message}`
+        : "Failed to sign in with phone number",
+    });
   }
 });
 

@@ -34,9 +34,12 @@ async function loadFirebaseAuth() {
   return import('@/src/lib/firebaseAuth');
 }
 
-function navigateAfterAuth(user: { role: 'buyer' | 'seller' | null }) {
-  if (!user.role) {
-    router.replace('/role-select');
+function navigateAfterAuth(user: {
+  name?: string | null;
+  role: 'buyer' | 'seller' | null;
+}) {
+  if (!user.name?.trim() || !user.role) {
+    router.replace('/onboarding');
     return;
   }
 

@@ -19,8 +19,8 @@ export default function Index() {
     return <Redirect href="/(auth)/sign-in" />;
   }
 
-  if (!user.role) {
-    return <Redirect href="/role-select" />;
+  if (!user.name?.trim() || !user.role) {
+    return <Redirect href="/onboarding" />;
   }
 
   if (user.role === 'buyer') {

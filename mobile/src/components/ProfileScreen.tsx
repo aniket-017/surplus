@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
 import { formatPhoneForDisplay } from '@/src/lib/phone';
@@ -190,6 +191,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
 
   return (
     <KeyboardAwareScrollView contentContainerStyle={styles.container}>
+      <ScreenContent style={styles.screenContent}>
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle}>Profile</Text>
         <Text style={styles.pageSubtitle}>Manage your account and preferences</Text>
@@ -483,6 +485,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
           onPress={handleSignOut}
         />
       </View>
+      </ScreenContent>
     </KeyboardAwareScrollView>
   );
 }
@@ -607,8 +610,10 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 const styles = StyleSheet.create({
   container: {
     padding: spacing.lg,
-    gap: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  screenContent: {
+    gap: spacing.md,
   },
   pageHeader: {
     gap: 4,

@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -14,8 +13,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
+import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 import { getImageUrl, getProduct } from '@/src/lib/productsApi';
 import {
   CONDITION_OPTIONS,
@@ -24,8 +25,6 @@ import {
   type ProductCondition,
   type PriceType,
 } from '@/src/types/product';
-
-const IMAGE_WIDTH = Dimensions.get('window').width - spacing.lg * 2;
 
 function formatPrice(value: number) {
   return `₹${value.toLocaleString('en-IN')}`;
@@ -55,6 +54,8 @@ function formatAttributeKey(key: string) {
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { token } = useAuth();
+  const { width, contentMaxWidth } = useBreakpoint();
+  const imageWidth = Math.min(width - spacing.lg * 2, contentMaxWidth);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -98,7 +99,7 @@ export default function ProductDetailScreen() {
   }, [token, id]);
 
   function handleImageScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const index = Math.round(event.nativeEvent.contentOffset.x / IMAGE_WIDTH);
+    const index = Math.round(event.nativeEvent.contentOffset.x / imageWidth);
     setActiveImage(index);
   }
 
@@ -156,6 +157,7 @@ export default function ProductDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <ScreenContent style={styles.screenContent}>
         <View style={styles.galleryCard}>
           {product.images.length > 0 ? (
             <>
@@ -170,7 +172,7 @@ export default function ProductDetailScreen() {
                   <Image
                     key={`${image}-${index}`}
                     source={{ uri: getImageUrl(image) }}
-                    style={styles.heroImage}
+                    style={[styles.heroImage, { width: imageWidth }]}
                     contentFit="cover"
                   />
                 ))}
@@ -270,6 +272,7 @@ export default function ProductDetailScreen() {
             ) : null}
           </View>
         </SectionCard>
+        </ScreenContent>
       </ScrollView>
     </SafeAreaView>
   );
@@ -335,8 +338,10 @@ const styles = StyleSheet.create({
   container: {
     padding: spacing.lg,
     paddingTop: 0,
-    gap: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  screenContent: {
+    gap: spacing.md,
   },
   galleryCard: {
     backgroundColor: colors.surface,
@@ -346,7 +351,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   heroImage: {
-    width: IMAGE_WIDTH,
     height: 260,
   },
   imageFallback: {

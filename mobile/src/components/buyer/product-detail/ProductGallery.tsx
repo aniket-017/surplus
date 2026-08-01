@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import {
-  Dimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -13,10 +12,9 @@ import {
 import ImageView from 'react-native-image-viewing';
 
 import { colors, spacing } from '@/src/constants/theme';
+import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 import { getImageUrl } from '@/src/lib/productsApi';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const IMAGE_WIDTH = SCREEN_WIDTH;
 const THUMB_SIZE = 56;
 
 type ProductGalleryProps = {
@@ -25,18 +23,19 @@ type ProductGalleryProps = {
 };
 
 export function ProductGallery({ images, title }: ProductGalleryProps) {
+  const { width: imageWidth } = useBreakpoint();
   const [activeImage, setActiveImage] = useState(0);
   const [viewerVisible, setViewerVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   function handleImageScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const index = Math.round(event.nativeEvent.contentOffset.x / IMAGE_WIDTH);
+    const index = Math.round(event.nativeEvent.contentOffset.x / imageWidth);
     setActiveImage(index);
   }
 
   function selectImage(index: number) {
     setActiveImage(index);
-    scrollRef.current?.scrollTo({ x: index * IMAGE_WIDTH, animated: true });
+    scrollRef.current?.scrollTo({ x: index * imageWidth, animated: true });
   }
 
   if (images.length === 0) {
@@ -67,7 +66,7 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
               <Image
                 key={`${image}-${index}`}
                 source={{ uri: getImageUrl(image) }}
-                style={styles.heroImage}
+                style={[styles.heroImage, { width: imageWidth }]}
                 contentFit="cover"
                 accessibilityLabel={title}
               />
@@ -124,7 +123,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   heroImage: {
-    width: IMAGE_WIDTH,
     height: 300,
   },
   fallback: {

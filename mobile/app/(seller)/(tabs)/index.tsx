@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DashboardScreen } from '@/src/components/DashboardShell';
 import { Logo } from '@/src/components/Logo';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import {
   SellerAddProductCard,
   SellerDashboardStats,
@@ -41,35 +42,37 @@ export default function SellerDashboardTab() {
   return (
     <DashboardScreen>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Logo size="sm" />
-        </View>
+        <ScreenContent style={styles.screenContent}>
+          <View style={styles.header}>
+            <Logo size="sm" />
+          </View>
 
-        <SellerWelcomeBanner name={user?.name} />
+          <SellerWelcomeBanner name={user?.name} />
 
-        <SellerDashboardStats
-          activeListings={stats.activeListings}
-          views={stats.totalViews}
-          inquiries={stats.totalInquiries}
-          estimatedValue={estimatedValue}
-        />
+          <SellerDashboardStats
+            activeListings={stats.activeListings}
+            views={stats.totalViews}
+            inquiries={stats.totalInquiries}
+            estimatedValue={estimatedValue}
+          />
 
-        <View style={styles.actions}>
-          <SellerAddProductCard onPress={() => router.push('/(seller)/add-product')} />
+          <View style={styles.actions}>
+            <SellerAddProductCard onPress={() => router.push('/(seller)/add-product')} />
 
-          <Pressable
-            style={styles.secondaryAction}
-            onPress={() => router.push('/(seller)/(tabs)/listings')}
-          >
-            <Ionicons name="list" size={20} color={colors.accent} />
-            <Text style={styles.secondaryActionText}>View All Listings</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </Pressable>
-        </View>
+            <Pressable
+              style={styles.secondaryAction}
+              onPress={() => router.push('/(seller)/(tabs)/listings')}
+            >
+              <Ionicons name="list" size={20} color={colors.accent} />
+              <Text style={styles.secondaryActionText}>View All Listings</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            </Pressable>
+          </View>
 
-        {switchError ? <Text style={styles.switchError}>{switchError}</Text> : null}
+          {switchError ? <Text style={styles.switchError}>{switchError}</Text> : null}
 
-        <SellerSwitchToBuyerCard onPress={handleSwitchToBuyer} loading={switching} />
+          <SellerSwitchToBuyerCard onPress={handleSwitchToBuyer} loading={switching} />
+        </ScreenContent>
       </ScrollView>
     </DashboardScreen>
   );
@@ -78,8 +81,10 @@ export default function SellerDashboardTab() {
 const styles = StyleSheet.create({
   container: {
     padding: spacing.lg,
-    gap: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  screenContent: {
+    gap: spacing.lg,
   },
   header: {
     alignItems: 'center',

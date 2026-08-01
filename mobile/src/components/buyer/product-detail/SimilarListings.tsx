@@ -1,13 +1,12 @@
 import { router } from 'expo-router';
-import { Dimensions, FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet } from 'react-native';
 
-import { colors, spacing } from '@/src/constants/theme';
+import { spacing } from '@/src/constants/theme';
 import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
+import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 import type { ProductListing } from '@/src/types/product';
 
 import { SectionCard } from './SectionCard';
-
-const CARD_WIDTH = Math.min(180, Dimensions.get('window').width * 0.44);
 
 type SimilarListingsProps = {
   products: ProductListing[];
@@ -15,6 +14,9 @@ type SimilarListingsProps = {
 };
 
 export function SimilarListings({ products, category }: SimilarListingsProps) {
+  const { width } = useBreakpoint();
+  const cardWidth = Math.min(180, width * 0.44);
+
   if (products.length === 0) return null;
 
   return (
@@ -28,7 +30,7 @@ export function SimilarListings({ products, category }: SimilarListingsProps) {
         renderItem={({ item }) => (
           <ProductListingCard
             product={item}
-            width={CARD_WIDTH}
+            width={cardWidth}
             onPress={() => router.push({ pathname: '/products/[id]', params: { id: item.id } })}
           />
         )}

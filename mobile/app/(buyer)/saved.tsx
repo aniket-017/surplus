@@ -3,7 +3,6 @@ import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   FlatList,
   Pressable,
   RefreshControl,
@@ -16,18 +15,21 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
+import { productCardWidth } from '@/src/constants/layout';
 import { colors, spacing } from '@/src/constants/theme';
+import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 import { getSavedListings, toggleSavedListing } from '@/src/lib/conversationsApi';
 import type { ProductListing } from '@/src/types/product';
 
 const HORIZONTAL_PADDING = spacing.lg;
 const GRID_GAP = spacing.sm;
-const CARD_WIDTH =
-  (Dimensions.get('window').width - HORIZONTAL_PADDING * 2 - GRID_GAP) / 2;
 
 export default function SavedListingsScreen() {
   const { token } = useAuth();
+  const { width, columns } = useBreakpoint();
+  const cardWidth = productCardWidth(width, columns, HORIZONTAL_PADDING, GRID_GAP);
   const [products, setProducts] = useState<ProductListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -85,68 +87,71 @@ export default function SavedListingsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={20} color={colors.accent} />
-          <Text style={styles.backText}>Back</Text>
-        </Pressable>
-        <Text style={styles.title}>Saved</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      {error ? (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{error}</Text>
+      <ScreenContent style={styles.screenContent}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={20} color={colors.accent} />
+            <Text style={styles.backText}>Back</Text>
+          </Pressable>
+          <Text style={styles.title}>Saved</Text>
+          <View style={styles.headerSpacer} />
         </View>
-      ) : null}
 
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.columnWrapper}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <ProductListingCard
-            product={item}
-            width={CARD_WIDTH}
-            saved
-            onToggleSave={() => void handleToggleSave(item.id)}
-            onPress={() =>
-              router.push({
-                pathname: '/products/[id]',
-                params: { id: item.id },
-              })
-            }
-          />
-        )}
-        ListEmptyComponent={
-          loading ? (
-            <View style={styles.emptyState}>
-              <ActivityIndicator color={colors.accent} size="large" />
-            </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="bookmark-outline" size={28} color={colors.accent} />
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        <FlatList
+          key={columns}
+          data={products}
+          keyExtractor={(item) => item.id}
+          numColumns={columns}
+          columnWrapperStyle={styles.columnWrapper}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <ProductListingCard
+              product={item}
+              width={cardWidth}
+              saved
+              onToggleSave={() => void handleToggleSave(item.id)}
+              onPress={() =>
+                router.push({
+                  pathname: '/products/[id]',
+                  params: { id: item.id },
+                })
+              }
+            />
+          )}
+          ListEmptyComponent={
+            loading ? (
+              <View style={styles.emptyState}>
+                <ActivityIndicator color={colors.accent} size="large" />
               </View>
-              <Text style={styles.emptyTitle}>No saved listings yet</Text>
-              <Text style={styles.emptyText}>
-                Tap the bookmark on any product to save it here for later.
-              </Text>
-            </View>
-          )
-        }
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => void loadSaved(true)}
-            tintColor={colors.accent}
-            colors={[colors.accent]}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      />
+            ) : (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}>
+                  <Ionicons name="bookmark-outline" size={28} color={colors.accent} />
+                </View>
+                <Text style={styles.emptyTitle}>No saved listings yet</Text>
+                <Text style={styles.emptyText}>
+                  Tap the bookmark on any product to save it here for later.
+                </Text>
+              </View>
+            )
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void loadSaved(true)}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      </ScreenContent>
     </SafeAreaView>
   );
 }
@@ -155,6 +160,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.bgSubtle,
+  },
+  screenContent: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

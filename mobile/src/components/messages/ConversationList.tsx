@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { useUnreadMessages } from '@/src/context/UnreadMessagesContext';
+import { CHAT_CONTENT_MAX_WIDTH } from '@/src/constants/layout';
 import { colors, spacing } from '@/src/constants/theme';
 import { getCachedConversations, setCachedConversations } from '@/src/lib/chatCache';
 import { getConversations, type ConversationSummary } from '@/src/lib/conversationsApi';
@@ -176,23 +178,28 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
   }
 
   return (
-    <FlatList
-      data={conversations}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.list}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
-      }
-      windowSize={7}
-      maxToRenderPerBatch={10}
-      initialNumToRender={12}
-      removeClippedSubviews={Platform.OS === 'android'}
-      renderItem={renderItem}
-    />
+    <ScreenContent maxWidth={CHAT_CONTENT_MAX_WIDTH} style={styles.listWrap}>
+      <FlatList
+        data={conversations}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
+        }
+        windowSize={7}
+        maxToRenderPerBatch={10}
+        initialNumToRender={12}
+        removeClippedSubviews={Platform.OS === 'android'}
+        renderItem={renderItem}
+      />
+    </ScreenContent>
   );
 }
 
 const styles = StyleSheet.create({
+  listWrap: {
+    flex: 1,
+  },
   list: {
     paddingBottom: spacing.lg,
   },

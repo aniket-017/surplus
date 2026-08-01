@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Logo } from '@/src/components/Logo';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { cardShadow, colors, radius, spacing } from '@/src/constants/theme';
 import type { UserRole } from '@/src/types/auth';
@@ -37,7 +38,7 @@ export default function RoleSelectScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScreenContent style={styles.container}>
         <View style={styles.brand}>
           <Logo size="lg" />
         </View>
@@ -88,7 +89,7 @@ export default function RoleSelectScreen() {
         </Pressable>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
-      </View>
+      </ScreenContent>
     </SafeAreaView>
   );
 }

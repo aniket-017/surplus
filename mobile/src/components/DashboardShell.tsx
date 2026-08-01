@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Logo } from '@/src/components/Logo';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { colors, spacing } from '@/src/constants/theme';
 import type { UserRole } from '@/src/types/auth';
 
@@ -23,28 +24,30 @@ export function DashboardShell({
 }: DashboardShellProps) {
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <Logo size="sm" />
-      </View>
-
-      <View style={styles.heroCard}>
-        <Text style={styles.roleBadge}>{role.toUpperCase()}</Text>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
-      </View>
-
-      {stats.length > 0 ? (
-        <View style={styles.statsGrid}>
-          {stats.map((item) => (
-            <View key={item.label} style={styles.statCard}>
-              <Text style={styles.statValue}>{item.value}</Text>
-              <Text style={styles.statLabel}>{item.label}</Text>
-            </View>
-          ))}
+      <ScreenContent style={styles.screenContent}>
+        <View style={styles.header}>
+          <Logo size="sm" />
         </View>
-      ) : null}
 
-      {children}
+        <View style={styles.heroCard}>
+          <Text style={styles.roleBadge}>{role.toUpperCase()}</Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
+
+        {stats.length > 0 ? (
+          <View style={styles.statsGrid}>
+            {stats.map((item) => (
+              <View key={item.label} style={styles.statCard}>
+                <Text style={styles.statValue}>{item.value}</Text>
+                <Text style={styles.statLabel}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {children}
+      </ScreenContent>
     </ScrollView>
   );
 }
@@ -64,8 +67,10 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: spacing.lg,
-    gap: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  screenContent: {
+    gap: spacing.lg,
   },
   header: {
     alignItems: 'flex-start',

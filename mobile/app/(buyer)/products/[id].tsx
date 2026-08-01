@@ -26,6 +26,7 @@ import {
   StickyActionBar,
   WhyBuySection,
 } from '@/src/components/buyer/product-detail';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
 import {
@@ -184,18 +185,20 @@ export default function BuyerProductDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ProductGallery images={product.images} title={product.title} />
-        <View style={styles.content}>
-          <ProductHero product={product} />
-          <QuickStatsRow product={product} />
-          <SellerTrustCard seller={product.seller} />
-          <MarketRateCard product={product} range={marketRange} />
-          <InquiryUrgency inquiryCount={inquiryCount} />
-          <DescriptionOverview description={product.description} />
-          <SpecsGrid attributes={product.attributes} />
-          <WhyBuySection product={product} />
-          <LocationSection location={product.location} />
-          <SimilarListings products={similar} category={product.category} />
-        </View>
+        <ScreenContent>
+          <View style={styles.content}>
+            <ProductHero product={product} />
+            <QuickStatsRow product={product} />
+            <SellerTrustCard seller={product.seller} />
+            <MarketRateCard product={product} range={marketRange} />
+            <InquiryUrgency inquiryCount={inquiryCount} />
+            <DescriptionOverview description={product.description} />
+            <SpecsGrid attributes={product.attributes} />
+            <WhyBuySection product={product} />
+            <LocationSection location={product.location} />
+            <SimilarListings products={similar} category={product.category} />
+          </View>
+        </ScreenContent>
       </ScrollView>
 
       <StickyActionBar

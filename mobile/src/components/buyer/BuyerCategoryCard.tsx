@@ -1,17 +1,19 @@
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CategoryImage } from '@/src/components/CategoryImage';
+import { categoryGridColumns } from '@/src/constants/layout';
 import { colors } from '@/src/constants/theme';
+import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 
-const COLUMNS = 3;
 const GAP = 12;
 const HORIZONTAL_PADDING = 16;
 
 export const CATEGORY_GRID_GAP = GAP;
 export const CATEGORY_GRID_PADDING = HORIZONTAL_PADDING;
 
-export function getCategoryTileWidth(screenWidth: number) {
-  return (screenWidth - HORIZONTAL_PADDING * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+export function getCategoryTileWidth(screenWidth: number, columns?: number) {
+  const cols = columns ?? categoryGridColumns(screenWidth);
+  return (screenWidth - HORIZONTAL_PADDING * 2 - GAP * (cols - 1)) / cols;
 }
 
 type BuyerCategoryCardProps = {
@@ -20,11 +22,19 @@ type BuyerCategoryCardProps = {
   imageUrl?: string | null;
   count: number;
   onPress: () => void;
+  /** When provided, avoids nested useBreakpoint in large grids. */
+  tileWidth?: number;
 };
 
-export function BuyerCategoryCard({ name, imageUrl, onPress }: BuyerCategoryCardProps) {
-  const { width: screenWidth } = useWindowDimensions();
-  const tileWidth = getCategoryTileWidth(screenWidth);
+export function BuyerCategoryCard({
+  name,
+  imageUrl,
+  onPress,
+  tileWidth: tileWidthProp,
+}: BuyerCategoryCardProps) {
+  const { width: screenWidth, categoryColumns, contentMaxWidth } = useBreakpoint();
+  const layoutWidth = Math.min(screenWidth, contentMaxWidth);
+  const tileWidth = tileWidthProp ?? getCategoryTileWidth(layoutWidth, categoryColumns);
 
   return (
     <Pressable

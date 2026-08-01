@@ -15,6 +15,7 @@ import { KeyboardAwareScrollView } from '@/src/components/KeyboardAwareScrollVie
 import { Logo } from '@/src/components/Logo';
 import { ProductForm } from '@/src/components/ProductForm';
 import { ProductImageSourceSheet } from '@/src/components/ProductImageSourceSheet';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
 import { getImageUrl, getProduct, updateProduct } from '@/src/lib/productsApi';
@@ -177,6 +178,7 @@ export default function EditProductScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAwareScrollView contentContainerStyle={styles.container}>
+        <ScreenContent style={styles.screenContent}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={20} color={colors.accent} />
@@ -274,6 +276,7 @@ export default function EditProductScreen() {
             )}
           </Pressable>
         </View>
+        </ScreenContent>
       </KeyboardAwareScrollView>
 
       <ProductImageSourceSheet
@@ -300,6 +303,8 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  screenContent: {
     gap: spacing.lg,
   },
   headerRow: {

@@ -11,14 +11,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { loadCategoryImageManifest } from '@/src/lib/categoryImages';
-import { BuyerCategoryCard, CATEGORY_GRID_GAP, CATEGORY_GRID_PADDING } from '@/src/components/buyer/BuyerCategoryCard';
+import {
+  BuyerCategoryCard,
+  CATEGORY_GRID_GAP,
+  CATEGORY_GRID_PADDING,
+  getCategoryTileWidth,
+} from '@/src/components/buyer/BuyerCategoryCard';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
+import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 import { getProductCategories } from '@/src/lib/productsApi';
 import type { ProductCategory } from '@/src/types/product';
 
 export default function BuyerCategoriesTab() {
   const { token } = useAuth();
+  const { width, categoryColumns, contentMaxWidth } = useBreakpoint();
+  const layoutWidth = Math.min(width, contentMaxWidth);
+  const tileWidth = getCategoryTileWidth(layoutWidth, categoryColumns);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -59,40 +69,43 @@ export default function BuyerCategoriesTab() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Categories</Text>
-        <Text style={styles.subtitle}>Browse surplus materials by category</Text>
-      </View>
+      <ScreenContent style={styles.screenContent}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Categories</Text>
+          <Text style={styles.subtitle}>Browse surplus materials by category</Text>
+        </View>
 
-      {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
-      ) : error ? (
-        <View style={styles.centered}>
-          <Text style={styles.error}>{error}</Text>
-          <Text style={styles.retryLink} onPress={loadCategories}>
-            Try again
-          </Text>
-        </View>
-      ) : categories.length === 0 ? (
-        <View style={styles.centered}>
-          <Text style={styles.emptyText}>No categories yet. Check back when listings are available.</Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-          {categories.map((category) => (
-            <BuyerCategoryCard
-              key={category.name}
-              name={category.name}
-              icon={category.icon}
-              imageUrl={category.imageUrl}
-              count={category.count}
-              onPress={() => handleSelectCategory(category.name)}
-            />
-          ))}
-        </ScrollView>
-      )}
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator color={colors.accent} size="large" />
+          </View>
+        ) : error ? (
+          <View style={styles.centered}>
+            <Text style={styles.error}>{error}</Text>
+            <Text style={styles.retryLink} onPress={loadCategories}>
+              Try again
+            </Text>
+          </View>
+        ) : categories.length === 0 ? (
+          <View style={styles.centered}>
+            <Text style={styles.emptyText}>No categories yet. Check back when listings are available.</Text>
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+            {categories.map((category) => (
+              <BuyerCategoryCard
+                key={category.name}
+                name={category.name}
+                icon={category.icon}
+                imageUrl={category.imageUrl}
+                count={category.count}
+                tileWidth={tileWidth}
+                onPress={() => handleSelectCategory(category.name)}
+              />
+            ))}
+          </ScrollView>
+        )}
+      </ScreenContent>
     </SafeAreaView>
   );
 }
@@ -101,6 +114,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.bgSubtle,
+  },
+  screenContent: {
+    flex: 1,
   },
   header: {
     paddingHorizontal: spacing.lg,

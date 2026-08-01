@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -24,9 +23,12 @@ import {
 } from '@/src/components/buyer/FilterModal';
 import { ListingFilterChips } from '@/src/components/buyer/ListingFilterChips';
 import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { useBuyerLocation } from '@/src/context/LocationContext';
+import { productCardWidth } from '@/src/constants/layout';
 import { colors, spacing } from '@/src/constants/theme';
+import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 import { getSavedListings, toggleSavedListing } from '@/src/lib/conversationsApi';
 import { browseProducts, getProductCategories } from '@/src/lib/productsApi';
 import { loadCategoryImageManifest } from '@/src/lib/categoryImages';
@@ -34,8 +36,6 @@ import type { BrowseSort, ProductCategory, ProductListing } from '@/src/types/pr
 
 const HORIZONTAL_PADDING = spacing.lg;
 const GRID_GAP = spacing.sm;
-const CARD_WIDTH =
-  (Dimensions.get('window').width - HORIZONTAL_PADDING * 2 - GRID_GAP) / 2;
 
 function parseOptionalPrice(value: string): number | undefined {
   const trimmed = value.trim();
@@ -54,6 +54,8 @@ function chipIdFromFilters(filters: BrowseFilters): string {
 export default function BuyerHomeTab() {
   const { token, user } = useAuth();
   const { location } = useBuyerLocation();
+  const { width, columns } = useBreakpoint();
+  const cardWidth = productCardWidth(width, columns, HORIZONTAL_PADDING, GRID_GAP);
   const { category: categoryParam } = useLocalSearchParams<{ category?: string }>();
 
   const [search, setSearch] = useState('');
@@ -228,51 +230,54 @@ export default function BuyerHomeTab() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.columnWrapper}
-        contentContainerStyle={styles.listContent}
-        ListHeaderComponent={listHeader}
-        renderItem={({ item }) => (
-          <ProductListingCard
-            product={item}
-            width={CARD_WIDTH}
-            saved={savedIds.has(item.id)}
-            onToggleSave={() => void handleToggleSave(item.id)}
-            onPress={() =>
-              router.push({
-                pathname: '/products/[id]',
-                params: { id: item.id },
-              })
-            }
-          />
-        )}
-        ListEmptyComponent={
-          loading ? (
-            <View style={styles.emptyState}>
-              <ActivityIndicator color={colors.accent} size="large" />
-            </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No listings found</Text>
-              <Text style={styles.emptyText}>
-                Try adjusting your search or filters to discover more surplus materials.
-              </Text>
-            </View>
-          )
-        }
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => loadFeed(true)}
-            tintColor={colors.accent}
-            colors={[colors.accent]}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      />
+      <ScreenContent style={styles.screenContent}>
+        <FlatList
+          key={columns}
+          data={products}
+          keyExtractor={(item) => item.id}
+          numColumns={columns}
+          columnWrapperStyle={styles.columnWrapper}
+          contentContainerStyle={styles.listContent}
+          ListHeaderComponent={listHeader}
+          renderItem={({ item }) => (
+            <ProductListingCard
+              product={item}
+              width={cardWidth}
+              saved={savedIds.has(item.id)}
+              onToggleSave={() => void handleToggleSave(item.id)}
+              onPress={() =>
+                router.push({
+                  pathname: '/products/[id]',
+                  params: { id: item.id },
+                })
+              }
+            />
+          )}
+          ListEmptyComponent={
+            loading ? (
+              <View style={styles.emptyState}>
+                <ActivityIndicator color={colors.accent} size="large" />
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyTitle}>No listings found</Text>
+                <Text style={styles.emptyText}>
+                  Try adjusting your search or filters to discover more surplus materials.
+                </Text>
+              </View>
+            )
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadFeed(true)}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      </ScreenContent>
 
       <FilterModal
         visible={filtersVisible}
@@ -290,6 +295,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.bgSubtle,
+  },
+  screenContent: {
+    flex: 1,
   },
   listContent: {
     paddingHorizontal: HORIZONTAL_PADDING,

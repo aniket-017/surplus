@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { colors, spacing } from '@/src/constants/theme';
 import { formatListingPrice } from '@/src/lib/productFormat';
 import type { ProductListing } from '@/src/types/product';
@@ -27,45 +28,47 @@ export function StickyActionBar({
 
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
-      <View style={styles.summary}>
-        <Text style={styles.price}>{formatListingPrice(product)}</Text>
-        <Text style={styles.qty}>
-          {product.quantity} {product.quantityUnit} available
-        </Text>
-      </View>
-      <View style={styles.actions}>
-        <Pressable
-          onPress={onSave}
-          disabled={saving}
-          style={[styles.iconButton, saved && styles.iconButtonActive]}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={saved ? 'Remove from saved' : 'Save listing'}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color={colors.accent} />
-          ) : (
-            <Ionicons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={22}
-              color={saved ? colors.accent : colors.textStrong}
-            />
-          )}
-        </Pressable>
-        <Pressable
-          onPress={onInquiry}
-          disabled={submitting}
-          style={[styles.primaryButton, submitting && styles.primaryDisabled]}
-          accessibilityRole="button"
-          accessibilityLabel="Send inquiry"
-        >
-          {submitting ? (
-            <ActivityIndicator size="small" color={colors.white} />
-          ) : (
-            <Text style={styles.primaryText}>Send Inquiry</Text>
-          )}
-        </Pressable>
-      </View>
+      <ScreenContent style={styles.inner}>
+        <View style={styles.summary}>
+          <Text style={styles.price}>{formatListingPrice(product)}</Text>
+          <Text style={styles.qty}>
+            {product.quantity} {product.quantityUnit} available
+          </Text>
+        </View>
+        <View style={styles.actions}>
+          <Pressable
+            onPress={onSave}
+            disabled={saving}
+            style={[styles.iconButton, saved && styles.iconButtonActive]}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={saved ? 'Remove from saved' : 'Save listing'}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color={colors.accent} />
+            ) : (
+              <Ionicons
+                name={saved ? 'bookmark' : 'bookmark-outline'}
+                size={22}
+                color={saved ? colors.accent : colors.textStrong}
+              />
+            )}
+          </Pressable>
+          <Pressable
+            onPress={onInquiry}
+            disabled={submitting}
+            style={[styles.primaryButton, submitting && styles.primaryDisabled]}
+            accessibilityRole="button"
+            accessibilityLabel="Send inquiry"
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Text style={styles.primaryText}>Send Inquiry</Text>
+            )}
+          </Pressable>
+        </View>
+      </ScreenContent>
     </View>
   );
 }
@@ -81,6 +84,8 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
+  },
+  inner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,

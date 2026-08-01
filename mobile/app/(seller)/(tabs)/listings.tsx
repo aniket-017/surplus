@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { DashboardScreen } from '@/src/components/DashboardShell';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import {
   SellerAddProductCard,
   SellerListingCard,
@@ -53,6 +54,7 @@ export default function SellerListingsTab() {
   return (
     <DashboardScreen>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <ScreenContent style={styles.screenContent}>
         <SellerListingsHeader
           totalCount={products.length}
           onSearchPress={() => setSearchOpen((value) => !value)}
@@ -112,6 +114,7 @@ export default function SellerListingsTab() {
             ))}
           </View>
         )}
+        </ScreenContent>
       </ScrollView>
     </DashboardScreen>
   );
@@ -120,8 +123,10 @@ export default function SellerListingsTab() {
 const styles = StyleSheet.create({
   container: {
     padding: spacing.lg,
-    gap: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  screenContent: {
+    gap: spacing.md,
   },
   searchWrap: {
     flexDirection: 'row',

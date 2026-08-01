@@ -20,9 +20,11 @@ import { DateSeparator } from '@/src/components/messages/DateSeparator';
 import { MessageBubble } from '@/src/components/messages/MessageBubble';
 import { MessageComposer } from '@/src/components/messages/MessageComposer';
 import { MessageInfoModal } from '@/src/components/messages/MessageInfoModal';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { useUnreadMessages } from '@/src/context/UnreadMessagesContext';
 import { chatTheme } from '@/src/constants/chatTheme';
+import { CHAT_CONTENT_MAX_WIDTH } from '@/src/constants/layout';
 import { colors, spacing } from '@/src/constants/theme';
 import {
   appendThreadMessage,
@@ -466,54 +468,58 @@ export function ChatThreadScreen() {
 
       <View style={styles.flex}>
         <ChatWallpaper>
-          <FlatList
-            ref={listRef}
-            style={styles.messageListFlex}
-            data={listItems}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={[
-              styles.messageList,
-              { paddingBottom: spacing.sm },
-            ]}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            onLayout={() => scrollToEndIfPending(false)}
-            onContentSizeChange={() => scrollToEndIfPending(false)}
-            onScroll={(event) => {
-              if (event.nativeEvent.contentOffset.y < 80) {
-                void loadOlderMessages();
+          <ScreenContent maxWidth={CHAT_CONTENT_MAX_WIDTH} style={styles.chatColumn}>
+            <FlatList
+              ref={listRef}
+              style={styles.messageListFlex}
+              data={listItems}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={[
+                styles.messageList,
+                { paddingBottom: spacing.sm },
+              ]}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              onLayout={() => scrollToEndIfPending(false)}
+              onContentSizeChange={() => scrollToEndIfPending(false)}
+              onScroll={(event) => {
+                if (event.nativeEvent.contentOffset.y < 80) {
+                  void loadOlderMessages();
+                }
+              }}
+              scrollEventThrottle={200}
+              ListHeaderComponent={
+                loadingOlder ? (
+                  <View style={styles.olderLoader}>
+                    <ActivityIndicator color={colors.accent} size="small" />
+                  </View>
+                ) : null
               }
-            }}
-            scrollEventThrottle={200}
-            ListHeaderComponent={
-              loadingOlder ? (
-                <View style={styles.olderLoader}>
-                  <ActivityIndicator color={colors.accent} size="small" />
-                </View>
-              ) : null
-            }
-            windowSize={7}
-            maxToRenderPerBatch={8}
-            initialNumToRender={16}
-            removeClippedSubviews={Platform.OS === 'android'}
-            renderItem={renderItem}
-          />
+              windowSize={7}
+              maxToRenderPerBatch={8}
+              initialNumToRender={16}
+              removeClippedSubviews={Platform.OS === 'android'}
+              renderItem={renderItem}
+            />
+          </ScreenContent>
         </ChatWallpaper>
 
-        <View style={styles.composerHost}>
-          <MessageComposer
-            draft={draft}
-            pendingAttachment={pendingAttachment}
-            sending={sending}
-            uploading={uploading}
-            keyboardVisible={keyboardVisible}
-            onChangeText={setDraft}
-            onSend={handleSend}
-            onSelectAttachment={setPendingAttachment}
-            onClearAttachment={() => setPendingAttachment(null)}
-            onFocus={() => scrollToEnd(true)}
-          />
-        </View>
+        <ScreenContent maxWidth={CHAT_CONTENT_MAX_WIDTH}>
+          <View style={styles.composerHost}>
+            <MessageComposer
+              draft={draft}
+              pendingAttachment={pendingAttachment}
+              sending={sending}
+              uploading={uploading}
+              keyboardVisible={keyboardVisible}
+              onChangeText={setDraft}
+              onSend={handleSend}
+              onSelectAttachment={setPendingAttachment}
+              onClearAttachment={() => setPendingAttachment(null)}
+              onFocus={() => scrollToEnd(true)}
+            />
+          </View>
+        </ScreenContent>
 
         <View style={{ height: keyboardHeight }} />
       </View>
@@ -557,6 +563,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   flex: {
+    flex: 1,
+  },
+  chatColumn: {
     flex: 1,
   },
   messageListFlex: {

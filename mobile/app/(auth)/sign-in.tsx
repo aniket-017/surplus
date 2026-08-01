@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Logo } from '@/src/components/Logo';
 import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
+import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { formatPhoneForDisplay, toE164Phone } from '@/src/lib/phone';
 import { requestPhoneNumberHintLocal } from '@/src/lib/phoneHint';
@@ -327,126 +328,128 @@ export default function SignInScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.brand}>
-          <Logo size="lg" />
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.header}>
-            <Text style={styles.title}>
-              {step === 'phone' ? 'Welcome to Surplus' : 'Enter verification code'}
-            </Text>
-            <Text style={styles.subtitle}>
-              {step === 'phone'
-                ? 'Enter your mobile number to continue. We’ll send a one-time code to verify it’s you.'
-                : `Code sent to ${formatPhoneForDisplay(e164Phone)}`}
-            </Text>
+        <ScreenContent style={styles.screenContent}>
+          <View style={styles.brand}>
+            <Logo size="lg" />
           </View>
 
-          {step === 'phone' ? (
-            <View style={styles.form}>
-              <Text style={styles.label}>Mobile number</Text>
-              <ScrollIntoView>
-                <View style={styles.phoneField}>
-                  <Text style={styles.countryCodeText}>+91</Text>
-                  <View style={styles.phoneDivider} />
-                  <TextInput
-                    style={styles.phoneInput}
-                    value={phoneInput}
-                    onChangeText={(value) => setPhoneInput(value.replace(/\D/g, '').slice(0, 10))}
-                    placeholder="98765 43210"
-                    placeholderTextColor={colors.muted}
-                    keyboardType="phone-pad"
-                    autoComplete="tel"
-                    textContentType="telephoneNumber"
-                    maxLength={10}
-                  />
-                </View>
-              </ScrollIntoView>
+          <View style={styles.card}>
+            <View style={styles.header}>
+              <Text style={styles.title}>
+                {step === 'phone' ? 'Welcome to Surplus' : 'Enter verification code'}
+              </Text>
+              <Text style={styles.subtitle}>
+                {step === 'phone'
+                  ? 'Enter your mobile number to continue. We’ll send a one-time code to verify it’s you.'
+                  : `Code sent to ${formatPhoneForDisplay(e164Phone)}`}
+              </Text>
+            </View>
 
-              {hintAvailable ? (
+            {step === 'phone' ? (
+              <View style={styles.form}>
+                <Text style={styles.label}>Mobile number</Text>
+                <ScrollIntoView>
+                  <View style={styles.phoneField}>
+                    <Text style={styles.countryCodeText}>+91</Text>
+                    <View style={styles.phoneDivider} />
+                    <TextInput
+                      style={styles.phoneInput}
+                      value={phoneInput}
+                      onChangeText={(value) => setPhoneInput(value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="98765 43210"
+                      placeholderTextColor={colors.muted}
+                      keyboardType="phone-pad"
+                      autoComplete="tel"
+                      textContentType="telephoneNumber"
+                      maxLength={10}
+                    />
+                  </View>
+                </ScrollIntoView>
+
+                {hintAvailable ? (
+                  <Pressable
+                    onPress={handleUseMyNumber}
+                    disabled={hintLoading || loading}
+                    style={styles.hintLinkWrap}
+                  >
+                    {hintLoading ? (
+                      <ActivityIndicator color={colors.accent} size="small" />
+                    ) : (
+                      <Text style={styles.link}>Use my number</Text>
+                    )}
+                  </Pressable>
+                ) : null}
+
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+                {info ? <Text style={styles.info}>{info}</Text> : null}
+
                 <Pressable
-                  onPress={handleUseMyNumber}
-                  disabled={hintLoading || loading}
-                  style={styles.hintLinkWrap}
+                  style={({ pressed }) => [
+                    styles.button,
+                    pressed && styles.buttonPressed,
+                    (loading || !phoneReady) && styles.buttonDisabled,
+                  ]}
+                  onPress={handleSendOtp}
+                  disabled={loading || !phoneReady}
                 >
-                  {hintLoading ? (
-                    <ActivityIndicator color={colors.accent} size="small" />
+                  {loading ? (
+                    <ActivityIndicator color={colors.white} />
                   ) : (
-                    <Text style={styles.link}>Use my number</Text>
+                    <Text style={styles.buttonText}>Send verification code</Text>
                   )}
                 </Pressable>
-              ) : null}
+              </View>
+            ) : (
+              <View style={styles.form}>
+                <Text style={styles.label}>Verification code</Text>
+                <ScrollIntoView>
+                  <TextInput
+                    style={styles.otpInput}
+                    value={otp}
+                    onChangeText={(value) => {
+                      const digits = value.replace(/\D/g, '').slice(0, 6);
+                      setOtp(digits);
+                      if (digits.length === 6 && !loading && !completingRef.current) {
+                        void handleVerifyOtp(digits);
+                      }
+                    }}
+                    placeholder="000000"
+                    placeholderTextColor={colors.muted}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    autoComplete="sms-otp"
+                    textContentType="oneTimeCode"
+                    importantForAutofill="yes"
+                    autoFocus
+                  />
+                </ScrollIntoView>
 
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-              {info ? <Text style={styles.info}>{info}</Text> : null}
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+                {info ? <Text style={styles.info}>{info}</Text> : null}
 
-              <Pressable
-                style={({ pressed }) => [
-                  styles.button,
-                  pressed && styles.buttonPressed,
-                  (loading || !phoneReady) && styles.buttonDisabled,
-                ]}
-                onPress={handleSendOtp}
-                disabled={loading || !phoneReady}
-              >
-                {loading ? (
-                  <ActivityIndicator color={colors.white} />
-                ) : (
-                  <Text style={styles.buttonText}>Send verification code</Text>
-                )}
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.form}>
-              <Text style={styles.label}>Verification code</Text>
-              <ScrollIntoView>
-                <TextInput
-                  style={styles.otpInput}
-                  value={otp}
-                  onChangeText={(value) => {
-                    const digits = value.replace(/\D/g, '').slice(0, 6);
-                    setOtp(digits);
-                    if (digits.length === 6 && !loading && !completingRef.current) {
-                      void handleVerifyOtp(digits);
-                    }
-                  }}
-                  placeholder="000000"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  autoComplete="sms-otp"
-                  textContentType="oneTimeCode"
-                  importantForAutofill="yes"
-                  autoFocus
-                />
-              </ScrollIntoView>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.button,
+                    pressed && styles.buttonPressed,
+                    (loading || otp.length !== 6) && styles.buttonDisabled,
+                  ]}
+                  onPress={() => void handleVerifyOtp()}
+                  disabled={loading || otp.length !== 6}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <Text style={styles.buttonText}>Continue</Text>
+                  )}
+                </Pressable>
 
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-              {info ? <Text style={styles.info}>{info}</Text> : null}
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.button,
-                  pressed && styles.buttonPressed,
-                  (loading || otp.length !== 6) && styles.buttonDisabled,
-                ]}
-                onPress={() => void handleVerifyOtp()}
-                disabled={loading || otp.length !== 6}
-              >
-                {loading ? (
-                  <ActivityIndicator color={colors.white} />
-                ) : (
-                  <Text style={styles.buttonText}>Continue</Text>
-                )}
-              </Pressable>
-
-              <Pressable onPress={resetToPhoneStep} style={styles.secondaryLinkWrap}>
-                <Text style={styles.link}>Use a different number</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
+                <Pressable onPress={resetToPhoneStep} style={styles.secondaryLinkWrap}>
+                  <Text style={styles.link}>Use a different number</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </ScreenContent>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -462,6 +465,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
+  },
+  screenContent: {
     gap: spacing.xl,
   },
   brand: {

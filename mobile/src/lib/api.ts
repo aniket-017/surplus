@@ -37,14 +37,6 @@ export function verifyFirebasePhone(idToken: string) {
   });
 }
 
-/** Local Expo Go only — backend must have ALLOW_DEV_PHONE_BYPASS=true. */
-export function verifyDevPhone(phone: string) {
-  return apiFetch<{ message: string; token: string; user: User }>('/api/auth/dev/phone', {
-    method: 'POST',
-    body: JSON.stringify({ phone }),
-  });
-}
-
 export function getCurrentUser(token: string) {
   return apiFetch<{ user: User }>('/api/auth/me', { token });
 }

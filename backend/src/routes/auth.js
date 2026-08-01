@@ -79,7 +79,6 @@ router.post("/firebase/phone", async (req, res) => {
   }
 
   const idToken = typeof req.body.idToken === "string" ? req.body.idToken.trim() : "";
-  const intent = parseAuthIntent(req.body.intent);
 
   if (!idToken) {
     return res.status(400).json({ error: "Firebase ID token is required" });
@@ -98,25 +97,13 @@ router.post("/firebase/phone", async (req, res) => {
 
     const existingUser = await findUserByPhoneOrFirebaseUid(phone, firebaseUid);
 
-    if (intent === "signin" && !existingUser) {
-      return res.status(404).json({
-        error: "No account found with this phone number. Create an account first.",
-      });
-    }
-
-    if (intent === "signup" && existingUser) {
-      return res.status(409).json({
-        error: "An account with this phone number already exists. Sign in instead.",
-      });
-    }
-
     if (existingUser?.isBanned) {
       return res.status(403).json({ error: "This account has been banned" });
     }
 
     let user = existingUser;
 
-    if (intent === "signup") {
+    if (!existingUser) {
       user = await prisma.user.create({
         data: {
           phone,
@@ -125,8 +112,8 @@ router.post("/firebase/phone", async (req, res) => {
         select: userSelect,
       });
     } else if (
-      existingUser &&
-      (existingUser.phone !== phone || existingUser.firebaseUid !== firebaseUid)
+      existingUser.phone !== phone ||
+      existingUser.firebaseUid !== firebaseUid
     ) {
       user = await prisma.user.update({
         where: { id: existingUser.id },
@@ -150,7 +137,7 @@ router.post("/firebase/phone", async (req, res) => {
 
     if (error.code === "P2002") {
       return res.status(409).json({
-        error: "An account with this phone number already exists. Sign in instead.",
+        error: "An account with this phone number already exists.",
       });
     }
 

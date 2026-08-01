@@ -30,12 +30,10 @@ export async function apiFetch<T>(
   return parseResponse<T>(res);
 }
 
-export type AuthIntent = 'signin' | 'signup';
-
-export function verifyFirebasePhone(idToken: string, intent: AuthIntent = 'signin') {
+export function verifyFirebasePhone(idToken: string) {
   return apiFetch<{ message: string; token: string; user: User }>('/api/auth/firebase/phone', {
     method: 'POST',
-    body: JSON.stringify({ idToken, intent }),
+    body: JSON.stringify({ idToken }),
   });
 }
 

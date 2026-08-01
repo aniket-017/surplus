@@ -1,9 +1,14 @@
-import auth, { type FirebaseAuthTypes } from '@react-native-firebase/auth';
+import {
+  getAuth,
+  getIdToken,
+  signInWithPhoneNumber,
+  signOut,
+} from '@react-native-firebase/auth';
 
-export type PhoneConfirmation = FirebaseAuthTypes.ConfirmationResult;
+export type PhoneConfirmation = Awaited<ReturnType<typeof signInWithPhoneNumber>>;
 
 export async function sendFirebasePhoneOtp(e164Phone: string): Promise<PhoneConfirmation> {
-  return auth().signInWithPhoneNumber(e164Phone);
+  return signInWithPhoneNumber(getAuth(), e164Phone);
 }
 
 export async function confirmFirebasePhoneOtp(
@@ -11,16 +16,18 @@ export async function confirmFirebasePhoneOtp(
   code: string,
 ): Promise<string> {
   const credential = await confirmation.confirm(code);
+  const user = credential?.user;
 
-  if (!credential?.user) {
+  if (!user) {
     throw new Error('Phone verification failed. Please try again.');
   }
 
-  return credential.user.getIdToken(true);
+  return getIdToken(user, true);
 }
 
 export async function signOutFirebaseAuth(): Promise<void> {
-  if (auth().currentUser) {
-    await auth().signOut();
+  const auth = getAuth();
+  if (auth.currentUser) {
+    await signOut(auth);
   }
 }

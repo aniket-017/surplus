@@ -16,7 +16,6 @@ import {
   updateRole,
   verifyFirebasePhone,
 } from '@/src/lib/api';
-import type { AuthIntent } from '@/src/lib/api';
 import { signOutFirebaseAuth } from '@/src/lib/firebaseAuth';
 import { unregisterPushToken } from '@/src/lib/conversationsApi';
 import { clearStoredPushToken, loadStoredPushToken } from '@/src/lib/pushTokenStorage';
@@ -28,7 +27,7 @@ type AuthContextValue = {
   user: User | null;
   token: string | null;
   loading: boolean;
-  signInWithPhone: (idToken: string, intent?: AuthIntent) => Promise<User>;
+  signInWithPhone: (idToken: string) => Promise<User>;
   signOut: () => Promise<void>;
   setRole: (role: UserRole) => Promise<User>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<User>;
@@ -86,21 +85,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
-  const signInWithPhone = useCallback(
-    async (idToken: string, intent: AuthIntent = 'signin') => {
-      const data = await verifyFirebasePhone(idToken, intent);
+  const signInWithPhone = useCallback(async (idToken: string) => {
+    const data = await verifyFirebasePhone(idToken);
 
-      if (!data.user) {
-        throw new Error('Sign-in failed. Please try again.');
-      }
+    if (!data.user) {
+      throw new Error('Sign-in failed. Please try again.');
+    }
 
-      await saveToken(data.token);
-      setToken(data.token);
-      setUser(data.user);
-      return data.user;
-    },
-    [],
-  );
+    await saveToken(data.token);
+    setToken(data.token);
+    setUser(data.user);
+    return data.user;
+  }, []);
 
   const signOut = useCallback(async () => {
     if (token) {

@@ -2,10 +2,8 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Logo } from '@/src/components/Logo';
+import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
 import { useAuth } from '@/src/context/AuthContext';
 import {
   confirmFirebasePhoneOtp,
@@ -21,9 +20,9 @@ import {
   type PhoneConfirmation,
 } from '@/src/lib/firebaseAuth';
 import { formatPhoneForDisplay, toE164Phone } from '@/src/lib/phone';
+import { requestPhoneNumberHintLocal } from '@/src/lib/phoneHint';
 import { colors, spacing } from '@/src/constants/theme';
 
-type AuthMode = 'signin' | 'signup';
 type Step = 'phone' | 'otp';
 
 function navigateAfterAuth(user: { role: 'buyer' | 'seller' | null }) {
@@ -60,21 +59,69 @@ function mapFirebaseError(error: unknown): string {
 
 export default function SignInScreen() {
   const { signInWithPhone, token, user } = useAuth();
-  const [mode, setMode] = useState<AuthMode>('signin');
   const [step, setStep] = useState<Step>('phone');
   const [phoneInput, setPhoneInput] = useState('');
   const [e164Phone, setE164Phone] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hintLoading, setHintLoading] = useState(false);
+  const [hintAvailable, setHintAvailable] = useState(Platform.OS === 'android');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const confirmationRef = useRef<PhoneConfirmation | null>(null);
+  const hintAttemptedRef = useRef(false);
 
   useEffect(() => {
     if (token && user) {
       navigateAfterAuth(user);
     }
   }, [token, user]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android' || hintAttemptedRef.current) {
+      return;
+    }
+
+    hintAttemptedRef.current = true;
+
+    let cancelled = false;
+
+    (async () => {
+      setHintLoading(true);
+      try {
+        const local = await requestPhoneNumberHintLocal();
+        if (!cancelled && local) {
+          setPhoneInput(local);
+        }
+      } finally {
+        if (!cancelled) {
+          setHintLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleUseMyNumber() {
+    setError('');
+    setHintLoading(true);
+
+    try {
+      const local = await requestPhoneNumberHintLocal();
+      if (local) {
+        setPhoneInput(local);
+      } else {
+        setInfo('No saved number found. Enter your mobile number manually.');
+      }
+    } catch {
+      setHintAvailable(false);
+    } finally {
+      setHintLoading(false);
+    }
+  }
 
   async function handleSendOtp() {
     setError('');
@@ -114,7 +161,7 @@ export default function SignInScreen() {
 
     try {
       const idToken = await confirmFirebasePhoneOtp(confirmationRef.current, otp.trim());
-      const signedInUser = await signInWithPhone(idToken, mode);
+      const signedInUser = await signInWithPhone(idToken);
       navigateAfterAuth(signedInUser);
     } catch (err) {
       setError(mapFirebaseError(err));
@@ -131,54 +178,26 @@ export default function SignInScreen() {
     confirmationRef.current = null;
   }
 
-  const isSignUp = mode === 'signup';
   const phoneReady = Boolean(toE164Phone(phoneInput));
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Logo size="lg" />
+        <Logo size="lg" />
 
-          <View style={styles.card}>
-            <View style={styles.tabs}>
-              <Pressable
-                style={[styles.tab, mode === 'signin' && styles.tabActive]}
-                onPress={() => {
-                  setMode('signin');
-                  resetToPhoneStep();
-                }}
-              >
-                <Text style={[styles.tabText, mode === 'signin' && styles.tabTextActive]}>
-                  Sign In
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.tab, mode === 'signup' && styles.tabActive]}
-                onPress={() => {
-                  setMode('signup');
-                  resetToPhoneStep();
-                }}
-              >
-                <Text style={[styles.tabText, mode === 'signup' && styles.tabTextActive]}>
-                  Sign Up
-                </Text>
-              </Pressable>
-            </View>
+        <View style={styles.card}>
+          <Text style={styles.title}>Welcome to Surplus</Text>
+          <Text style={styles.subtitle}>
+            Enter your mobile number to continue. We’ll send a one-time code to verify it’s you.
+          </Text>
 
-            <Text style={styles.title}>{isSignUp ? 'Create your account' : 'Welcome back'}</Text>
-            <Text style={styles.subtitle}>
-              {isSignUp
-                ? 'Join Surplus with your mobile number to buy, sell, and recover industrial value.'
-                : 'Sign in with your mobile number to continue to Surplus.'}
-            </Text>
-
-            {step === 'phone' ? (
-              <View style={styles.form}>
-                <Text style={styles.label}>Mobile number</Text>
+          {step === 'phone' ? (
+            <View style={styles.form}>
+              <Text style={styles.label}>Mobile number</Text>
+              <ScrollIntoView>
                 <View style={styles.phoneRow}>
                   <View style={styles.countryCode}>
                     <Text style={styles.countryCodeText}>+91</Text>
@@ -186,9 +205,7 @@ export default function SignInScreen() {
                   <TextInput
                     style={[styles.input, styles.phoneInput]}
                     value={phoneInput}
-                    onChangeText={(value) =>
-                      setPhoneInput(value.replace(/\D/g, '').slice(0, 10))
-                    }
+                    onChangeText={(value) => setPhoneInput(value.replace(/\D/g, '').slice(0, 10))}
                     placeholder="98765 43210"
                     placeholderTextColor={colors.muted}
                     keyboardType="phone-pad"
@@ -197,32 +214,46 @@ export default function SignInScreen() {
                     maxLength={10}
                   />
                 </View>
+              </ScrollIntoView>
 
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-                {info ? <Text style={styles.info}>{info}</Text> : null}
-
+              {hintAvailable ? (
                 <Pressable
-                  style={[styles.button, loading && styles.buttonDisabled]}
-                  onPress={handleSendOtp}
-                  disabled={loading || !phoneReady}
+                  onPress={handleUseMyNumber}
+                  disabled={hintLoading || loading}
+                  style={styles.hintLinkWrap}
                 >
-                  {loading ? (
-                    <ActivityIndicator color={colors.white} />
+                  {hintLoading ? (
+                    <ActivityIndicator color={colors.accent} />
                   ) : (
-                    <Text style={styles.buttonText}>
-                      {isSignUp ? 'Send verification code' : 'Continue with phone'}
-                    </Text>
+                    <Text style={styles.link}>Use my number</Text>
                   )}
                 </Pressable>
-              </View>
-            ) : (
-              <View style={styles.form}>
-                <Text style={styles.hint}>
-                  Code sent to{' '}
-                  <Text style={styles.hintStrong}>{formatPhoneForDisplay(e164Phone)}</Text>
-                </Text>
+              ) : null}
 
-                <Text style={styles.label}>Verification code</Text>
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {info ? <Text style={styles.info}>{info}</Text> : null}
+
+              <Pressable
+                style={[styles.button, (loading || !phoneReady) && styles.buttonDisabled]}
+                onPress={handleSendOtp}
+                disabled={loading || !phoneReady}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text style={styles.buttonText}>Send verification code</Text>
+                )}
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.form}>
+              <Text style={styles.hint}>
+                Code sent to{' '}
+                <Text style={styles.hintStrong}>{formatPhoneForDisplay(e164Phone)}</Text>
+              </Text>
+
+              <Text style={styles.label}>Verification code</Text>
+              <ScrollIntoView>
                 <TextInput
                   style={[styles.input, styles.otpInput]}
                   value={otp}
@@ -232,45 +263,30 @@ export default function SignInScreen() {
                   keyboardType="number-pad"
                   maxLength={6}
                 />
+              </ScrollIntoView>
 
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-                {info ? <Text style={styles.info}>{info}</Text> : null}
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {info ? <Text style={styles.info}>{info}</Text> : null}
 
-                <Pressable
-                  style={[styles.button, loading && styles.buttonDisabled]}
-                  onPress={handleVerifyOtp}
-                  disabled={loading || otp.length !== 6}
-                >
-                  {loading ? (
-                    <ActivityIndicator color={colors.white} />
-                  ) : (
-                    <Text style={styles.buttonText}>
-                      {isSignUp ? 'Create account' : 'Sign in'}
-                    </Text>
-                  )}
-                </Pressable>
-
-                <Pressable onPress={resetToPhoneStep}>
-                  <Text style={styles.link}>Use a different number</Text>
-                </Pressable>
-              </View>
-            )}
-
-            <Text style={styles.switchText}>
-              {isSignUp ? 'Already have an account? ' : 'New to Surplus? '}
-              <Text
-                style={styles.link}
-                onPress={() => {
-                  setMode(isSignUp ? 'signin' : 'signup');
-                  resetToPhoneStep();
-                }}
+              <Pressable
+                style={[styles.button, (loading || otp.length !== 6) && styles.buttonDisabled]}
+                onPress={handleVerifyOtp}
+                disabled={loading || otp.length !== 6}
               >
-                {isSignUp ? 'Sign in' : 'Create an account'}
-              </Text>
-            </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+                {loading ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text style={styles.buttonText}>Continue</Text>
+                )}
+              </Pressable>
+
+              <Pressable onPress={resetToPhoneStep}>
+                <Text style={styles.link}>Use a different number</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
@@ -279,9 +295,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.bgSubtle,
-  },
-  flex: {
-    flex: 1,
   },
   container: {
     flexGrow: 1,
@@ -296,32 +309,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.md,
-  },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: 8,
-    padding: 4,
-    gap: 4,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  tabActive: {
-    backgroundColor: colors.surface,
-  },
-  tabText: {
-    color: colors.muted,
-    fontWeight: '700',
-    fontSize: 13,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  tabTextActive: {
-    color: colors.textStrong,
   },
   title: {
     color: colors.textStrong,
@@ -387,6 +374,11 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
     fontWeight: '700',
   },
+  hintLinkWrap: {
+    alignSelf: 'flex-start',
+    minHeight: 24,
+    justifyContent: 'center',
+  },
   error: {
     color: colors.error,
     fontSize: 14,
@@ -411,11 +403,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
-  },
-  switchText: {
-    textAlign: 'center',
-    color: colors.muted,
-    fontSize: 14,
   },
   link: {
     color: colors.accent,

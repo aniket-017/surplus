@@ -43,6 +43,25 @@ export function toE164Phone(raw: string): string | null {
   return null;
 }
 
+/** Extract 10-digit Indian local number from E.164 or raw input for the auth field. */
+export function toIndianLocalDigits(raw: string): string | null {
+  const e164 = toE164Phone(raw);
+  if (!e164) {
+    return null;
+  }
+
+  if (e164.startsWith('+91') && e164.length === 13) {
+    return e164.slice(3);
+  }
+
+  const digits = e164.replace(/\D/g, '');
+  if (digits.length >= 10) {
+    return digits.slice(-10);
+  }
+
+  return null;
+}
+
 export function formatPhoneForDisplay(e164: string): string {
   if (e164.startsWith('+91') && e164.length === 13) {
     const local = e164.slice(3);

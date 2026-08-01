@@ -15,6 +15,11 @@ import { Logo } from '@/src/components/Logo';
 import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
+import {
+  DEV_BYPASS_LOCAL_PHONE,
+  isDevBypassPhone,
+  isDevPhoneBypassEnabled,
+} from '@/src/lib/devPhoneBypass';
 import { formatPhoneForDisplay, toE164Phone } from '@/src/lib/phone';
 import { requestPhoneNumberHintLocal } from '@/src/lib/phoneHint';
 import { isExpoGo } from '@/src/lib/notifications';
@@ -29,6 +34,9 @@ type PhoneConfirmation = {
 
 const EXPO_GO_PHONE_AUTH_MSG =
   'Phone OTP needs a native build (EAS preview/dev). Expo Go cannot load React Native Firebase.';
+
+const DEV_BYPASS_INFO =
+  `Dev mode: use ${DEV_BYPASS_LOCAL_PHONE} to sign in without OTP (local backend required).`;
 
 async function loadFirebaseAuth() {
   return import('@/src/lib/firebaseAuth');
@@ -76,9 +84,11 @@ function mapFirebaseError(error: unknown): string {
 }
 
 export default function SignInScreen() {
-  const { signInWithPhone, token, user } = useAuth();
+  const { signInWithPhone, signInWithDevPhone, token, user } = useAuth();
   const [step, setStep] = useState<Step>('phone');
-  const [phoneInput, setPhoneInput] = useState('');
+  const [phoneInput, setPhoneInput] = useState(
+    isDevPhoneBypassEnabled() ? DEV_BYPASS_LOCAL_PHONE : '',
+  );
   const [e164Phone, setE164Phone] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
@@ -89,6 +99,8 @@ export default function SignInScreen() {
   const confirmationRef = useRef<PhoneConfirmation | null>(null);
   const hintAttemptedRef = useRef(false);
   const completingRef = useRef(false);
+  const bypassEnabled = isDevPhoneBypassEnabled();
+  const canBypassCurrentPhone = bypassEnabled && isDevBypassPhone(phoneInput);
 
   useEffect(() => {
     if (token && user) {
@@ -97,11 +109,17 @@ export default function SignInScreen() {
   }, [token, user]);
 
   useEffect(() => {
+    if (bypassEnabled) {
+      setInfo(DEV_BYPASS_INFO);
+      setHintAvailable(false);
+      return;
+    }
+
     if (isExpoGo()) {
       setError(EXPO_GO_PHONE_AUTH_MSG);
       setHintAvailable(false);
     }
-  }, []);
+  }, [bypassEnabled]);
 
   useEffect(() => {
     if (Platform.OS !== 'android' || isExpoGo() || hintAttemptedRef.current) {
@@ -153,6 +171,30 @@ export default function SignInScreen() {
       }
     },
     [signInWithPhone],
+  );
+
+  const completeWithDevPhone = useCallback(
+    async (phone: string) => {
+      if (completingRef.current) {
+        return;
+      }
+
+      completingRef.current = true;
+      setLoading(true);
+      setError('');
+      setInfo('Dev bypass — signing you in…');
+
+      try {
+        const signedInUser = await signInWithDevPhone(phone);
+        navigateAfterAuth(signedInUser);
+      } catch (err) {
+        setError(mapFirebaseError(err));
+        completingRef.current = false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [signInWithDevPhone],
   );
 
   // Android can auto-retrieve the SMS and sign in without typing the OTP.
@@ -219,17 +261,26 @@ export default function SignInScreen() {
 
   async function handleSendOtp() {
     setError('');
-    setInfo('');
+    setInfo(bypassEnabled ? DEV_BYPASS_INFO : '');
     completingRef.current = false;
-
-    if (isExpoGo()) {
-      setError(EXPO_GO_PHONE_AUTH_MSG);
-      return;
-    }
 
     const normalized = toE164Phone(phoneInput);
     if (!normalized) {
       setError('Enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+
+    if (bypassEnabled && isDevBypassPhone(normalized)) {
+      await completeWithDevPhone(normalized);
+      return;
+    }
+
+    if (isExpoGo()) {
+      setError(
+        bypassEnabled
+          ? `Dev bypass only works for ${DEV_BYPASS_LOCAL_PHONE}.`
+          : EXPO_GO_PHONE_AUTH_MSG,
+      );
       return;
     }
 
@@ -340,7 +391,9 @@ export default function SignInScreen() {
               </Text>
               <Text style={styles.subtitle}>
                 {step === 'phone'
-                  ? 'Enter your mobile number to continue. We’ll send a one-time code to verify it’s you.'
+                  ? bypassEnabled
+                    ? DEV_BYPASS_INFO
+                    : 'Enter your mobile number to continue. We’ll send a one-time code to verify it’s you.'
                   : `Code sent to ${formatPhoneForDisplay(e164Phone)}`}
               </Text>
             </View>
@@ -395,7 +448,11 @@ export default function SignInScreen() {
                   {loading ? (
                     <ActivityIndicator color={colors.white} />
                   ) : (
-                    <Text style={styles.buttonText}>Send verification code</Text>
+                    <Text style={styles.buttonText}>
+                      {canBypassCurrentPhone
+                        ? 'Continue without OTP (dev)'
+                        : 'Send verification code'}
+                    </Text>
                   )}
                 </Pressable>
               </View>

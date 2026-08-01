@@ -14,6 +14,7 @@ import {
   logoutRequest,
   updateProfile as updateProfileRequest,
   updateRole,
+  verifyDevPhone,
   verifyFirebasePhone,
 } from '@/src/lib/api';
 import { unregisterPushToken } from '@/src/lib/conversationsApi';
@@ -27,6 +28,7 @@ type AuthContextValue = {
   token: string | null;
   loading: boolean;
   signInWithPhone: (idToken: string) => Promise<User>;
+  signInWithDevPhone: (phone: string) => Promise<User>;
   signOut: () => Promise<void>;
   setRole: (role: UserRole) => Promise<User>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<User>;
@@ -86,6 +88,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithPhone = useCallback(async (idToken: string) => {
     const data = await verifyFirebasePhone(idToken);
+
+    if (!data.user) {
+      throw new Error('Sign-in failed. Please try again.');
+    }
+
+    await saveToken(data.token);
+    setToken(data.token);
+    setUser(data.user);
+    return data.user;
+  }, []);
+
+  const signInWithDevPhone = useCallback(async (phone: string) => {
+    const data = await verifyDevPhone(phone);
 
     if (!data.user) {
       throw new Error('Sign-in failed. Please try again.');
@@ -161,12 +176,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
       loading,
       signInWithPhone,
+      signInWithDevPhone,
       signOut,
       setRole,
       updateProfile,
       refreshUser,
     }),
-    [user, token, loading, signInWithPhone, signOut, setRole, updateProfile, refreshUser],
+    [
+      user,
+      token,
+      loading,
+      signInWithPhone,
+      signInWithDevPhone,
+      signOut,
+      setRole,
+      updateProfile,
+      refreshUser,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

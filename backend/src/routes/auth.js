@@ -25,8 +25,83 @@ const router = Router();
 const TEST_ACCOUNT_EMAIL = "aniketkhillare17@gmail.com";
 const TEST_ACCOUNT_OTP = "123456";
 
+// Local Expo Go development only — never enable on production.
+function isDevPhoneBypassEnabled() {
+  return (
+    process.env.ALLOW_DEV_PHONE_BYPASS === "true" &&
+    process.env.NODE_ENV !== "production"
+  );
+}
+
+function getDevBypassPhones() {
+  const raw =
+    process.env.DEV_PHONE_BYPASS_NUMBERS?.trim() || "+918788896643";
+  return new Set(
+    raw
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+}
+
+function toE164IndianPhone(raw) {
+  const cleaned = String(raw || "").replace(/[^\d+]/g, "").trim();
+  if (!cleaned) {
+    return null;
+  }
+
+  let digits = cleaned.startsWith("+") ? cleaned.slice(1) : cleaned;
+  if (!/^\d+$/.test(digits)) {
+    return null;
+  }
+
+  if (digits.length === 10) {
+    return `+91${digits}`;
+  }
+  if (digits.length === 12 && digits.startsWith("91")) {
+    return `+${digits}`;
+  }
+  if (digits.startsWith("91") || digits.length >= 11) {
+    return `+${digits}`;
+  }
+  return null;
+}
+
 function isTestAccount(email) {
   return email === TEST_ACCOUNT_EMAIL;
+}
+
+async function upsertPhoneUser(phone, firebaseUid) {
+  const existingUser = await findUserByPhoneOrFirebaseUid(phone, firebaseUid);
+
+  if (existingUser?.isBanned) {
+    const bannedError = new Error("This account has been banned");
+    bannedError.status = 403;
+    throw bannedError;
+  }
+
+  if (!existingUser) {
+    return prisma.user.create({
+      data: {
+        phone,
+        firebaseUid,
+      },
+      select: userSelect,
+    });
+  }
+
+  if (existingUser.phone !== phone || existingUser.firebaseUid !== firebaseUid) {
+    return prisma.user.update({
+      where: { id: existingUser.id },
+      data: {
+        phone,
+        firebaseUid,
+      },
+      select: userSelect,
+    });
+  }
+
+  return existingUser;
 }
 
 function parseRole(role) {
@@ -99,36 +174,7 @@ router.post("/firebase/phone", async (req, res) => {
       });
     }
 
-    const existingUser = await findUserByPhoneOrFirebaseUid(phone, firebaseUid);
-
-    if (existingUser?.isBanned) {
-      return res.status(403).json({ error: "This account has been banned" });
-    }
-
-    let user = existingUser;
-
-    if (!existingUser) {
-      user = await prisma.user.create({
-        data: {
-          phone,
-          firebaseUid,
-        },
-        select: userSelect,
-      });
-    } else if (
-      existingUser.phone !== phone ||
-      existingUser.firebaseUid !== firebaseUid
-    ) {
-      user = await prisma.user.update({
-        where: { id: existingUser.id },
-        data: {
-          phone,
-          firebaseUid,
-        },
-        select: userSelect,
-      });
-    }
-
+    const user = await upsertPhoneUser(phone, firebaseUid);
     const token = setAuthCookie(res, user);
 
     res.json({
@@ -138,6 +184,10 @@ router.post("/firebase/phone", async (req, res) => {
     });
   } catch (error) {
     console.error("Firebase phone auth failed:", error);
+
+    if (error.status === 403) {
+      return res.status(403).json({ error: error.message });
+    }
 
     if (error.code === "P2002") {
       return res.status(409).json({
@@ -171,6 +221,52 @@ router.post("/firebase/phone", async (req, res) => {
       error: error.message
         ? `Failed to sign in with phone number: ${error.message}`
         : "Failed to sign in with phone number",
+    });
+  }
+});
+
+// Expo Go / local development: skip Firebase OTP for allowlisted phones.
+router.post("/dev/phone", async (req, res) => {
+  if (!isDevPhoneBypassEnabled()) {
+    return res.status(404).json({ error: "Not found" });
+  }
+
+  const phone = toE164IndianPhone(req.body.phone);
+  if (!phone) {
+    return res.status(400).json({ error: "Valid phone number is required" });
+  }
+
+  if (!getDevBypassPhones().has(phone)) {
+    return res.status(403).json({
+      error: "This phone number is not allowlisted for dev bypass.",
+    });
+  }
+
+  try {
+    const firebaseUid = `dev-phone:${phone}`;
+    const user = await upsertPhoneUser(phone, firebaseUid);
+    const token = setAuthCookie(res, user);
+
+    res.json({
+      message: "Signed in with dev phone bypass",
+      token,
+      user: formatUser(user),
+    });
+  } catch (error) {
+    console.error("Dev phone bypass failed:", error);
+
+    if (error.status === 403) {
+      return res.status(403).json({ error: error.message });
+    }
+
+    if (error.code === "P2002") {
+      return res.status(409).json({
+        error: "An account with this phone number already exists.",
+      });
+    }
+
+    res.status(500).json({
+      error: error.message || "Failed to sign in with phone number",
     });
   }
 });

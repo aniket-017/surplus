@@ -236,9 +236,7 @@ export function buildBrowseWhere({
   }
 
   if (condition) {
-    // Include legacy SCRAP documents when filtering for SURPLUS
-    where.condition =
-      condition === "SURPLUS" ? { in: ["SURPLUS", "SCRAP"] } : condition;
+    where.condition = condition;
   }
 
   if (negotiable) {

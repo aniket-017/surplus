@@ -2,7 +2,7 @@ import { resolveProductImageUrls } from "./s3.js";
 import { parseCategory } from "./category.js";
 
 const PRICE_TYPES = ["FIXED", "NEGOTIABLE", "PER_KG", "PER_UNIT", "PER_LOT"];
-const CONDITIONS = ["NEW", "USED", "SCRAP", "REFURBISHED"];
+const CONDITIONS = ["NEW", "USED", "SURPLUS", "REFURBISHED"];
 
 export function parsePriceType(value) {
   const normalized = String(value || "")
@@ -19,6 +19,8 @@ export function parsePriceType(value) {
 
 export function parseCondition(value) {
   const normalized = String(value || "").trim().toUpperCase();
+  // Legacy client/DB value
+  if (normalized === "SCRAP") return "SURPLUS";
   return CONDITIONS.includes(normalized) ? normalized : null;
 }
 
@@ -130,7 +132,10 @@ export async function formatProduct(product) {
     quantityUnit: product.quantityUnit,
     price: product.price,
     priceType: product.priceType.toLowerCase(),
-    condition: product.condition.toLowerCase(),
+    condition:
+      String(product.condition).toUpperCase() === "SCRAP"
+        ? "surplus"
+        : product.condition.toLowerCase(),
     images,
     attributes: product.attributes,
     location: product.location,
@@ -231,7 +236,9 @@ export function buildBrowseWhere({
   }
 
   if (condition) {
-    where.condition = condition;
+    // Include legacy SCRAP documents when filtering for SURPLUS
+    where.condition =
+      condition === "SURPLUS" ? { in: ["SURPLUS", "SCRAP"] } : condition;
   }
 
   if (negotiable) {

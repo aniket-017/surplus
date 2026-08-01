@@ -13,7 +13,7 @@ export type ProductLocation = {
 };
 
 export type PriceType = 'fixed' | 'negotiable' | 'per_kg' | 'per_unit' | 'per_lot';
-export type ProductCondition = 'new' | 'used' | 'scrap' | 'refurbished';
+export type ProductCondition = 'new' | 'used' | 'surplus' | 'refurbished';
 
 export type ProductAnalysis = {
   title: string;
@@ -112,7 +112,7 @@ export const PRICE_TYPE_OPTIONS: { label: string; value: PriceType }[] = [
 export const CONDITION_OPTIONS: { label: string; value: ProductCondition }[] = [
   { label: 'New', value: 'new' },
   { label: 'Used', value: 'used' },
-  { label: 'Scrap', value: 'scrap' },
+  { label: 'Surplus', value: 'surplus' },
   { label: 'Refurbished', value: 'refurbished' },
 ];
 
@@ -151,7 +151,7 @@ export const emptyProductForm = (): ProductFormValues => ({
   quantity: '',
   price: '',
   priceType: 'fixed',
-  condition: 'scrap',
+  condition: 'surplus',
   attributes: [],
   location: {
     address: '',

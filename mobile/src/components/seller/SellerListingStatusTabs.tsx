@@ -2,7 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing } from '@/src/constants/theme';
 
-export type SellerListingFilter = 'all' | 'active' | 'sold' | 'scrap';
+export type SellerListingFilter = 'all' | 'active' | 'sold' | 'surplus';
 
 type TabOption = {
   id: SellerListingFilter;
@@ -25,7 +25,7 @@ export function SellerListingStatusTabs({
     { id: 'all', label: 'All', count: counts.all },
     { id: 'active', label: 'Active', count: counts.active },
     { id: 'sold', label: 'Sold', count: counts.sold },
-    { id: 'scrap', label: 'Scrap', count: counts.scrap },
+    { id: 'surplus', label: 'Surplus', count: counts.surplus },
   ];
 
   return (

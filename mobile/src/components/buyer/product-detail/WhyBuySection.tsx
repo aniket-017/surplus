@@ -13,7 +13,7 @@ type WhyBuySectionProps = {
 function getWhyBuyItems(product: ProductListing) {
   const items: string[] = ['Ready for pickup'];
 
-  if (product.condition === 'scrap') {
+  if (product.condition === 'surplus') {
     items.push('Suitable for reprocessing');
   } else if (product.condition === 'new') {
     items.push('Unused / new material');

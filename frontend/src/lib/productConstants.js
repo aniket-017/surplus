@@ -9,7 +9,7 @@ export const PRICE_TYPE_OPTIONS = [
 export const CONDITION_OPTIONS = [
   { label: 'New', value: 'new' },
   { label: 'Used', value: 'used' },
-  { label: 'Scrap', value: 'scrap' },
+  { label: 'Surplus', value: 'surplus' },
   { label: 'Refurbished', value: 'refurbished' },
 ]
 
@@ -47,7 +47,7 @@ export function emptyProductForm() {
     quantity: '',
     price: '',
     priceType: 'fixed',
-    condition: 'scrap',
+    condition: 'surplus',
     attributes: [],
     location: {
       address: '',

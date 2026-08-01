@@ -23,7 +23,7 @@ enum PriceType {
 enum ProductCondition {
   NEW
   USED
-  SCRAP
+  SURPLUS
   REFURBISHED
 }
 

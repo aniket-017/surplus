@@ -3,14 +3,14 @@ import type { Product, ProductCondition } from '@/src/types/product';
 import type { SellerListingFilter } from './SellerListingStatusTabs';
 
 export function getSellerListingCounts(products: Product[]) {
-  const active = products.filter((product) => product.condition !== 'scrap').length;
-  const scrap = products.filter((product) => product.condition === 'scrap').length;
+  const active = products.filter((product) => product.condition !== 'surplus').length;
+  const surplus = products.filter((product) => product.condition === 'surplus').length;
 
   return {
     all: products.length,
     active,
     sold: 0,
-    scrap,
+    surplus,
   };
 }
 
@@ -24,8 +24,8 @@ export function filterSellerListings(
   return products.filter((product) => {
     const matchesFilter =
       filter === 'all' ||
-      (filter === 'active' && product.condition !== 'scrap') ||
-      (filter === 'scrap' && product.condition === 'scrap') ||
+      (filter === 'active' && product.condition !== 'surplus') ||
+      (filter === 'surplus' && product.condition === 'surplus') ||
       (filter === 'sold' && false);
 
     if (!matchesFilter) {
@@ -50,6 +50,6 @@ export function filterSellerListings(
 }
 
 export function getConditionFilterLabel(condition: ProductCondition) {
-  if (condition === 'scrap') return 'Scrap';
+  if (condition === 'surplus') return 'Surplus';
   return 'Active';
 }

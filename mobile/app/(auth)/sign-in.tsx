@@ -17,6 +17,7 @@ import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { formatPhoneForDisplay, toE164Phone } from '@/src/lib/phone';
 import { requestPhoneNumberHintLocal } from '@/src/lib/phoneHint';
+import { startOtpSmsConsent } from '@/src/lib/otpSmsConsent';
 import { isExpoGo } from '@/src/lib/notifications';
 import { cardShadow, colors, radius, spacing } from '@/src/constants/theme';
 
@@ -92,6 +93,7 @@ export default function SignInScreen() {
   const confirmationRef = useRef<PhoneConfirmation | null>(null);
   const hintAttemptedRef = useRef(false);
   const completingRef = useRef(false);
+  const handleVerifyOtpRef = useRef<(codeOverride?: string) => Promise<void>>(async () => {});
 
   useEffect(() => {
     if (token && user) {
@@ -202,6 +204,22 @@ export default function SignInScreen() {
     };
   }, [step, completeWithIdToken]);
 
+  // Android SMS User Consent — fill the OTP field from the incoming SMS.
+  useEffect(() => {
+    if (step !== 'otp') {
+      return;
+    }
+
+    return startOtpSmsConsent((digits) => {
+      if (completingRef.current) {
+        return;
+      }
+      setOtp(digits);
+      setInfo('Code detected. Verifying…');
+      void handleVerifyOtpRef.current(digits);
+    });
+  }, [step]);
+
   async function handleUseMyNumber() {
     setError('');
     setHintLoading(true);
@@ -258,6 +276,10 @@ export default function SignInScreen() {
   }
 
   async function handleVerifyOtp(codeOverride?: string) {
+    if (completingRef.current) {
+      return;
+    }
+
     const code = (codeOverride ?? otp).trim();
     setError('');
     setInfo('');
@@ -313,6 +335,8 @@ export default function SignInScreen() {
       setError(mapFirebaseError(err));
     }
   }
+
+  handleVerifyOtpRef.current = handleVerifyOtp;
 
   function resetToPhoneStep() {
     setStep('phone');

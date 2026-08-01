@@ -25,20 +25,43 @@ export function configurePassport() {
             return done(new Error("Google account already linked to another user"), null);
           }
 
-          const user = await prisma.user.upsert({
-            where: { email },
-            update: {
-              googleId: profile.id,
-              name: profile.displayName,
-              avatarUrl: profile.photos?.[0]?.value ?? null,
-            },
-            create: {
-              googleId: profile.id,
-              email,
-              name: profile.displayName,
-              avatarUrl: profile.photos?.[0]?.value ?? null,
-            },
-          });
+          let user = existingByGoogle;
+
+          if (user) {
+            user = await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                googleId: profile.id,
+                email,
+                name: profile.displayName,
+                avatarUrl: profile.photos?.[0]?.value ?? null,
+              },
+            });
+          } else {
+            const existingByEmail = await prisma.user.findFirst({
+              where: { email },
+            });
+
+            if (existingByEmail) {
+              user = await prisma.user.update({
+                where: { id: existingByEmail.id },
+                data: {
+                  googleId: profile.id,
+                  name: profile.displayName,
+                  avatarUrl: profile.photos?.[0]?.value ?? null,
+                },
+              });
+            } else {
+              user = await prisma.user.create({
+                data: {
+                  googleId: profile.id,
+                  email,
+                  name: profile.displayName,
+                  avatarUrl: profile.photos?.[0]?.value ?? null,
+                },
+              });
+            }
+          }
 
           if (user.isBanned) {
             return done(null, false, { message: "This account has been banned" });

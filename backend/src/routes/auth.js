@@ -8,11 +8,11 @@ import {
   clearAuthCookie,
   formatUser,
   parseUserAddress,
-  signToken,
   userSelect,
 } from "../lib/auth.js";
 import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
+import { isFirebaseAuthConfigured, verifyFirebaseIdToken } from "../lib/firebaseAdmin.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -34,6 +34,15 @@ function parseRole(role) {
 
 function parseAuthIntent(raw) {
   return raw === "signup" ? "signup" : "signin";
+}
+
+async function findUserByPhoneOrFirebaseUid(phone, firebaseUid) {
+  return prisma.user.findFirst({
+    where: {
+      OR: [{ phone }, { firebaseUid }],
+    },
+    select: userSelect,
+  });
 }
 
 router.get("/methods", (_req, res) => {
@@ -62,6 +71,101 @@ if (isGoogleAuthEnabled()) {
   );
 }
 
+router.post("/firebase/phone", async (req, res) => {
+  if (!isFirebaseAuthConfigured()) {
+    return res.status(503).json({
+      error: "Phone authentication is not configured on the server.",
+    });
+  }
+
+  const idToken = typeof req.body.idToken === "string" ? req.body.idToken.trim() : "";
+  const intent = parseAuthIntent(req.body.intent);
+
+  if (!idToken) {
+    return res.status(400).json({ error: "Firebase ID token is required" });
+  }
+
+  try {
+    const decoded = await verifyFirebaseIdToken(idToken);
+    const firebaseUid = decoded.uid;
+    const phone = decoded.phone_number;
+
+    if (!firebaseUid || !phone) {
+      return res.status(400).json({
+        error: "Firebase token is missing a verified phone number.",
+      });
+    }
+
+    const existingUser = await findUserByPhoneOrFirebaseUid(phone, firebaseUid);
+
+    if (intent === "signin" && !existingUser) {
+      return res.status(404).json({
+        error: "No account found with this phone number. Create an account first.",
+      });
+    }
+
+    if (intent === "signup" && existingUser) {
+      return res.status(409).json({
+        error: "An account with this phone number already exists. Sign in instead.",
+      });
+    }
+
+    if (existingUser?.isBanned) {
+      return res.status(403).json({ error: "This account has been banned" });
+    }
+
+    let user = existingUser;
+
+    if (intent === "signup") {
+      user = await prisma.user.create({
+        data: {
+          phone,
+          firebaseUid,
+        },
+        select: userSelect,
+      });
+    } else if (
+      existingUser &&
+      (existingUser.phone !== phone || existingUser.firebaseUid !== firebaseUid)
+    ) {
+      user = await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          phone,
+          firebaseUid,
+        },
+        select: userSelect,
+      });
+    }
+
+    const token = setAuthCookie(res, user);
+
+    res.json({
+      message: "Signed in successfully",
+      token,
+      user: formatUser(user),
+    });
+  } catch (error) {
+    console.error("Firebase phone auth failed:", error);
+
+    if (error.code === "P2002") {
+      return res.status(409).json({
+        error: "An account with this phone number already exists. Sign in instead.",
+      });
+    }
+
+    if (
+      error.code === "auth/id-token-expired" ||
+      error.code === "auth/argument-error" ||
+      error.code === "auth/invalid-id-token"
+    ) {
+      return res.status(401).json({ error: "Invalid or expired Firebase token" });
+    }
+
+    res.status(500).json({ error: "Failed to sign in with phone number" });
+  }
+});
+
 if (isOtpAuthEnabled()) {
   router.post("/otp/send", async (req, res) => {
     const email = req.body.email?.trim().toLowerCase();
@@ -72,7 +176,7 @@ if (isOtpAuthEnabled()) {
     }
 
     try {
-      const existingUser = await prisma.user.findUnique({
+      const existingUser = await prisma.user.findFirst({
         where: { email },
         select: { id: true, isBanned: true },
       });
@@ -139,7 +243,7 @@ if (isOtpAuthEnabled()) {
     }
 
     try {
-      const existingUser = await prisma.user.findUnique({
+      const existingUser = await prisma.user.findFirst({
         where: { email },
         select: userSelect,
       });
@@ -246,6 +350,29 @@ router.patch("/profile", requireAuth, async (req, res) => {
       updateData.address = parseUserAddress(req.body.address);
     }
 
+    if (req.body.email !== undefined) {
+      const emailRaw = String(req.body.email || "").trim().toLowerCase();
+
+      if (!emailRaw) {
+        updateData.email = null;
+      } else if (!isValidEmail(emailRaw)) {
+        return res.status(400).json({ error: "Valid email is required" });
+      } else {
+        const existingEmailUser = await prisma.user.findFirst({
+          where: { email: emailRaw },
+          select: { id: true },
+        });
+
+        if (existingEmailUser && existingEmailUser.id !== req.user.id) {
+          return res.status(409).json({
+            error: "This email is already linked to another account.",
+          });
+        }
+
+        updateData.email = emailRaw;
+      }
+    }
+
     if (!Object.keys(updateData).length) {
       return res.status(400).json({ error: "No profile fields to update" });
     }
@@ -261,6 +388,13 @@ router.patch("/profile", requireAuth, async (req, res) => {
     res.json({ user: formatUser(user) });
   } catch (error) {
     console.error("Profile update failed:", error);
+
+    if (error.code === "P2002") {
+      return res.status(409).json({
+        error: "This email is already linked to another account.",
+      });
+    }
+
     res.status(400).json({ error: error.message || "Failed to update profile" });
   }
 });

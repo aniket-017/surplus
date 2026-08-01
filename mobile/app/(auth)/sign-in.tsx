@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -15,11 +15,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Logo } from '@/src/components/Logo';
 import { useAuth } from '@/src/context/AuthContext';
-import { sendOtp } from '@/src/lib/api';
+import {
+  confirmFirebasePhoneOtp,
+  sendFirebasePhoneOtp,
+  type PhoneConfirmation,
+} from '@/src/lib/firebaseAuth';
+import { formatPhoneForDisplay, toE164Phone } from '@/src/lib/phone';
 import { colors, spacing } from '@/src/constants/theme';
 
 type AuthMode = 'signin' | 'signup';
-type Step = 'email' | 'otp';
+type Step = 'phone' | 'otp';
 
 function navigateAfterAuth(user: { role: 'buyer' | 'seller' | null }) {
   if (!user.role) {
@@ -30,15 +35,40 @@ function navigateAfterAuth(user: { role: 'buyer' | 'seller' | null }) {
   router.replace(user.role === 'buyer' ? '/(buyer)/(tabs)' : '/(seller)/(tabs)');
 }
 
+function mapFirebaseError(error: unknown): string {
+  const code =
+    typeof error === 'object' && error && 'code' in error
+      ? String((error as { code?: string }).code || '')
+      : '';
+
+  switch (code) {
+    case 'auth/invalid-phone-number':
+      return 'Enter a valid mobile number.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Please try again later.';
+    case 'auth/invalid-verification-code':
+      return 'Invalid OTP. Please check the code and try again.';
+    case 'auth/session-expired':
+      return 'OTP expired. Request a new code.';
+    case 'auth/missing-client-identifier':
+    case 'auth/app-not-authorized':
+      return 'Phone auth is not configured for this app build. Add SHA keys in Firebase and rebuild.';
+    default:
+      return error instanceof Error ? error.message : 'Something went wrong';
+  }
+}
+
 export default function SignInScreen() {
-  const { signIn, token, user } = useAuth();
+  const { signInWithPhone, token, user } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signin');
-  const [step, setStep] = useState<Step>('email');
-  const [email, setEmail] = useState('');
+  const [step, setStep] = useState<Step>('phone');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [e164Phone, setE164Phone] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
+  const confirmationRef = useRef<PhoneConfirmation | null>(null);
 
   useEffect(() => {
     if (token && user) {
@@ -49,14 +79,22 @@ export default function SignInScreen() {
   async function handleSendOtp() {
     setError('');
     setInfo('');
+
+    const normalized = toE164Phone(phoneInput);
+    if (!normalized) {
+      setError('Enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await sendOtp(email.trim().toLowerCase(), mode);
+      confirmationRef.current = await sendFirebasePhoneOtp(normalized);
+      setE164Phone(normalized);
       setStep('otp');
-      setInfo('We sent a 6-digit code to your email.');
+      setInfo('We sent a 6-digit code to your phone.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send OTP');
+      setError(mapFirebaseError(err));
     } finally {
       setLoading(false);
     }
@@ -65,19 +103,36 @@ export default function SignInScreen() {
   async function handleVerifyOtp() {
     setError('');
     setInfo('');
+
+    if (!confirmationRef.current) {
+      setError('Request a new OTP and try again.');
+      setStep('phone');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const signedInUser = await signIn(email.trim().toLowerCase(), otp.trim(), mode);
+      const idToken = await confirmFirebasePhoneOtp(confirmationRef.current, otp.trim());
+      const signedInUser = await signInWithPhone(idToken, mode);
       navigateAfterAuth(signedInUser);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to verify OTP');
+      setError(mapFirebaseError(err));
     } finally {
       setLoading(false);
     }
   }
 
+  function resetToPhoneStep() {
+    setStep('phone');
+    setOtp('');
+    setError('');
+    setInfo('');
+    confirmationRef.current = null;
+  }
+
   const isSignUp = mode === 'signup';
+  const phoneReady = Boolean(toE164Phone(phoneInput));
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -94,10 +149,7 @@ export default function SignInScreen() {
                 style={[styles.tab, mode === 'signin' && styles.tabActive]}
                 onPress={() => {
                   setMode('signin');
-                  setStep('email');
-                  setOtp('');
-                  setError('');
-                  setInfo('');
+                  resetToPhoneStep();
                 }}
               >
                 <Text style={[styles.tabText, mode === 'signin' && styles.tabTextActive]}>
@@ -108,10 +160,7 @@ export default function SignInScreen() {
                 style={[styles.tab, mode === 'signup' && styles.tabActive]}
                 onPress={() => {
                   setMode('signup');
-                  setStep('email');
-                  setOtp('');
-                  setError('');
-                  setInfo('');
+                  resetToPhoneStep();
                 }}
               >
                 <Text style={[styles.tabText, mode === 'signup' && styles.tabTextActive]}>
@@ -123,23 +172,31 @@ export default function SignInScreen() {
             <Text style={styles.title}>{isSignUp ? 'Create your account' : 'Welcome back'}</Text>
             <Text style={styles.subtitle}>
               {isSignUp
-                ? 'Join Surplus to buy, sell, and recover industrial value.'
-                : 'Sign in to continue to your Surplus account.'}
+                ? 'Join Surplus with your mobile number to buy, sell, and recover industrial value.'
+                : 'Sign in with your mobile number to continue to Surplus.'}
             </Text>
 
-            {step === 'email' ? (
+            {step === 'phone' ? (
               <View style={styles.form}>
-                <Text style={styles.label}>Email address</Text>
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@company.com"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                />
+                <Text style={styles.label}>Mobile number</Text>
+                <View style={styles.phoneRow}>
+                  <View style={styles.countryCode}>
+                    <Text style={styles.countryCodeText}>+91</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.phoneInput]}
+                    value={phoneInput}
+                    onChangeText={(value) =>
+                      setPhoneInput(value.replace(/\D/g, '').slice(0, 10))
+                    }
+                    placeholder="98765 43210"
+                    placeholderTextColor={colors.muted}
+                    keyboardType="phone-pad"
+                    autoComplete="tel"
+                    textContentType="telephoneNumber"
+                    maxLength={10}
+                  />
+                </View>
 
                 {error ? <Text style={styles.error}>{error}</Text> : null}
                 {info ? <Text style={styles.info}>{info}</Text> : null}
@@ -147,13 +204,13 @@ export default function SignInScreen() {
                 <Pressable
                   style={[styles.button, loading && styles.buttonDisabled]}
                   onPress={handleSendOtp}
-                  disabled={loading || !email.trim()}
+                  disabled={loading || !phoneReady}
                 >
                   {loading ? (
                     <ActivityIndicator color={colors.white} />
                   ) : (
                     <Text style={styles.buttonText}>
-                      {isSignUp ? 'Send verification code' : 'Continue with email'}
+                      {isSignUp ? 'Send verification code' : 'Continue with phone'}
                     </Text>
                   )}
                 </Pressable>
@@ -161,7 +218,8 @@ export default function SignInScreen() {
             ) : (
               <View style={styles.form}>
                 <Text style={styles.hint}>
-                  Code sent to <Text style={styles.hintStrong}>{email}</Text>
+                  Code sent to{' '}
+                  <Text style={styles.hintStrong}>{formatPhoneForDisplay(e164Phone)}</Text>
                 </Text>
 
                 <Text style={styles.label}>Verification code</Text>
@@ -192,15 +250,8 @@ export default function SignInScreen() {
                   )}
                 </Pressable>
 
-                <Pressable
-                  onPress={() => {
-                    setStep('email');
-                    setOtp('');
-                    setError('');
-                    setInfo('');
-                  }}
-                >
-                  <Text style={styles.link}>Use a different email</Text>
+                <Pressable onPress={resetToPhoneStep}>
+                  <Text style={styles.link}>Use a different number</Text>
                 </Pressable>
               </View>
             )}
@@ -211,10 +262,7 @@ export default function SignInScreen() {
                 style={styles.link}
                 onPress={() => {
                   setMode(isSignUp ? 'signin' : 'signup');
-                  setStep('email');
-                  setOtp('');
-                  setError('');
-                  setInfo('');
+                  resetToPhoneStep();
                 }}
               >
                 {isSignUp ? 'Sign in' : 'Create an account'}
@@ -293,6 +341,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 13,
   },
+  phoneRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  countryCode: {
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: colors.surfaceMuted,
+  },
+  countryCodeText: {
+    color: colors.textStrong,
+    fontWeight: '700',
+    fontSize: 15,
+  },
   input: {
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -302,6 +368,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textStrong,
     backgroundColor: colors.bg,
+  },
+  phoneInput: {
+    flex: 1,
+    letterSpacing: 1,
   },
   otpInput: {
     textAlign: 'center',

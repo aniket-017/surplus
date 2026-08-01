@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
+import { formatPhoneForDisplay } from '@/src/lib/phone';
 import type { User, UserAddress, UserRole } from '@/src/types/auth';
 
 const DARK_GREEN = '#1F5C38';
@@ -46,6 +47,7 @@ type ProfileScreenProps = {
 export function ProfileScreen({ role }: ProfileScreenProps) {
   const { user, signOut, setRole, updateProfile } = useAuth();
   const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [address, setAddress] = useState<UserAddress>(user?.address || emptyAddress());
   const [editingPersonal, setEditingPersonal] = useState(!isPersonalComplete(user));
   const [editingAddress, setEditingAddress] = useState(!isAddressComplete(user));
@@ -61,18 +63,26 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
 
   useEffect(() => {
     setName(user?.name || '');
+    setEmail(user?.email || '');
     setAddress(user?.address || emptyAddress());
     setEditingPersonal(!isPersonalComplete(user));
     setEditingAddress(!isAddressComplete(user));
   }, [user]);
 
-  const displayName = user?.name || user?.email || 'User';
+  const displayName =
+    user?.name ||
+    (user?.phone ? formatPhoneForDisplay(user.phone) : null) ||
+    user?.email ||
+    'User';
+  const displayContact =
+    (user?.phone ? formatPhoneForDisplay(user.phone) : null) || user?.email || 'No contact added';
   const switchLabel = role === 'buyer' ? 'Switch to Seller' : 'Switch to Buyer';
   const switchSubtitle =
     role === 'buyer' ? 'Start selling surplus items' : 'Browse and buy items';
 
   function resetFormFromUser() {
     setName(user?.name || '');
+    setEmail(user?.email || '');
     setAddress(user?.address || emptyAddress());
   }
 
@@ -88,6 +98,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
 
   function cancelPersonalEdit() {
     setName(user?.name || '');
+    setEmail(user?.email || '');
     if (isPersonalComplete(user)) {
       setEditingPersonal(false);
     }
@@ -108,13 +119,17 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
     try {
       const payload: {
         name?: string;
+        email?: string | null;
         address?: {
           address?: string | null;
           city: string;
           state: string;
           pincode: string;
         };
-      } = { name };
+      } = {
+        name,
+        email: email.trim() || null,
+      };
 
       if (
         address.city.trim() ||
@@ -204,7 +219,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
         )}
         <View style={styles.userInfo}>
           <Text style={styles.userName}>{displayName}</Text>
-          <Text style={styles.userEmail}>{user?.email}</Text>
+          <Text style={styles.userEmail}>{displayContact}</Text>
           <View style={styles.roleBadge}>
             <Ionicons
               name={role === 'seller' ? 'storefront-outline' : 'bag-outline'}
@@ -237,20 +252,55 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
         onCancel={cancelPersonalEdit}
       >
         {editingPersonal ? (
-          <Field label="Full Name">
-            <ScrollIntoView>
-              <TextInput
-                ref={nameInputRef}
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Your name"
-                placeholderTextColor={colors.muted}
-              />
-            </ScrollIntoView>
-          </Field>
+          <>
+            <Field label="Full Name">
+              <ScrollIntoView>
+                <TextInput
+                  ref={nameInputRef}
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Your name"
+                  placeholderTextColor={colors.muted}
+                />
+              </ScrollIntoView>
+            </Field>
+
+            <ViewField
+              label="Mobile number"
+              value={user?.phone ? formatPhoneForDisplay(user.phone) : 'Not linked'}
+              muted={!user?.phone}
+            />
+
+            <Field label="Email (optional)">
+              <ScrollIntoView>
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="you@company.com"
+                  placeholderTextColor={colors.muted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                />
+              </ScrollIntoView>
+            </Field>
+          </>
         ) : (
-          <ViewField label="Full Name" value={name || 'Not added yet'} />
+          <>
+            <ViewField label="Full Name" value={name || 'Not added yet'} />
+            <ViewField
+              label="Mobile number"
+              value={user?.phone ? formatPhoneForDisplay(user.phone) : 'Not linked'}
+              muted={!user?.phone}
+            />
+            <ViewField
+              label="Email"
+              value={email.trim() || 'Not added yet'}
+              muted={!email.trim()}
+            />
+          </>
         )}
       </SectionCard>
 

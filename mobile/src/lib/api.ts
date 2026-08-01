@@ -32,17 +32,10 @@ export async function apiFetch<T>(
 
 export type AuthIntent = 'signin' | 'signup';
 
-export function sendOtp(email: string, intent: AuthIntent = 'signin') {
-  return apiFetch<{ message: string }>('/api/auth/otp/send', {
+export function verifyFirebasePhone(idToken: string, intent: AuthIntent = 'signin') {
+  return apiFetch<{ message: string; token: string; user: User }>('/api/auth/firebase/phone', {
     method: 'POST',
-    body: JSON.stringify({ email, intent }),
-  });
-}
-
-export function verifyOtp(email: string, otp: string, intent: AuthIntent = 'signin') {
-  return apiFetch<{ message: string; token: string; user: User }>('/api/auth/otp/verify', {
-    method: 'POST',
-    body: JSON.stringify({ email, otp, intent }),
+    body: JSON.stringify({ idToken, intent }),
   });
 }
 

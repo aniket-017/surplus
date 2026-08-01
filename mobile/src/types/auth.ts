@@ -9,7 +9,8 @@ export type UserAddress = {
 
 export type User = {
   id: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
   name: string | null;
   avatarUrl: string | null;
   role: UserRole | null;
@@ -19,5 +20,6 @@ export type User = {
 
 export type UpdateProfilePayload = {
   name?: string;
+  email?: string | null;
   address?: UserAddress | null;
 };

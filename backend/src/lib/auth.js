@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 const userSelect = {
   id: true,
   email: true,
+  phone: true,
+  firebaseUid: true,
   name: true,
   avatarUrl: true,
   role: true,
@@ -17,7 +19,8 @@ const userSelect = {
 export function formatUser(user) {
   return {
     id: user.id,
-    email: user.email,
+    email: user.email ?? null,
+    phone: user.phone ?? null,
     name: user.name,
     avatarUrl: user.avatarUrl,
     role: user.role ? user.role.toLowerCase() : null,
@@ -66,7 +69,8 @@ export function signToken(user) {
   return jwt.sign(
     {
       id: user.id,
-      email: user.email,
+      email: user.email ?? null,
+      phone: user.phone ?? null,
       name: user.name,
       role: user.role ? user.role.toLowerCase() : null,
       isSuperAdmin: Boolean(user.isSuperAdmin),

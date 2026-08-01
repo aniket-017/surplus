@@ -8,6 +8,7 @@
     "start": "node src/index.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
+    "db:indexes": "node scripts/ensureSparseUserIndexes.js",
     "db:studio": "prisma studio"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "firebase-admin": "^13.4.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.1",
     "nodemailer": "^7.0.3",

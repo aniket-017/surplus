@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "260875897324",
+    "project_id": "surlpus",
+    "storage_bucket": "surlpus.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:260875897324:android:c2e70a5c2851002ee218c9",
+        "android_client_info": {
+          "package_name": "com.surplus.surplus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCa4I7e0BAENS2rosUMRJ9yGue6J08U5HE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

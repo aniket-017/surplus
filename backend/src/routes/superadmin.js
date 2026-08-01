@@ -85,7 +85,7 @@ if (isOtpAuthEnabled()) {
     }
 
     try {
-      const user = await prisma.user.findUnique({
+      const user = await prisma.user.findFirst({
         where: { email },
         select: { id: true, isSuperAdmin: true, isBanned: true },
       });
@@ -141,7 +141,7 @@ if (isOtpAuthEnabled()) {
     }
 
     try {
-      const user = await prisma.user.findUnique({
+      const user = await prisma.user.findFirst({
         where: { email },
         select: userSelect,
       });
@@ -722,21 +722,35 @@ router.post("/admins", async (req, res) => {
   }
 
   try {
-    const admin = await prisma.user.upsert({
+    const existing = await prisma.user.findFirst({
       where: { email },
-      update: { isSuperAdmin: true },
-      create: {
-        email,
-        isSuperAdmin: true,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        isSuperAdmin: true,
-      },
     });
+
+    const admin = existing
+      ? await prisma.user.update({
+          where: { id: existing.id },
+          data: { isSuperAdmin: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            createdAt: true,
+            isSuperAdmin: true,
+          },
+        })
+      : await prisma.user.create({
+          data: {
+            email,
+            isSuperAdmin: true,
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            createdAt: true,
+            isSuperAdmin: true,
+          },
+        });
 
     res.status(201).json({ admin });
   } catch (error) {

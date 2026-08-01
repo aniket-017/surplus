@@ -18,6 +18,7 @@ export async function requireAuth(req, res, next) {
       select: {
         id: true,
         email: true,
+        phone: true,
         name: true,
         role: true,
         isSuperAdmin: true,
@@ -38,6 +39,7 @@ export async function requireAuth(req, res, next) {
     req.user = {
       id: user.id,
       email: user.email,
+      phone: user.phone,
       name: user.name,
       role: user.role ? user.role.toLowerCase() : null,
       isSuperAdmin: Boolean(user.isSuperAdmin),

@@ -14,9 +14,10 @@ import {
   logoutRequest,
   updateProfile as updateProfileRequest,
   updateRole,
-  verifyOtp,
+  verifyFirebasePhone,
 } from '@/src/lib/api';
 import type { AuthIntent } from '@/src/lib/api';
+import { signOutFirebaseAuth } from '@/src/lib/firebaseAuth';
 import { unregisterPushToken } from '@/src/lib/conversationsApi';
 import { clearStoredPushToken, loadStoredPushToken } from '@/src/lib/pushTokenStorage';
 import type { UpdateProfilePayload, User, UserRole } from '@/src/types/auth';
@@ -27,7 +28,7 @@ type AuthContextValue = {
   user: User | null;
   token: string | null;
   loading: boolean;
-  signIn: (email: string, otp: string, intent?: AuthIntent) => Promise<User>;
+  signInWithPhone: (idToken: string, intent?: AuthIntent) => Promise<User>;
   signOut: () => Promise<void>;
   setRole: (role: UserRole) => Promise<User>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<User>;
@@ -85,18 +86,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
-  const signIn = useCallback(async (email: string, otp: string, intent: AuthIntent = 'signin') => {
-    const data = await verifyOtp(email, otp, intent);
+  const signInWithPhone = useCallback(
+    async (idToken: string, intent: AuthIntent = 'signin') => {
+      const data = await verifyFirebasePhone(idToken, intent);
 
-    if (!data.user) {
-      throw new Error('Sign-in failed. Please try again.');
-    }
+      if (!data.user) {
+        throw new Error('Sign-in failed. Please try again.');
+      }
 
-    await saveToken(data.token);
-    setToken(data.token);
-    setUser(data.user);
-    return data.user;
-  }, []);
+      await saveToken(data.token);
+      setToken(data.token);
+      setUser(data.user);
+      return data.user;
+    },
+    [],
+  );
 
   const signOut = useCallback(async () => {
     if (token) {
@@ -114,6 +118,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         // Ignore logout API errors and clear local session anyway.
       }
+    }
+
+    try {
+      await signOutFirebaseAuth();
+    } catch {
+      // Ignore Firebase sign-out errors.
     }
 
     await clearStoredPushToken();
@@ -153,13 +163,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       token,
       loading,
-      signIn,
+      signInWithPhone,
       signOut,
       setRole,
       updateProfile,
       refreshUser,
     }),
-    [user, token, loading, signIn, signOut, setRole, updateProfile, refreshUser],
+    [user, token, loading, signInWithPhone, signOut, setRole, updateProfile, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

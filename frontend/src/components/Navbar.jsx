@@ -58,9 +58,11 @@ export default function Navbar() {
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt="" className="nav-user-avatar" />
                 ) : (
-                  <span className="nav-user-initial">{user.email[0].toUpperCase()}</span>
+                  <span className="nav-user-initial">
+                    {(user.name || user.email || user.phone || '?')[0].toUpperCase()}
+                  </span>
                 )}
-                <span className="nav-user-email">{user.name || user.email}</span>
+                <span className="nav-user-email">{user.name || user.email || user.phone}</span>
               </span>
               <button type="button" className="btn btn-outline" onClick={logout}>
                 Sign Out

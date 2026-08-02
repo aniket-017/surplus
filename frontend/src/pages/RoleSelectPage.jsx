@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import surplusLogo from '../assets/logo/surplus.png'
 
@@ -26,7 +26,10 @@ export default function RoleSelectPage() {
   return (
     <div className="role-select-page">
       <div className="role-select-shell">
-        <img src={surplusLogo} alt="Surplus" style={{ height: 40 }} />
+        <Link to="/">
+          <img src={surplusLogo} alt="Surplus" style={{ height: 40 }} />
+        </Link>
+        <p className="auth-step-badge">Step 2 of 2</p>
         <h1>How will you use Surplus?</h1>
         <p>Choose your role to get started. You can switch anytime from your profile.</p>
 

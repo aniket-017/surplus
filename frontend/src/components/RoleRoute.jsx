@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getPostAuthPath } from '../lib/authRedirect'
+import { getPostAuthPath, needsProfile } from '../lib/authRedirect'
 
 export default function RoleRoute({ role, children }) {
   const { user, loading } = useAuth()
@@ -15,6 +15,17 @@ export default function RoleRoute({ role, children }) {
 
   if (!user) {
     return <Navigate to="/signin" replace />
+  }
+
+  if (needsProfile(user) && role !== 'profile') {
+    return <Navigate to="/onboarding/profile" replace />
+  }
+
+  if (role === 'profile') {
+    if (!needsProfile(user)) {
+      return <Navigate to={getPostAuthPath(user)} replace />
+    }
+    return children
   }
 
   if (role === 'none') {

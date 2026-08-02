@@ -10,6 +10,7 @@ import AuthPage from './pages/AuthPage'
 import LandingPage from './pages/LandingPage'
 import ProfilePage from './pages/ProfilePage'
 import RoleSelectPage from './pages/RoleSelectPage'
+import OnboardingProfilePage from './pages/OnboardingProfilePage'
 import SuperLoginPage from './pages/SuperLoginPage'
 import ChatThreadPage from './pages/ChatThreadPage'
 import MessagesPage from './pages/MessagesPage'
@@ -62,6 +63,17 @@ export default function App() {
             <Route path="products" element={<ProductsPage />} />
             <Route path="admins" element={<AdminsPage />} />
           </Route>
+
+          <Route
+            path="/onboarding/profile"
+            element={
+              <ProtectedRoute>
+                <RoleRoute role="profile">
+                  <OnboardingProfilePage />
+                </RoleRoute>
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/onboarding/role"

@@ -2138,6 +2138,11 @@
   line-height: 1.5;
 }
 
+.role-select-shell .auth-step-badge {
+  margin-top: 1.25rem;
+  margin-bottom: 0;
+}
+
 .role-card {
   background: var(--surface);
   border: 1px solid var(--border);

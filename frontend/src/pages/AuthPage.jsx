@@ -1,28 +1,35 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import surplusLogo from '../assets/logo/surplus.png'
 import { useAuth } from '../context/AuthContext'
-import { getAuthMethods, sendOtp, verifyOtp } from '../lib/api'
+import { getAuthMethods, verifyFirebasePhone } from '../lib/api'
 import { getPostAuthPath } from '../lib/authRedirect'
+import {
+  confirmFirebasePhoneOtp,
+  mapFirebaseAuthError,
+  preparePhoneAuth,
+  sendFirebasePhoneOtp,
+} from '../lib/firebaseAuth'
+import { formatPhoneForDisplay, toE164Phone } from '../lib/phone'
 
 export default function AuthPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, setUser } = useAuth()
 
-  const initialMode = location.pathname === '/signup' ? 'signup' : 'signin'
-  const [mode, setMode] = useState(initialMode)
-  const [step, setStep] = useState('email')
-  const [email, setEmail] = useState('')
+  const [step, setStep] = useState('phone') // 'phone' | 'otp'
+  const [phoneInput, setPhoneInput] = useState('')
+  const [e164Phone, setE164Phone] = useState('')
   const [otp, setOtp] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
-  const [methods, setMethods] = useState({ google: false, otp: false })
+  const [phoneConfigured, setPhoneConfigured] = useState(false)
+  const [phoneReady, setPhoneReady] = useState(false)
+  const confirmationRef = useRef(null)
+  const completingRef = useRef(false)
 
-  useEffect(() => {
-    setMode(location.pathname === '/signup' ? 'signup' : 'signin')
-  }, [location.pathname])
+  const phoneEnabled = phoneConfigured && phoneReady
 
   useEffect(() => {
     if (location.state?.error) {
@@ -38,55 +45,130 @@ export default function AuthPage() {
   }, [user, navigate])
 
   useEffect(() => {
-    getAuthMethods()
-      .then(setMethods)
-      .catch(() => setError('Unable to load sign-in options'))
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const next = await getAuthMethods()
+        if (cancelled) return
+
+        const phone = Boolean(next.phone)
+        setPhoneConfigured(phone)
+
+        if (!phone) {
+          setError(
+            'Phone authentication is not available. Set FIREBASE_* Admin and FIREBASE_WEB_* in backend/.env.',
+          )
+          return
+        }
+
+        await preparePhoneAuth()
+        if (cancelled) return
+        setPhoneReady(true)
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Unable to load sign-in options')
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  async function handleSendOtp(event) {
-    event.preventDefault()
-    setError('')
-    setInfo('')
-    setLoading(true)
-
-    try {
-      await sendOtp(email.trim().toLowerCase(), mode)
-      setStep('otp')
-      setInfo('We sent a 6-digit code to your email.')
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+  async function completeWithIdToken(idToken) {
+    if (completingRef.current) {
+      return
     }
-  }
 
-  async function handleVerifyOtp(event) {
-    event.preventDefault()
-    setError('')
-    setInfo('')
+    completingRef.current = true
     setLoading(true)
+    setError('')
+    setInfo('Verified. Signing you in…')
 
     try {
-      const data = await verifyOtp(email.trim().toLowerCase(), otp.trim(), mode)
+      const data = await verifyFirebasePhone(idToken)
       setUser(data.user)
       navigate(getPostAuthPath(data.user), { replace: true })
     } catch (err) {
       setError(err.message)
+      completingRef.current = false
     } finally {
       setLoading(false)
     }
   }
 
-  function switchMode(nextMode) {
-    setMode(nextMode)
-    setStep('email')
+  async function handleSendPhoneOtp(event) {
+    event.preventDefault()
+    setError('')
+    setInfo('')
+    completingRef.current = false
+
+    if (!phoneEnabled) {
+      setError(
+        'Phone sign-in is not configured. Add FIREBASE_WEB_* values to backend/.env.',
+      )
+      return
+    }
+
+    const normalized = toE164Phone(phoneInput)
+    if (!normalized) {
+      setError('Enter a valid 10-digit Indian mobile number.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      confirmationRef.current = await sendFirebasePhoneOtp(normalized)
+      setE164Phone(normalized)
+      setStep('otp')
+      setOtp('')
+      setInfo('We sent a 6-digit code to your phone.')
+    } catch (err) {
+      setError(mapFirebaseAuthError(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleVerifyPhoneOtp(event) {
+    event.preventDefault()
+    setError('')
+    setInfo('')
+
+    const code = otp.trim()
+    if (!/^\d{6}$/.test(code)) {
+      setError('Enter the 6-digit verification code.')
+      return
+    }
+
+    if (!confirmationRef.current) {
+      setError('Request a new OTP and try again.')
+      setStep('phone')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const idToken = await confirmFirebasePhoneOtp(confirmationRef.current, code)
+      await completeWithIdToken(idToken)
+    } catch (err) {
+      setError(mapFirebaseAuthError(err))
+      setLoading(false)
+    }
+  }
+
+  function resetToPhoneStep() {
+    setStep('phone')
     setOtp('')
     setError('')
     setInfo('')
-    navigate(nextMode === 'signup' ? '/signup' : '/signin', { replace: true })
+    confirmationRef.current = null
+    completingRef.current = false
   }
-
-  const isSignUp = mode === 'signup'
 
   return (
     <div className="auth-page">
@@ -96,77 +178,59 @@ export default function AuthPage() {
         </Link>
 
         <div className="auth-card">
-          <div className="auth-tabs">
-            <button
-              type="button"
-              className={`auth-tab ${mode === 'signin' ? 'active' : ''}`}
-              onClick={() => switchMode('signin')}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              className={`auth-tab ${mode === 'signup' ? 'active' : ''}`}
-              onClick={() => switchMode('signup')}
-            >
-              Sign Up
-            </button>
-          </div>
-
           <div className="auth-header">
-            <h1>{isSignUp ? 'Create your account' : 'Welcome back'}</h1>
+            <h1>{step === 'otp' ? 'Enter verification code' : 'Welcome to Surplus'}</h1>
             <p>
-              {isSignUp
-                ? 'Join Surplus to buy, sell, and recover industrial value.'
-                : 'Sign in to continue to your Surplus account.'}
+              {step === 'otp'
+                ? `Code sent to ${formatPhoneForDisplay(e164Phone)}`
+                : 'Enter your mobile number to continue. We’ll send a one-time code to verify it’s you.'}
             </p>
           </div>
 
-          {methods.google && (
-            <a href="/api/auth/google" className="btn btn-outline auth-google-btn">
-              <GoogleIcon />
-              Continue with Google
-            </a>
-          )}
-
-          {methods.google && methods.otp && <div className="auth-divider">or</div>}
-
-          {methods.otp && step === 'email' && (
-            <form className="auth-form" onSubmit={handleSendOtp}>
-              <label className="auth-label" htmlFor="email">
-                Email address
+          {step === 'phone' && (
+            <form className="auth-form" onSubmit={handleSendPhoneOtp}>
+              <label className="auth-label" htmlFor="phone">
+                Mobile number
               </label>
-              <input
-                id="email"
-                type="email"
-                className="auth-input"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-                autoComplete="email"
-              />
+              <div className="auth-phone-field">
+                <span className="auth-country-code">+91</span>
+                <span className="auth-phone-divider" aria-hidden="true" />
+                <input
+                  id="phone"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  className="auth-input auth-phone-input"
+                  placeholder="98765 43210"
+                  value={phoneInput}
+                  onChange={(event) =>
+                    setPhoneInput(event.target.value.replace(/\D/g, '').slice(0, 10))
+                  }
+                  required
+                  maxLength={10}
+                />
+              </div>
 
               {error && <p className="auth-error">{error}</p>}
               {info && <p className="auth-info">{info}</p>}
 
-              <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
-                {loading ? 'Sending...' : isSignUp ? 'Send verification code' : 'Continue with email'}
+              <button
+                type="submit"
+                className="btn btn-primary auth-submit"
+                disabled={loading || !phoneEnabled || phoneInput.length < 10}
+              >
+                {loading ? 'Sending...' : 'Continue'}
               </button>
             </form>
           )}
 
-          {methods.otp && step === 'otp' && (
-            <form className="auth-form" onSubmit={handleVerifyOtp}>
-              <p className="auth-email-hint">
-                Code sent to <strong>{email}</strong>
-              </p>
-
-              <label className="auth-label" htmlFor="otp">
+          {step === 'otp' && (
+            <form className="auth-form" onSubmit={handleVerifyPhoneOtp}>
+              <label className="auth-label" htmlFor="phone-otp">
                 Verification code
               </label>
               <input
-                id="otp"
+                id="phone-otp"
                 type="text"
                 inputMode="numeric"
                 pattern="\d{6}"
@@ -183,70 +247,18 @@ export default function AuthPage() {
               {info && <p className="auth-info">{info}</p>}
 
               <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
-                {loading ? 'Verifying...' : isSignUp ? 'Create account' : 'Sign in'}
+                {loading ? 'Verifying...' : 'Continue'}
               </button>
 
-              <button
-                type="button"
-                className="auth-link-btn"
-                onClick={() => {
-                  setStep('email')
-                  setOtp('')
-                  setError('')
-                  setInfo('')
-                }}
-              >
-                Use a different email
+              <button type="button" className="auth-link-btn" onClick={resetToPhoneStep}>
+                Use a different number
               </button>
             </form>
           )}
-
-          {!methods.google && !methods.otp && (
-            <p className="auth-error">No sign-in methods are available right now.</p>
-          )}
-
-          <p className="auth-switch">
-            {isSignUp ? (
-              <>
-                Already have an account?{' '}
-                <button type="button" className="auth-link-btn" onClick={() => switchMode('signin')}>
-                  Sign in
-                </button>
-              </>
-            ) : (
-              <>
-                New to Surplus?{' '}
-                <button type="button" className="auth-link-btn" onClick={() => switchMode('signup')}>
-                  Create an account
-                </button>
-              </>
-            )}
-          </p>
         </div>
       </div>
-    </div>
-  )
-}
 
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-      />
-    </svg>
+      <div id="recaptcha-container" />
+    </div>
   )
 }

@@ -67,16 +67,11 @@ export default function Navbar() {
               </button>
             </>
           ) : (
-            <>
-              <Link to="/signin" className="btn btn-outline">
-                Sign In
-              </Link>
-              <Link to="/signup" className="btn btn-primary">
-                Sign Up
-              </Link>
-            </>
+            <Link to="/signin" className="btn btn-primary">
+              Continue with mobile
+            </Link>
           )}
-          <a href="#" className="btn btn-primary nav-app-btn">
+          <a href="#" className="btn btn-outline nav-app-btn">
             Get the App ↗
           </a>
         </div>
@@ -132,16 +127,11 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <>
-                <Link to="/signin" className="btn btn-outline btn-block" onClick={closeMenu}>
-                  Sign In
-                </Link>
-                <Link to="/signup" className="btn btn-primary btn-block" onClick={closeMenu}>
-                  Sign Up
-                </Link>
-              </>
+              <Link to="/signin" className="btn btn-primary btn-block" onClick={closeMenu}>
+                Continue with mobile
+              </Link>
             )}
-            <a href="#" className="btn btn-primary btn-block" onClick={closeMenu}>
+            <a href="#" className="btn btn-outline btn-block" onClick={closeMenu}>
               Get the App ↗
             </a>
           </div>

@@ -6,7 +6,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import passport, { configurePassport } from "./config/passport.js";
-import { isGoogleAuthEnabled, isOtpAuthEnabled } from "./config/auth.js";
+import { isGoogleAuthEnabled, isOtpAuthEnabled, isPhoneAuthEnabled } from "./config/auth.js";
 import { isFirebaseAuthConfigured } from "./lib/firebaseAdmin.js";
 import { verifySmtpConnection } from "./lib/mail.js";
 import authRoutes from "./routes/auth.js";
@@ -68,10 +68,10 @@ for (const key of requiredEnv) {
   }
 }
 
-if (!isGoogleAuthEnabled() && !isOtpAuthEnabled()) {
+if (!isGoogleAuthEnabled() && !isOtpAuthEnabled() && !isPhoneAuthEnabled()) {
   console.error(
-    "Configure either Google OAuth (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET) " +
-      "or SMTP email OTP (SMTP_MAIL, SMTP_PASSWORD, SMTP_HOST, SMTP_PORT)",
+    "Configure at least one auth method: Google OAuth, SMTP email OTP, " +
+      "or Firebase phone auth (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY)",
   );
   process.exit(1);
 }
@@ -147,6 +147,7 @@ app.get("/api/health", (_req, res) => {
     auth: {
       google: isGoogleAuthEnabled(),
       otp: isOtpAuthEnabled(),
+      phone: isPhoneAuthEnabled(),
     },
   });
 });
@@ -196,7 +197,11 @@ app.use((err, req, res, _next) => {
 });
 
 app.listen(PORT, () => {
-  const methods = [isGoogleAuthEnabled() && "Google", isOtpAuthEnabled() && "Email OTP"].filter(Boolean);
+  const methods = [
+    isGoogleAuthEnabled() && "Google",
+    isOtpAuthEnabled() && "Email OTP",
+    isPhoneAuthEnabled() && "Phone OTP",
+  ].filter(Boolean);
 
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Auth methods: ${methods.join(", ")}`);

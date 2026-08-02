@@ -25,6 +25,17 @@ export function getAuthMethods() {
   return apiFetch('/api/auth/methods')
 }
 
+export function getFirebaseWebConfig() {
+  return apiFetch('/api/auth/firebase-config')
+}
+
+export function verifyFirebasePhone(idToken) {
+  return apiFetch('/api/auth/firebase/phone', {
+    method: 'POST',
+    body: JSON.stringify({ idToken }),
+  })
+}
+
 export function sendOtp(email, intent = 'signin') {
   return apiFetch('/api/auth/otp/send', {
     method: 'POST',

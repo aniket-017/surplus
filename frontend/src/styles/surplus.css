@@ -1252,6 +1252,58 @@ footer {
   box-shadow: 0 0 0 3px var(--glow);
 }
 
+.auth-phone-field {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-phone-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--glow);
+}
+
+.auth-country-code {
+  flex-shrink: 0;
+  padding: 12px 0 12px 14px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.auth-phone-divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 10px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.auth-phone-input {
+  border: none !important;
+  box-shadow: none !important;
+  padding-left: 0;
+  border-radius: 0;
+}
+
+.auth-phone-input:focus {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.auth-alt-method {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 16px;
+}
+
 .auth-otp-input {
   letter-spacing: 0.35em;
   text-align: center;

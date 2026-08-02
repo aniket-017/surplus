@@ -1,6 +1,6 @@
 import { Router } from "express";
 import passport from "../config/passport.js";
-import { isGoogleAuthEnabled, isOtpAuthEnabled, getAuthMethods } from "../config/auth.js";
+import { isGoogleAuthEnabled, isOtpAuthEnabled, getAuthMethods, getFirebaseWebConfig } from "../config/auth.js";
 import { prisma } from "../lib/prisma.js";
 import { withPrismaRetry } from "../lib/prismaRetry.js";
 import {
@@ -51,6 +51,17 @@ async function findUserByPhoneOrFirebaseUid(phone, firebaseUid) {
 
 router.get("/methods", (_req, res) => {
   res.json(getAuthMethods());
+});
+
+router.get("/firebase-config", (_req, res) => {
+  const config = getFirebaseWebConfig();
+  if (!config) {
+    return res.status(503).json({
+      error:
+        "Firebase web config is missing. Set FIREBASE_WEB_API_KEY, FIREBASE_WEB_AUTH_DOMAIN, FIREBASE_WEB_APP_ID (and FIREBASE_PROJECT_ID) in backend/.env.",
+    });
+  }
+  res.json(config);
 });
 
 if (isGoogleAuthEnabled()) {

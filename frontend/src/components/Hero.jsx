@@ -1,4 +1,4 @@
-import { heroStats, heroListings, chartBars } from '../data/landingData'
+import { heroListings, chartBars } from '../data/landingData'
 import { PLAY_STORE_URL } from '../constants/links'
 
 export default function Hero() {
@@ -32,17 +32,6 @@ export default function Hero() {
             <a href="#how" className="btn btn-ghost">
               See How It Works
             </a>
-          </div>
-          <div className="hero-stats">
-            {heroStats.map((stat) => (
-              <div key={stat.label} className="stat-item">
-                <div className="stat-num">
-                  {stat.value}
-                  <span>{stat.suffix}</span>
-                </div>
-                <div className="stat-label">{stat.label}</div>
-              </div>
-            ))}
           </div>
         </div>
 

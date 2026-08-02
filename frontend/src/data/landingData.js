@@ -1,9 +1,3 @@
-export const heroStats = [
-  { value: '12K', suffix: '+', label: 'Active Listings' },
-  { value: '₹480', suffix: 'Cr', label: 'Recovered Value' },
-  { value: '3.2K', suffix: '+', label: 'Verified Buyers' },
-]
-
 export const heroListings = [
   {
     icon: '⚙️',

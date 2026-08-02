@@ -74,7 +74,7 @@ export default function OnboardingScreen() {
     try {
       const updated = await updateProfile({
         name: trimmedName,
-        email: trimmedEmail || null,
+        ...(trimmedEmail ? { email: trimmedEmail } : {}),
       });
 
       if (updated.role) {

@@ -362,11 +362,14 @@ router.patch("/profile", requireAuth, async (req, res) => {
     if (req.body.email !== undefined) {
       const emailRaw = String(req.body.email || "").trim().toLowerCase();
 
-      if (!emailRaw) {
-        updateData.email = null;
-      } else if (!isValidEmail(emailRaw)) {
-        return res.status(400).json({ error: "Valid email is required" });
-      } else {
+      // Blank email means "leave unchanged". Do not write null — MongoDB
+      // unique indexes (even sparse ones) treat null as a real value, so
+      // only one user could otherwise have a missing email.
+      if (emailRaw) {
+        if (!isValidEmail(emailRaw)) {
+          return res.status(400).json({ error: "Valid email is required" });
+        }
+
         const existingEmailUser = await prisma.user.findFirst({
           where: { email: emailRaw },
           select: { id: true },

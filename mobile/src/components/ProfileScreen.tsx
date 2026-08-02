@@ -118,6 +118,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
     setMessage('');
 
     try {
+      const trimmedEmail = email.trim();
       const payload: {
         name?: string;
         email?: string | null;
@@ -129,7 +130,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
         };
       } = {
         name,
-        email: email.trim() || null,
+        ...(trimmedEmail ? { email: trimmedEmail } : {}),
       };
 
       if (

@@ -1,4 +1,6 @@
 import Reveal from './Reveal'
+import { Link } from 'react-router-dom'
+import { PLAY_STORE_URL } from '../constants/links'
 
 export default function CtaSection() {
   return (
@@ -20,8 +22,8 @@ export default function CtaSection() {
             </p>
           </div>
           <div className="cta-actions">
-            <a
-              href="#"
+            <Link
+              to="/signin"
               className="btn btn-primary"
               style={{
                 width: 200,
@@ -31,15 +33,13 @@ export default function CtaSection() {
               }}
             >
               List for Free →
-            </a>
-            <a href="#" className="store-badge">
-              <span className="store-badge-icon">📱</span>
-              <div>
-                <div className="store-badge-text">Download on the</div>
-                <div className="store-badge-name">App Store</div>
-              </div>
-            </a>
-            <a href="#" className="store-badge">
+            </Link>
+            <a
+              href={PLAY_STORE_URL}
+              className="store-badge"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <span className="store-badge-icon">🤖</span>
               <div>
                 <div className="store-badge-text">Get it on</div>

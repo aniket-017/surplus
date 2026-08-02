@@ -1,4 +1,5 @@
 import { heroStats, heroListings, chartBars } from '../data/landingData'
+import { PLAY_STORE_URL } from '../constants/links'
 
 export default function Hero() {
   return (
@@ -20,7 +21,12 @@ export default function Hero() {
             chemicals, metals, and more. Stop losing money on idle inventory.
           </p>
           <div className="hero-actions">
-            <a href="#" className="btn btn-primary">
+            <a
+              href={PLAY_STORE_URL}
+              className="btn btn-primary"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Download App →
             </a>
             <a href="#how" className="btn btn-ghost">

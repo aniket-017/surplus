@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import surplusLogo from '../assets/logo/surplus.png'
 import { useAuth } from '../context/AuthContext'
 import { getPostAuthPath } from '../lib/authRedirect'
+import { PLAY_STORE_URL } from '../constants/links'
 
 const NAV_LINKS = [
   { href: '#problem', label: 'Problem' },
@@ -73,7 +74,12 @@ export default function Navbar() {
               Continue with mobile
             </Link>
           )}
-          <a href="#" className="btn btn-outline nav-app-btn">
+          <a
+            href={PLAY_STORE_URL}
+            className="btn btn-outline nav-app-btn"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Get the App ↗
           </a>
         </div>
@@ -133,7 +139,13 @@ export default function Navbar() {
                 Continue with mobile
               </Link>
             )}
-            <a href="#" className="btn btn-outline btn-block" onClick={closeMenu}>
+            <a
+              href={PLAY_STORE_URL}
+              className="btn btn-outline btn-block"
+              onClick={closeMenu}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Get the App ↗
             </a>
           </div>

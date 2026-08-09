@@ -53,15 +53,23 @@ export async function sendPushToUser(userId, { title, body, data }) {
       data,
       badge: typeof data?.unreadCount === "number" ? data.unreadCount : undefined,
       channelId: "messages",
+      priority: "high",
+      ttl: 86400,
     }));
+
+    const headers = {
+      Accept: "application/json",
+      "Accept-Encoding": "gzip, deflate",
+      "Content-Type": "application/json",
+    };
+    const expoAccessToken = process.env.EXPO_ACCESS_TOKEN?.trim();
+    if (expoAccessToken) {
+      headers.Authorization = `Bearer ${expoAccessToken}`;
+    }
 
     const response = await fetch(EXPO_PUSH_URL, {
       method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Accept-Encoding": "gzip, deflate",
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(messages),
     });
 

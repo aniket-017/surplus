@@ -79,8 +79,6 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
     (user?.phone ? formatPhoneForDisplay(user.phone) : null) ||
     user?.email ||
     'User';
-  const displayContact =
-    (user?.phone ? formatPhoneForDisplay(user.phone) : null) || user?.email || 'No contact added';
   const switchLabel = role === 'buyer' ? 'Switch to Seller' : 'Switch to Buyer';
   const switchSubtitle =
     role === 'buyer' ? 'Start selling surplus items' : 'Browse and buy items';
@@ -244,7 +242,6 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
         )}
         <View style={styles.userInfo}>
           <Text style={styles.userName}>{displayName}</Text>
-          <Text style={styles.userEmail}>{displayContact}</Text>
           <View style={styles.roleBadge}>
             <Ionicons
               name={role === 'seller' ? 'storefront-outline' : 'bag-outline'}
@@ -266,11 +263,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
       <SectionCard
         icon="person-outline"
         title="Personal Details"
-        subtitle={
-          editingPersonal
-            ? 'Update how your account appears'
-            : 'Your account identity on Surplus'
-        }
+        subtitle={editingPersonal ? 'Update how your account appears' : undefined}
         mode={editingPersonal ? 'edit' : 'view'}
         canCancel={isPersonalComplete(user)}
         onEdit={enterPersonalEdit}
@@ -313,30 +306,27 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
             </Field>
           </>
         ) : (
-          <>
-            <ViewField label="Full Name" value={name || 'Not added yet'} />
-            <ViewField
-              label="Mobile number"
+          <View style={styles.detailList}>
+            <DetailRow label="Name" value={name || 'Not added yet'} muted={!name.trim()} />
+            <DetailRow
+              label="Mobile"
               value={user?.phone ? formatPhoneForDisplay(user.phone) : 'Not linked'}
               muted={!user?.phone}
             />
-            <ViewField
+            <DetailRow
               label="Email"
               value={email.trim() || 'Not added yet'}
               muted={!email.trim()}
+              isLast
             />
-          </>
+          </View>
         )}
       </SectionCard>
 
       <SectionCard
         icon="location-outline"
         title="Address"
-        subtitle={
-          editingAddress
-            ? 'Used for pickup, delivery and account verification'
-            : 'Your registered location details'
-        }
+        subtitle={editingAddress ? 'Pickup and delivery location' : undefined}
         mode={editingAddress ? 'edit' : 'view'}
         canCancel={isAddressComplete(user)}
         onEdit={enterAddressEdit}
@@ -344,6 +334,23 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
       >
         {editingAddress ? (
           <>
+            <Pressable style={styles.mapButton} onPress={() => setMapPickerVisible(true)}>
+              <View style={styles.mapButtonIcon}>
+                <Ionicons name="map-outline" size={16} color={colors.accent} />
+              </View>
+              <View style={styles.mapButtonTextWrap}>
+                <Text style={styles.mapButtonTitle}>Pick on map</Text>
+                <Text style={styles.mapButtonSubtitle}>
+                  Search or move the map to set location
+                </Text>
+              </View>
+              {typeof address.latitude === 'number' && typeof address.longitude === 'number' ? (
+                <Ionicons name="checkmark-circle" size={18} color={colors.accent} />
+              ) : (
+                <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+              )}
+            </Pressable>
+
             <Field label="Street Address">
               <ScrollIntoView>
                 <TextInput
@@ -351,31 +358,11 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
                   style={styles.input}
                   value={address.address || ''}
                   onChangeText={(text) => updateAddressField('address', text)}
-                  placeholder="Street address (optional)"
+                  placeholder="Street / area (optional)"
                   placeholderTextColor={colors.muted}
                 />
               </ScrollIntoView>
             </Field>
-
-            <Pressable style={styles.mapButton} onPress={() => setMapPickerVisible(true)}>
-              <Ionicons name="map-outline" size={18} color={colors.accent} />
-              <View style={styles.mapButtonTextWrap}>
-                <Text style={styles.mapButtonTitle}>Pick on map</Text>
-                <Text style={styles.mapButtonSubtitle}>
-                  Search and drop a pin to auto-fill address details.
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
-            </Pressable>
-
-            {typeof address.latitude === 'number' && typeof address.longitude === 'number' ? (
-              <View style={styles.coordsPill}>
-                <Ionicons name="locate-outline" size={14} color={DARK_GREEN} />
-                <Text style={styles.coordsText}>
-                  {address.latitude.toFixed(5)}, {address.longitude.toFixed(5)}
-                </Text>
-              </View>
-            ) : null}
 
             <View style={styles.row}>
               <View style={styles.rowItem}>
@@ -423,27 +410,21 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
             </Field>
           </>
         ) : (
-          <>
-            <ViewField
-              label="Street Address"
+          <View style={styles.detailList}>
+            <DetailRow
+              label="Street"
               value={address.address?.trim() || 'Not provided'}
               muted={!address.address?.trim()}
             />
-            <View style={styles.viewRow}>
-              <View style={styles.viewRowItem}>
-                <ViewField label="City" value={address.city || '—'} muted={!address.city} />
-              </View>
-              <View style={styles.viewRowItem}>
-                <ViewField label="State" value={address.state || '—'} muted={!address.state} />
-              </View>
-            </View>
-            <ViewField
+            <DetailRow label="City" value={address.city || '—'} muted={!address.city} />
+            <DetailRow label="State" value={address.state || '—'} muted={!address.state} />
+            <DetailRow
               label="Pincode"
               value={address.pincode || '—'}
               muted={!address.pincode}
-              compact
+              isLast
             />
-          </>
+          </View>
         )}
       </SectionCard>
 
@@ -551,7 +532,7 @@ function SectionCard({
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   mode: 'view' | 'edit';
   canCancel?: boolean;
   onEdit: () => void;
@@ -567,7 +548,7 @@ function SectionCard({
           </View>
           <View style={styles.sectionHeaderText}>
             <Text style={styles.sectionTitle}>{title}</Text>
-            <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+            {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
           </View>
         </View>
         {mode === 'view' ? (
@@ -586,19 +567,41 @@ function SectionCard({
   );
 }
 
-function ViewField({
+function DetailRow({
   label,
   value,
   muted = false,
-  compact = false,
+  isLast = false,
 }: {
   label: string;
   value: string;
   muted?: boolean;
-  compact?: boolean;
+  isLast?: boolean;
 }) {
   return (
-    <View style={[styles.viewField, compact && styles.viewFieldCompact]}>
+    <View style={[styles.detailRow, !isLast && styles.detailRowBorder]}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text
+        style={[styles.detailValue, muted && styles.detailValueMuted]}
+        numberOfLines={1}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function ViewField({
+  label,
+  value,
+  muted = false,
+}: {
+  label: string;
+  value: string;
+  muted?: boolean;
+}) {
+  return (
+    <View style={styles.viewField}>
       <Text style={styles.viewLabel}>{label}</Text>
       <Text style={[styles.viewValue, muted && styles.viewValueMuted]}>{value}</Text>
     </View>
@@ -748,10 +751,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
   },
-  userEmail: {
-    color: colors.muted,
-    fontSize: 13,
-  },
   roleBadge: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
@@ -837,70 +836,89 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sectionBody: {
-    gap: spacing.sm,
+    gap: 10,
+  },
+  detailList: {
+    marginTop: -2,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: 10,
+  },
+  detailRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  detailLabel: {
+    width: 72,
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  detailValue: {
+    flex: 1,
+    color: colors.textStrong,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  detailValueMuted: {
+    color: colors.muted,
+    fontStyle: 'italic',
+    fontWeight: '500',
   },
   viewField: {
     backgroundColor: colors.bgSubtle,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 4,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 3,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  viewFieldCompact: {
-    alignSelf: 'flex-start',
-    minWidth: '48%',
-  },
   viewLabel: {
     color: colors.muted,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
   viewValue: {
     color: colors.textStrong,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    lineHeight: 21,
+    lineHeight: 19,
   },
   viewValueMuted: {
     color: colors.muted,
     fontStyle: 'italic',
     fontWeight: '500',
   },
-  viewRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  viewRowItem: {
-    flex: 1,
-  },
   field: {
-    gap: 6,
+    gap: 4,
   },
   label: {
-    color: colors.textStrong,
-    fontSize: 12,
+    color: colors.muted,
+    fontSize: 11,
     fontWeight: '700',
   },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 14,
     color: colors.textStrong,
     backgroundColor: colors.surface,
   },
   pincodeInput: {
-    maxWidth: '50%',
+    maxWidth: '42%',
   },
   row: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 10,
   },
   rowItem: {
     flex: 1,
@@ -908,13 +926,21 @@ const styles = StyleSheet.create({
   mapButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 10,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    backgroundColor: '#F9FCFA',
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    borderColor: colors.borderAccent,
+    borderRadius: 10,
+    backgroundColor: '#F7FCF8',
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  mapButtonIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   mapButtonTextWrap: {
     flex: 1,
@@ -922,28 +948,13 @@ const styles = StyleSheet.create({
   },
   mapButtonTitle: {
     color: colors.textStrong,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   mapButtonSubtitle: {
     color: colors.muted,
     fontSize: 11,
-    lineHeight: 15,
-  },
-  coordsPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 5,
-    backgroundColor: LIGHT_GREEN,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  coordsText: {
-    color: DARK_GREEN,
-    fontSize: 11,
-    fontWeight: '700',
+    lineHeight: 14,
   },
   success: {
     color: colors.accent,

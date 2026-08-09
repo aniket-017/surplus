@@ -10,7 +10,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { loadCategoryImageManifest } from '@/src/lib/categoryImages';
 import {
   BuyerCategoryCard,
   CATEGORY_GRID_GAP,
@@ -55,7 +54,6 @@ export default function BuyerCategoriesTab() {
 
   useFocusEffect(
     useCallback(() => {
-      loadCategoryImageManifest(true);
       loadCategories();
     }, [loadCategories]),
   );

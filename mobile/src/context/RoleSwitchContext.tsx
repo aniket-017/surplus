@@ -50,9 +50,9 @@ export function RoleSwitchProvider({ children }: { children: ReactNode }) {
         if (nextRole === 'seller') {
           const [, result] = await Promise.all([
             (async () => {
-              await delay(600);
+              await delay(900);
               setStage(2);
-              await delay(700);
+              await delay(1000);
               setStage(3);
             })(),
             apiPromise,
@@ -64,12 +64,14 @@ export function RoleSwitchProvider({ children }: { children: ReactNode }) {
               : new Error('Failed to switch role');
           }
 
+          // Let the listing card settle briefly before the ready beat.
+          await delay(500);
           setStage(4);
-          await delay(800);
+          await delay(1200);
         } else {
           const [, result] = await Promise.all([
             (async () => {
-              await delay(600);
+              await delay(800);
               setStage(2);
             })(),
             apiPromise,
@@ -81,9 +83,9 @@ export function RoleSwitchProvider({ children }: { children: ReactNode }) {
               : new Error('Failed to switch role');
           }
 
-          await delay(400);
-          setStage(3);
           await delay(700);
+          setStage(3);
+          await delay(1100);
         }
 
         router.replace(nextRole === 'buyer' ? '/(buyer)/(tabs)' : '/(seller)/(tabs)');

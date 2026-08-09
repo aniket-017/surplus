@@ -1,11 +1,7 @@
 import { Image, type ImageStyle } from 'expo-image';
-import { useEffect, useState } from 'react';
 import { StyleSheet, type StyleProp } from 'react-native';
 
-import {
-  loadCategoryImageManifest,
-  resolveCategoryImageUrl,
-} from '@/src/lib/categoryImages';
+import { getCategoryImageSource } from '@/src/lib/categoryImages';
 
 type CategoryImageProps = {
   name: string;
@@ -13,38 +9,19 @@ type CategoryImageProps = {
   style?: StyleProp<ImageStyle>;
 };
 
-export function CategoryImage({ name, imageUrl, style }: CategoryImageProps) {
-  const [uri, setUri] = useState(() => resolveCategoryImageUrl(name, imageUrl));
+export function CategoryImage({ name, style }: CategoryImageProps) {
+  const source = getCategoryImageSource(name);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function syncUri() {
-      if (imageUrl) {
-        setUri(resolveCategoryImageUrl(name, imageUrl));
-        return;
-      }
-
-      await loadCategoryImageManifest();
-      if (!cancelled) {
-        setUri(resolveCategoryImageUrl(name));
-      }
-    }
-
-    syncUri();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [name, imageUrl]);
+  if (!source) {
+    return null;
+  }
 
   return (
     <Image
-      source={{ uri }}
+      source={source}
       style={[styles.image, style]}
       contentFit="contain"
-      cachePolicy="none"
-      recyclingKey={uri}
+      recyclingKey={name}
       transition={150}
     />
   );

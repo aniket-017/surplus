@@ -33,7 +33,6 @@ import { colors, spacing } from '@/src/constants/theme';
 import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 import { getSavedListings, toggleSavedListing } from '@/src/lib/conversationsApi';
 import { browseProducts, getProductCategories } from '@/src/lib/productsApi';
-import { loadCategoryImageManifest } from '@/src/lib/categoryImages';
 import type { BrowseSort, ProductCategory, ProductListing } from '@/src/types/product';
 
 const HORIZONTAL_PADDING = spacing.lg;
@@ -189,7 +188,6 @@ export default function BuyerHomeTab() {
 
   useFocusEffect(
     useCallback(() => {
-      loadCategoryImageManifest(true);
       loadFeed();
     }, [loadFeed]),
   );

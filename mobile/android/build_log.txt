@@ -1,0 +1,663 @@
+Starting a Gradle Daemon, 2 busy and 3 incompatible and 3 stopped Daemons could not be reused, use --status for details
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:shared:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:processResources NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:classes UP-TO-DATE
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+> Task :gradle-plugin:shared:classes UP-TO-DATE
+> Task :gradle-plugin:shared:jar UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:jar UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:jar UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:jar UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-module-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-module-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-module-gradle-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
+> Task :expo-module-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :expo-module-gradle-plugin:compileJava NO-SOURCE
+> Task :expo-module-gradle-plugin:classes UP-TO-DATE
+> Task :expo-module-gradle-plugin:jar UP-TO-DATE
+
+> Configure project :
+[32m[ExpoRootProject][0m Using the following versions:
+  - buildTools:  [32m36.0.0[0m
+  - minSdk:      [32m24[0m
+  - compileSdk:  [32m36[0m
+  - targetSdk:   [32m36[0m
+  - ndk:         [32m27.1.12297006[0m
+  - kotlin:      [32m2.1.20[0m
+  - ksp:         [32m2.1.20-2.0.1[0m
+
+> Configure project :expo
+
+Using expo modules
+  - [32mexpo-constants[0m (18.0.13)
+  - [32mexpo-modules-core[0m (3.0.30)
+  - [32mexpo-otp-autofill-consent[0m (0.1.0)
+  - [32mexpo-phone-number-hint[0m (0.4.0)
+  - [33m[?][0m [32mexpo-application[0m (7.0.8)
+  - [33m[?][0m [32mexpo-asset[0m (12.0.13)
+  - [33m[?][0m [32mexpo-camera[0m (17.0.10)
+  - [33m[?][0m [32mexpo-document-picker[0m (14.0.8)
+  - [33m[?][0m [32mexpo-file-system[0m (19.0.23)
+  - [33m[?][0m [32mexpo-font[0m (14.0.12)
+  - [33m[?][0m [32mexpo-image[0m (3.0.11)
+  - [33m[?][0m [32mexpo-image-loader[0m (6.0.0)
+  - [33m[?][0m [32mexpo-image-picker[0m (17.0.11)
+  - [33m[?][0m [32mexpo-keep-awake[0m (15.0.8)
+  - [33m[?][0m [32mexpo-linking[0m (8.0.12)
+  - [33m[?][0m [32mexpo-location[0m (19.0.8)
+  - [33m[?][0m [32mexpo-notifications[0m (0.32.17)
+  - [33m[?][0m [32mexpo-secure-store[0m (15.0.8)
+  - [33m[?][0m [32mexpo-splash-screen[0m (31.0.13)
+  - [33m[?][0m [32mexpo-web-browser[0m (15.0.11)
+
+
+> Configure project :react-native-firebase_app
+:react-native-firebase_app package.json found at C:\Users\9421309441\Desktop\Projects\surplus\mobile\node_modules\@react-native-firebase\app\package.json
+:react-native-firebase_app:firebase.bom using default value: 34.15.0
+:react-native-firebase_app:play.play-services-auth using default value: 21.5.0
+:react-native-firebase_app package.json found at C:\Users\9421309441\Desktop\Projects\surplus\mobile\node_modules\@react-native-firebase\app\package.json
+:react-native-firebase_app:version set from package.json: 26.0.0 (26,0,0 - 26000000)
+:react-native-firebase_app:android.compileSdk using custom value: 36
+:react-native-firebase_app:android.targetSdk using custom value: 36
+:react-native-firebase_app:android.minSdk using custom value: 24
+:react-native-firebase_app:reactNativeAndroidDir C:\Users\9421309441\Desktop\Projects\surplus\mobile\node_modules\react-native
+
+> Configure project :react-native-firebase_auth
+:react-native-firebase_auth package.json found at C:\Users\9421309441\Desktop\Projects\surplus\mobile\node_modules\@react-native-firebase\auth\package.json
+:react-native-firebase_app package.json found at C:\Users\9421309441\Desktop\Projects\surplus\mobile\node_modules\@react-native-firebase\app\package.json
+:react-native-firebase_auth:firebase.bom using default value: 34.15.0
+:react-native-firebase_auth package.json found at C:\Users\9421309441\Desktop\Projects\surplus\mobile\node_modules\@react-native-firebase\auth\package.json
+:react-native-firebase_auth:version set from package.json: 26.0.0 (26,0,0 - 26000000)
+:react-native-firebase_auth:android.compileSdk using custom value: 36
+:react-native-firebase_auth:android.targetSdk using custom value: 36
+:react-native-firebase_auth:android.minSdk using custom value: 24
+:react-native-firebase_auth:reactNativeAndroidDir C:\Users\9421309441\Desktop\Projects\surplus\mobile\node_modules\react-native
+
+> Task :expo-modules-core:preBuild UP-TO-DATE
+> Task :react-native-firebase_app:preBuild UP-TO-DATE
+> Task :react-native-firebase_auth:preBuild UP-TO-DATE
+> Task :expo-otp-autofill-consent:preBuild UP-TO-DATE
+> Task :expo-phone-number-hint:preBuild UP-TO-DATE
+> Task :react-native-maps:preBuild UP-TO-DATE
+> Task :expo-modules-core:preDebugBuild UP-TO-DATE
+> Task :expo-modules-core:writeDebugAarMetadata UP-TO-DATE
+> Task :expo:generatePackagesList UP-TO-DATE
+> Task :expo-otp-autofill-consent:preDebugBuild UP-TO-DATE
+> Task :expo:preBuild UP-TO-DATE
+> Task :expo:preDebugBuild UP-TO-DATE
+> Task :expo:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-safe-area-context:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :expo-otp-autofill-consent:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-screens:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :expo-phone-number-hint:preDebugBuild UP-TO-DATE
+> Task :react-native-firebase_app:preDebugBuild UP-TO-DATE
+> Task :app:generateAutolinkingNewArchitectureFiles UP-TO-DATE
+> Task :react-native-firebase_app:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-firebase_auth:preDebugBuild UP-TO-DATE
+> Task :expo-phone-number-hint:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-maps:preDebugBuild UP-TO-DATE
+> Task :react-native-firebase_auth:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-screens:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-safe-area-context:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-screens:preBuild UP-TO-DATE
+> Task :react-native-safe-area-context:preBuild UP-TO-DATE
+> Task :react-native-safe-area-context:preDebugBuild UP-TO-DATE
+> Task :react-native-screens:preDebugBuild UP-TO-DATE
+> Task :expo:generateDebugResValues UP-TO-DATE
+> Task :react-native-maps:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-screens:writeDebugAarMetadata UP-TO-DATE
+> Task :expo:generateDebugResources UP-TO-DATE
+> Task :react-native-safe-area-context:writeDebugAarMetadata UP-TO-DATE
+> Task :app:generateAutolinkingPackageList UP-TO-DATE
+> Task :app:generateCodegenSchemaFromJavaScript SKIPPED
+> Task :expo-phone-number-hint:generateDebugResValues UP-TO-DATE
+> Task :expo-otp-autofill-consent:generateDebugResValues UP-TO-DATE
+> Task :app:generateCodegenArtifactsFromSchema SKIPPED
+> Task :expo-modules-core:generateDebugResValues UP-TO-DATE
+> Task :app:generateReactNativeEntryPoint UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-phone-number-hint:generateDebugResources UP-TO-DATE
+> Task :expo-otp-autofill-consent:generateDebugResources UP-TO-DATE
+> Task :expo:packageDebugResources UP-TO-DATE
+> Task :expo-modules-core:generateDebugResources UP-TO-DATE
+> Task :react-native-firebase_app:generateDebugResValues UP-TO-DATE
+> Task :app:processDebugGoogleServices UP-TO-DATE
+> Task :react-native-firebase_app:generateDebugResources UP-TO-DATE
+> Task :react-native-firebase_auth:generateDebugResValues UP-TO-DATE
+> Task :react-native-firebase_auth:generateDebugResources UP-TO-DATE
+> Task :expo-otp-autofill-consent:packageDebugResources UP-TO-DATE
+> Task :expo-phone-number-hint:packageDebugResources UP-TO-DATE
+> Task :expo-modules-core:packageDebugResources UP-TO-DATE
+> Task :react-native-maps:generateDebugResValues UP-TO-DATE
+> Task :react-native-safe-area-context:generateDebugResValues UP-TO-DATE
+> Task :react-native-safe-area-context:generateDebugResources UP-TO-DATE
+> Task :react-native-maps:generateDebugResources UP-TO-DATE
+> Task :react-native-screens:generateDebugResValues UP-TO-DATE
+> Task :react-native-firebase_app:packageDebugResources UP-TO-DATE
+> Task :expo:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-firebase_auth:packageDebugResources UP-TO-DATE
+> Task :react-native-maps:packageDebugResources UP-TO-DATE
+> Task :react-native-safe-area-context:packageDebugResources UP-TO-DATE
+> Task :expo-modules-core:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-otp-autofill-consent:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-phone-number-hint:extractDeepLinksDebug UP-TO-DATE
+> Task :expo:processDebugManifest UP-TO-DATE
+> Task :react-native-firebase_app:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-otp-autofill-consent:processDebugManifest UP-TO-DATE
+> Task :expo-modules-core:processDebugManifest UP-TO-DATE
+> Task :react-native-firebase_auth:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-maps:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-screens:generateDebugResources UP-TO-DATE
+> Task :expo-phone-number-hint:processDebugManifest UP-TO-DATE
+> Task :react-native-firebase_app:processDebugManifest UP-TO-DATE
+> Task :react-native-safe-area-context:extractDeepLinksDebug UP-TO-DATE
+> Task :expo:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-firebase_auth:processDebugManifest UP-TO-DATE
+> Task :react-native-maps:processDebugManifest UP-TO-DATE
+> Task :react-native-screens:packageDebugResources UP-TO-DATE
+> Task :expo-modules-core:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-otp-autofill-consent:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-screens:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-safe-area-context:processDebugManifest UP-TO-DATE
+> Task :expo-phone-number-hint:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-screens:processDebugManifest UP-TO-DATE
+> Task :react-native-firebase_app:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-otp-autofill-consent:parseDebugLocalResources UP-TO-DATE
+> Task :expo-phone-number-hint:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-firebase_app:parseDebugLocalResources UP-TO-DATE
+> Task :expo-modules-core:parseDebugLocalResources UP-TO-DATE
+> Task :expo-phone-number-hint:generateDebugRFile UP-TO-DATE
+> Task :expo-otp-autofill-consent:generateDebugRFile UP-TO-DATE
+> Task :expo-modules-core:generateDebugRFile UP-TO-DATE
+> Task :react-native-firebase_app:generateDebugRFile UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-firebase_auth:compileDebugLibraryResources UP-TO-DATE
+> Task :expo:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-safe-area-context:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-firebase_auth:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-screens:compileDebugLibraryResources UP-TO-DATE
+> Task :expo:generateDebugRFile UP-TO-DATE
+> Task :expo:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-screens:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-safe-area-context:generateDebugRFile UP-TO-DATE
+> Task :expo-modules-core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-firebase_auth:generateDebugRFile UP-TO-DATE
+> Task :expo-otp-autofill-consent:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-maps:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-maps:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-maps:generateDebugRFile UP-TO-DATE
+> Task :expo-phone-number-hint:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-modules-core:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-screens:generateDebugRFile UP-TO-DATE
+> Task :react-native-firebase_app:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-otp-autofill-consent:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-firebase_app:javaPreCompileDebug UP-TO-DATE
+> Task :expo-otp-autofill-consent:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-firebase_auth:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-firebase_auth:javaPreCompileDebug UP-TO-DATE
+> Task :expo-phone-number-hint:generateDebugBuildConfig UP-TO-DATE
+> Task :expo:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-safe-area-context:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-phone-number-hint:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-screens:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-safe-area-context:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-screens:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-maps:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-maps:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-reanimated:assertMinimalReactNativeVersionTask
+> Task :react-native-reanimated:assertNewArchitectureEnabledTask SKIPPED
+> Task :react-native-worklets:assertMinimalReactNativeVersionTask
+> Task :react-native-worklets:assertNewArchitectureEnabledTask SKIPPED
+> Task :react-native-worklets:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-worklets:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-worklets:prepareWorkletsHeadersForPrefabs UP-TO-DATE
+> Task :react-native-worklets:preBuild
+> Task :react-native-worklets:preDebugBuild
+> Task :react-native-worklets:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-worklets:generateDebugResValues UP-TO-DATE
+> Task :react-native-worklets:generateDebugResources UP-TO-DATE
+> Task :react-native-worklets:packageDebugResources UP-TO-DATE
+> Task :react-native-worklets:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-worklets:processDebugManifest UP-TO-DATE
+> Task :react-native-worklets:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-worklets:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-worklets:generateDebugRFile UP-TO-DATE
+> Task :react-native-worklets:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-worklets:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-reanimated:assertWorkletsVersionTask
+> Task :react-native-reanimated:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-reanimated:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-reanimated:prepareReanimatedHeadersForPrefabs UP-TO-DATE
+> Task :react-native-reanimated:preBuild
+> Task :react-native-reanimated:preDebugBuild
+> Task :react-native-reanimated:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-reanimated:generateDebugResValues UP-TO-DATE
+> Task :react-native-reanimated:generateDebugResources UP-TO-DATE
+> Task :react-native-reanimated:packageDebugResources UP-TO-DATE
+> Task :react-native-reanimated:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-reanimated:processDebugManifest UP-TO-DATE
+> Task :react-native-reanimated:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-reanimated:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-reanimated:generateDebugRFile UP-TO-DATE
+> Task :react-native-worklets:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-reanimated:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-worklets:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-reanimated:javaPreCompileDebug UP-TO-DATE
+> Task :expo:mergeDebugShaders UP-TO-DATE
+> Task :expo:compileDebugShaders NO-SOURCE
+> Task :expo:generateDebugAssets UP-TO-DATE
+> Task :expo:mergeDebugAssets UP-TO-DATE
+> Task :expo-otp-autofill-consent:mergeDebugShaders UP-TO-DATE
+> Task :react-native-reanimated:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-reanimated:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-phone-number-hint:mergeDebugShaders UP-TO-DATE
+> Task :expo-phone-number-hint:compileDebugShaders NO-SOURCE
+> Task :expo-phone-number-hint:generateDebugAssets UP-TO-DATE
+> Task :expo-phone-number-hint:mergeDebugAssets UP-TO-DATE
+> Task :react-native-firebase_auth:mergeDebugShaders UP-TO-DATE
+> Task :react-native-firebase_auth:compileDebugShaders NO-SOURCE
+> Task :react-native-firebase_auth:generateDebugAssets UP-TO-DATE
+> Task :expo-otp-autofill-consent:compileDebugShaders NO-SOURCE
+> Task :expo-otp-autofill-consent:generateDebugAssets UP-TO-DATE
+> Task :expo-otp-autofill-consent:mergeDebugAssets UP-TO-DATE
+
+> Task :expo-constants:createExpoConfig
+The NODE_ENV environment variable is required but was not specified. Ensure the project is bundled with Expo CLI or NODE_ENV is set. Using only .env.local and .env
+env: load .env
+env: export EXPO_PUBLIC_API_URL EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+
+> Task :react-native-reanimated:mergeDebugShaders UP-TO-DATE
+> Task :react-native-reanimated:compileDebugShaders NO-SOURCE
+> Task :react-native-reanimated:generateDebugAssets UP-TO-DATE
+> Task :react-native-firebase_auth:mergeDebugAssets UP-TO-DATE
+> Task :react-native-worklets:mergeDebugShaders UP-TO-DATE
+> Task :react-native-worklets:compileDebugShaders NO-SOURCE
+> Task :react-native-worklets:generateDebugAssets UP-TO-DATE
+> Task :react-native-worklets:mergeDebugAssets UP-TO-DATE
+> Task :react-native-worklets:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-firebase_auth:processDebugJavaRes NO-SOURCE
+> Task :react-native-worklets:processDebugJavaRes NO-SOURCE
+> Task :react-native-worklets:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-reanimated:mergeDebugAssets UP-TO-DATE
+> Task :react-native-reanimated:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-reanimated:processDebugJavaRes NO-SOURCE
+> Task :react-native-reanimated:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo:mergeDebugNativeLibs NO-SOURCE
+> Task :expo:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-otp-autofill-consent:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-otp-autofill-consent:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-otp-autofill-consent:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-phone-number-hint:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-phone-number-hint:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-phone-number-hint:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-firebase_auth:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-firebase_auth:mergeDebugNativeLibs NO-SOURCE
+> Task :react-native-firebase_auth:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-reanimated:mergeDebugJniLibFolders UP-TO-DATE
+
+> Task :expo-constants:createExpoConfig
+» android: androidStatusBar.backgroundColor: Color conflicts with the splash.backgroundColor
+
+> Task :react-native-firebase_app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-firebase_app:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-firebase_app:mergeDebugShaders UP-TO-DATE
+> Task :react-native-firebase_app:compileDebugShaders NO-SOURCE
+> Task :react-native-firebase_app:generateDebugAssets UP-TO-DATE
+> Task :react-native-firebase_app:mergeDebugAssets UP-TO-DATE
+> Task :react-native-maps:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-maps:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-maps:mergeDebugShaders UP-TO-DATE
+> Task :react-native-maps:compileDebugShaders NO-SOURCE
+> Task :react-native-maps:generateDebugAssets UP-TO-DATE
+> Task :react-native-maps:mergeDebugAssets UP-TO-DATE
+> Task :react-native-maps:bundleLibRuntimeToJarDebug UP-TO-DATE
+
+> Task :react-native-worklets:configureCMakeDebug[arm64-v8a]
+[CXX5304] This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+[CXX5304] This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+
+> Task :react-native-firebase_app:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-firebase_app:processDebugJavaRes NO-SOURCE
+> Task :react-native-maps:processDebugJavaRes NO-SOURCE
+> Task :react-native-firebase_app:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-maps:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-firebase_app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-firebase_app:mergeDebugNativeLibs NO-SOURCE
+> Task :react-native-firebase_app:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-maps:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-maps:mergeDebugNativeLibs NO-SOURCE
+> Task :react-native-maps:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-modules-core:compileDebugKotlin UP-TO-DATE
+> Task :expo-modules-core:javaPreCompileDebug UP-TO-DATE
+> Task :expo-modules-core:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-modules-core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-constants:preBuild
+> Task :app:preBuild
+> Task :app:preDebugBuild
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-constants:preDebugBuild
+> Task :expo-constants:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugKotlin
+> Task :react-native-screens:compileDebugKotlin
+> Task :react-native-firebase_auth:compileDebugJavaWithJavac
+> Task :expo-otp-autofill-consent:compileDebugKotlin
+> Task :expo-phone-number-hint:compileDebugKotlin
+> Task :app:checkDebugAarMetadata
+> Task :expo-constants:generateDebugResValues UP-TO-DATE
+> Task :expo-constants:generateDebugResources UP-TO-DATE
+> Task :expo-constants:packageDebugResources UP-TO-DATE
+> Task :expo-constants:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-constants:processDebugManifest UP-TO-DATE
+> Task :expo-constants:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-constants:parseDebugLocalResources UP-TO-DATE
+> Task :expo-constants:generateDebugRFile UP-TO-DATE
+> Task :expo-constants:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-constants:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugKotlin UP-TO-DATE
+> Task :react-native-safe-area-context:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-modules-core:mergeDebugShaders UP-TO-DATE
+> Task :expo-modules-core:compileDebugShaders NO-SOURCE
+> Task :expo-modules-core:generateDebugAssets UP-TO-DATE
+> Task :expo-modules-core:mergeDebugAssets UP-TO-DATE
+> Task :react-native-safe-area-context:mergeDebugShaders UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugShaders NO-SOURCE
+> Task :react-native-safe-area-context:generateDebugAssets UP-TO-DATE
+> Task :react-native-safe-area-context:mergeDebugAssets UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-modules-core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-modules-core:processDebugJavaRes UP-TO-DATE
+> Task :react-native-firebase_auth:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-firebase_auth:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-safe-area-context:processDebugJavaRes UP-TO-DATE
+> Task :react-native-firebase_auth:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-firebase_auth:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-modules-core:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :react-native-safe-area-context:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-safe-area-context:mergeDebugNativeLibs NO-SOURCE
+> Task :react-native-safe-area-context:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-screens:compileDebugKotlin UP-TO-DATE
+> Task :react-native-screens:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-screens:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-screens:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-screens:mergeDebugShaders UP-TO-DATE
+> Task :react-native-screens:compileDebugShaders NO-SOURCE
+> Task :react-native-screens:generateDebugAssets UP-TO-DATE
+> Task :react-native-screens:mergeDebugAssets UP-TO-DATE
+> Task :react-native-screens:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-screens:processDebugJavaRes UP-TO-DATE
+> Task :react-native-screens:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-constants:compileDebugKotlin UP-TO-DATE
+> Task :expo-constants:javaPreCompileDebug UP-TO-DATE
+> Task :expo-constants:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-constants:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-constants:mergeDebugShaders UP-TO-DATE
+> Task :expo-constants:compileDebugShaders NO-SOURCE
+> Task :expo-constants:generateDebugAssets UP-TO-DATE
+> Task :expo-constants:mergeDebugAssets UP-TO-DATE
+> Task :expo-constants:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-constants:processDebugJavaRes UP-TO-DATE
+> Task :expo-constants:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :expo-constants:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-constants:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-constants:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-modules-core:configureCMakeDebug[arm64-v8a]
+> Task :react-native-screens:configureCMakeDebug[arm64-v8a]
+> Task :react-native-worklets:configureCMakeDebug[armeabi-v7a]
+> Task :react-native-worklets:configureCMakeDebug[x86]
+> Task :react-native-worklets:configureCMakeDebug[x86_64]
+> Task :react-native-worklets:generateJsonModelDebug
+> Task :react-native-worklets:prefabDebugConfigurePackage UP-TO-DATE
+> Task :react-native-reanimated:configureCMakeDebug[arm64-v8a]
+> Task :react-native-reanimated:configureCMakeDebug[armeabi-v7a]
+> Task :react-native-reanimated:configureCMakeDebug[x86]
+> Task :react-native-reanimated:configureCMakeDebug[x86_64]
+> Task :react-native-reanimated:generateJsonModelDebug
+> Task :react-native-reanimated:prefabDebugConfigurePackage UP-TO-DATE
+> Task :expo-otp-autofill-consent:compileDebugKotlin UP-TO-DATE
+> Task :expo-otp-autofill-consent:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-otp-autofill-consent:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-otp-autofill-consent:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-otp-autofill-consent:processDebugJavaRes UP-TO-DATE
+> Task :expo-otp-autofill-consent:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :expo-phone-number-hint:compileDebugKotlin UP-TO-DATE
+> Task :expo-phone-number-hint:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-phone-number-hint:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-phone-number-hint:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-phone-number-hint:processDebugJavaRes UP-TO-DATE
+> Task :expo-phone-number-hint:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :react-native-screens:buildCMakeDebug[arm64-v8a]
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :react-native-screens:configureCMakeDebug[armeabi-v7a]
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-modules-core:buildCMakeDebug[arm64-v8a]
+> Task :expo-modules-core:configureCMakeDebug[armeabi-v7a]
+> Task :expo:compileDebugKotlin UP-TO-DATE
+> Task :expo:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo:processDebugJavaRes UP-TO-DATE
+> Task :expo:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :react-native-worklets:buildCMakeDebug[arm64-v8a][worklets]
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :react-native-screens:buildCMakeDebug[armeabi-v7a]
+> Task :react-native-screens:configureCMakeDebug[x86]
+> Task :react-native-screens:buildCMakeDebug[x86]
+> Task :react-native-screens:configureCMakeDebug[x86_64]
+> Task :expo-modules-core:buildCMakeDebug[armeabi-v7a]
+> Task :expo-modules-core:configureCMakeDebug[x86]
+> Task :react-native-worklets:buildCMakeDebug[armeabi-v7a][worklets]
+> Task :react-native-screens:buildCMakeDebug[x86_64]
+> Task :react-native-screens:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-screens:mergeDebugNativeLibs UP-TO-DATE
+> Task :react-native-screens:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :expo-modules-core:buildCMakeDebug[x86]
+> Task :expo-modules-core:configureCMakeDebug[x86_64]
+> Task :react-native-worklets:buildCMakeDebug[x86][worklets]
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:dexBuilderDebug UP-TO-DATE
+> Task :expo-modules-core:buildCMakeDebug[x86_64]
+> Task :expo-modules-core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-modules-core:mergeDebugNativeLibs UP-TO-DATE
+> Task :expo-modules-core:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-worklets:buildCMakeDebug[x86_64][worklets]
+> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :react-native-worklets:externalNativeBuildDebug
+> Task :react-native-worklets:prefabDebugPackage UP-TO-DATE
+> Task :react-native-worklets:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-worklets:mergeDebugNativeLibs UP-TO-DATE
+> Task :react-native-worklets:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :react-native-reanimated:buildCMakeDebug[arm64-v8a][reanimated]
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:mergeProjectDexDebug UP-TO-DATE
+> Task :react-native-reanimated:buildCMakeDebug[armeabi-v7a][reanimated]
+> Task :app:configureCMakeDebug[arm64-v8a]
+> Task :app:configureCMakeDebug[armeabi-v7a]
+> Task :app:configureCMakeDebug[x86]
+> Task :app:configureCMakeDebug[x86_64]
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :react-native-reanimated:buildCMakeDebug[x86][reanimated]
+> Task :react-native-reanimated:buildCMakeDebug[x86_64][reanimated]
+C/C++: ninja: Entering directory `C:\Users\9421309441\Desktop\Projects\surplus\mobile\node_modules\react-native-reanimated\android\.cxx\Debug\3o3q1rl3\x86_64'
+C/C++: cmd.exe /C "cd . && C:\Users\9421309441\AppData\Local\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=x86_64-none-linux-android24 --sysroot=C:/Users/9421309441/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot -fPIC -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -DREACT_NATIVE_MINOR_VERSION=81    -DREANIMATED_VERSION=4.1.7    -DREANIMATED_FEATURE_FLAGS="[EXPERIMENTAL_CSS_ANIMATIONS_FOR_SVG_COMPONENTS:false][RUNTIME_TEST_FLAG:false][DISABLE_COMMIT_PAUSING_MECHANISM:false][ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS:false][USE_SYNCHRONIZABLE_FOR_MUTABLES:false]" -fno-omit-frame-pointer -fstack-protector-all -fvisibility=hidden -ffunction-sections -fdata-sections -fno-limit-debug-info  -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments   -Wl,--gc-sections -shared -Wl,-soname,libreanimated.so -o ..\..\..\..\build\intermediates\cxx\Debug\3o3q1rl3\obj\x86_64\libreanimated.so @CMakeFiles\reanimated.rsp  && cd ."
+C/C++: clang++: error: no such file or directory: '@CMakeFiles\reanimated.rsp'
+C/C++: ninja: build stopped: subcommand failed.
+
+> Task :react-native-reanimated:buildCMakeDebug[x86_64][reanimated] FAILED
+
+[Incubating] Problems report is available at: file:///C:/Users/9421309441/Desktop/Projects/surplus/mobile/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':react-native-reanimated:buildCMakeDebug[x86_64][reanimated]'.
+> com.android.ide.common.process.ProcessException: ninja: Entering directory `C:\Users\9421309441\Desktop\Projects\surplus\mobile\node_modules\react-native-reanimated\android\.cxx\Debug\3o3q1rl3\x86_64'
+  [0/2] Re-checking globbed directories...
+  [1/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/common/transforms/TransformOp.cpp.o
+  [2/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/common/transforms/vectors.cpp.o
+  [3/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/AnimatedSensor/AnimatedSensorModule.cpp.o
+  [4/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/common/values/CSSLength.cpp.o
+  [5/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/common/values/CSSColor.cpp.o
+  [6/72] Building CXX object CMakeFiles/reanimated.dir/7591065e122360c4b039c2fb0d26bd03/cpp/reanimated/CSS/common/transforms/TransformMatrix3D.cpp.o
+  [7/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/common/values/CSSKeyword.cpp.o
+  [8/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/common/values/CSSBoolean.cpp.o
+  [9/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/common/values/CSSDiscreteArray.cpp.o
+  [10/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/common/values/CSSAngle.cpp.o
+  [11/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/common/values/CSSNumber.cpp.o
+  [12/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/configs/common.cpp.o
+  [13/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/configs/CSSAnimationConfig.cpp.o
+  [14/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/easing/linear.cpp.o
+  [15/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/configs/CSSTransitionConfig.cpp.o
+  [16/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/easing/EasingFunctions.cpp.o
+  [17/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/easing/cubicBezier.cpp.o
+  [18/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/configs/CSSKeyframesConfig.cpp.o
+  [19/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/core/CSSAnimation.cpp.o
+  [20/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/common/values/CSSValueVariant.cpp.o
+  [21/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/easing/steps.cpp.o
+  [22/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/core/CSSTransition.cpp.o
+  [23/72] Building CXX object CMakeFiles/reanimated.dir/9bc7b2b75c8380ae782716307a471e70/CSS/interpolation/groups/ArrayPropertiesInterpolator.cpp.o
+  [24/72] Building CXX object CMakeFiles/reanimated.dir/9bc7b2b75c8380ae782716307a471e70/CSS/interpolation/groups/GroupPropertiesInterpolator.cpp.o
+  [25/72] Building CXX object CMakeFiles/reanimated.dir/7591065e122360c4b039c2fb0d26bd03/cpp/reanimated/CSS/interpolation/PropertyInterpolator.cpp.o
+  [26/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/interpolation/InterpolatorFactory.cpp.o
+  [27/72] Building CXX object CMakeFiles/reanimated.dir/9bc7b2b75c8380ae782716307a471e70/CSS/interpolation/transforms/TransformOperationInterpolator.cpp.o
+  [28/72] Building CXX object CMakeFiles/reanimated.dir/ebdb7e592fd75398cbf2d49d1557e319/reanimated/CSS/interpolation/transforms/operations/matrix.cpp.o
+  [29/72] Building CXX object CMakeFiles/reanimated.dir/ebdb7e592fd75398cbf2d49d1557e319/reanimated/CSS/interpolation/transforms/TransformOperation.cpp.o
+  [30/72] Building CXX object CMakeFiles/reanimated.dir/9bc7b2b75c8380ae782716307a471e70/CSS/interpolation/transforms/TransformsStyleInterpolator.cpp.o
+  [31/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/progress/RawProgressProvider.cpp.o
+  [32/72] Building CXX object CMakeFiles/reanimated.dir/9bc7b2b75c8380ae782716307a471e70/CSS/interpolation/groups/RecordPropertiesInterpolator.cpp.o
+  [33/72] Building CXX object CMakeFiles/reanimated.dir/9bc7b2b75c8380ae782716307a471e70/CSS/interpolation/styles/TransitionStyleInterpolator.cpp.o
+  [34/72] Building CXX object CMakeFiles/reanimated.dir/7591065e122360c4b039c2fb0d26bd03/cpp/reanimated/CSS/interpolation/values/ValueInterpolator.cpp.o
+  [35/72] Building CXX object CMakeFiles/reanimated.dir/7591065e122360c4b039c2fb0d26bd03/cpp/reanimated/CSS/progress/AnimationProgressProvider.cpp.o
+  [36/72] Building CXX object CMakeFiles/reanimated.dir/9bc7b2b75c8380ae782716307a471e70/CSS/interpolation/values/ResolvableValueInterpolator.cpp.o
+  [37/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/misc/ViewStylesRepository.cpp.o
+  [38/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/registries/StaticPropsRegistry.cpp.o
+  [39/72] Building CXX object CMakeFiles/reanimated.dir/ebdb7e592fd75398cbf2d49d1557e319/reanimated/CSS/interpolation/values/SimpleValueInterpolator.cpp.o
+  [40/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/utils/algorithms.cpp.o
+  [41/72] Building CXX object CMakeFiles/reanimated.dir/7591065e122360c4b039c2fb0d26bd03/cpp/reanimated/CSS/progress/TransitionProgressProvider.cpp.o
+  [42/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/registries/CSSKeyframesRegistry.cpp.o
+  [43/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/registries/CSSTransitionsRegistry.cpp.o
+  [44/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/registries/CSSAnimationsRegistry.cpp.o
+  [45/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/svg/values/SVGLength.cpp.o
+  [46/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/utils/keyframes.cpp.o
+  [47/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/utils/DelayedItemsManager.cpp.o
+  [48/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/svg/values/SVGStrokeDashArray.cpp.o
+  [49/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/utils/interpolators.cpp.o
+  [50/72] Building CXX object CMakeFiles/reanimated.dir/7591065e122360c4b039c2fb0d26bd03/cpp/reanimated/NativeModules/ReanimatedModuleProxySpec.cpp.o
+  [51/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/Tools/ReanimatedVersion.cpp.o
+  [52/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/utils/props.cpp.o
+  [53/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/Fabric/ReanimatedCommitHook.cpp.o
+  [54/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/Fabric/ReanimatedMountHook.cpp.o
+  [55/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/Tools/FeatureFlags.cpp.o
+  [56/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/Fabric/ShadowTreeCloner.cpp.o
+  [57/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/Fabric/updates/AnimatedPropsRegistry.cpp.o
+  [58/72] Building CXX object CMakeFiles/reanimated.dir/7591065e122360c4b039c2fb0d26bd03/cpp/reanimated/LayoutAnimations/LayoutAnimationsManager.cpp.o
+  [59/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/RuntimeDecorators/UIRuntimeDecorator.cpp.o
+  [60/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/common/transforms/Quaternion.cpp.o
+  [61/72] Building CXX object CMakeFiles/reanimated.dir/7591065e122360c4b039c2fb0d26bd03/cpp/reanimated/LayoutAnimations/LayoutAnimationsUtils.cpp.o
+  [62/72] Building CXX object CMakeFiles/reanimated.dir/7591065e122360c4b039c2fb0d26bd03/cpp/reanimated/CSS/common/transforms/TransformMatrix2D.cpp.o
+  [63/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/Fabric/updates/UpdatesRegistryManager.cpp.o
+  [64/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/Fabric/updates/UpdatesRegistry.cpp.o
+  [65/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/RuntimeDecorators/RNRuntimeDecorator.cpp.o
+  [66/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/NativeModules/PropValueProcessor.cpp.o
+  ninja: Entering directory `C:\Users\9421309441\Desktop\Projects\surplus\mobile\node_modules\react-native-reanimated\android\.cxx\Debug\3o3q1rl3\x86_64'
+  [0/2] Re-checking globbed directories...
+  [67/72] Building CXX object CMakeFiles/reanimated.dir/7591065e122360c4b039c2fb0d26bd03/cpp/reanimated/LayoutAnimations/LayoutAnimationsProxy.cpp.o
+  [68/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/InterpolatorRegistry.cpp.o
+  [69/72] Building CXX object CMakeFiles/reanimated.dir/src/main/cpp/reanimated/android/OnLoad.cpp.o
+  [70/72] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/NativeModules/ReanimatedModuleProxy.cpp.o
+  [1/6] Building CXX object CMakeFiles/reanimated.dir/src/main/cpp/reanimated/android/OnLoad.cpp.o
+  [2/6] Building CXX object CMakeFiles/reanimated.dir/7591065e122360c4b039c2fb0d26bd03/cpp/reanimated/LayoutAnimations/LayoutAnimationsProxy.cpp.o
+  [3/6] Building CXX object CMakeFiles/reanimated.dir/src/main/cpp/reanimated/android/NativeProxy.cpp.o
+  [71/72] Building CXX object CMakeFiles/reanimated.dir/src/main/cpp/reanimated/android/NativeProxy.cpp.o
+  [4/6] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/CSS/InterpolatorRegistry.cpp.o
+  [5/6] Building CXX object CMakeFiles/reanimated.dir/5ff6dcda46480efd8d973716e8265407/Common/cpp/reanimated/NativeModules/ReanimatedModuleProxy.cpp.o
+  [72/72] Linking CXX shared library ..\..\..\..\build\intermediates\cxx\Debug\3o3q1rl3\obj\x86_64\libreanimated.so
+  [6/6] Linking CXX shared library ..\..\..\..\build\intermediates\cxx\Debug\3o3q1rl3\obj\x86_64\libreanimated.so
+  FAILED: ../../../../build/intermediates/cxx/Debug/3o3q1rl3/obj/x86_64/libreanimated.so 
+  cmd.exe /C "cd . && C:\Users\9421309441\AppData\Local\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=x86_64-none-linux-android24 --sysroot=C:/Users/9421309441/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot -fPIC -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -DREACT_NATIVE_MINOR_VERSION=81    -DREANIMATED_VERSION=4.1.7    -DREANIMATED_FEATURE_FLAGS="[EXPERIMENTAL_CSS_ANIMATIONS_FOR_SVG_COMPONENTS:false][RUNTIME_TEST_FLAG:false][DISABLE_COMMIT_PAUSING_MECHANISM:false][ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS:false][USE_SYNCHRONIZABLE_FOR_MUTABLES:false]" -fno-omit-frame-pointer -fstack-protector-all -fvisibility=hidden -ffunction-sections -fdata-sections -fno-limit-debug-info  -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments   -Wl,--gc-sections -shared -Wl,-soname,libreanimated.so -o ..\..\..\..\build\intermediates\cxx\Debug\3o3q1rl3\obj\x86_64\libreanimated.so @CMakeFiles\reanimated.rsp  && cd ."
+  clang++: error: no such file or directory: '@CMakeFiles\reanimated.rsp'
+  ninja: build stopped: subcommand failed.
+  
+  C++ build system [build] failed while executing:
+      @echo off
+      "D:\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe" ^
+        -C ^
+        "C:\\Users\\9421309441\\Desktop\\Projects\\surplus\\mobile\\node_modules\\react-native-reanimated\\android\\.cxx\\Debug\\3o3q1rl3\\x86_64" ^
+        reanimated
+    from C:\Users\9421309441\Desktop\Projects\surplus\mobile\node_modules\react-native-reanimated\android
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 7m 11s
+360 actionable tasks: 41 executed, 319 up-to-date

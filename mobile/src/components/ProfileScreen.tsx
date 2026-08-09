@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
+import { MapAddressPickerModal, type PickedAddress } from '@/src/components/MapAddressPickerModal';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
@@ -26,6 +27,8 @@ const emptyAddress = (): UserAddress => ({
   city: '',
   state: '',
   pincode: '',
+  latitude: null,
+  longitude: null,
 });
 
 function isPersonalComplete(user: User | null) {
@@ -54,6 +57,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
   const [editingAddress, setEditingAddress] = useState(!isAddressComplete(user));
   const [saving, setSaving] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [mapPickerVisible, setMapPickerVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const nameInputRef = useRef<TextInput>(null);
@@ -127,6 +131,8 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
           city: string;
           state: string;
           pincode: string;
+          latitude?: number | null;
+          longitude?: number | null;
         };
       } = {
         name,
@@ -148,6 +154,8 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
           city: address.city.trim(),
           state: address.state.trim(),
           pincode: address.pincode.trim(),
+          latitude: typeof address.latitude === 'number' ? address.latitude : null,
+          longitude: typeof address.longitude === 'number' ? address.longitude : null,
         };
       }
 
@@ -188,6 +196,20 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
 
   function updateAddressField(field: keyof UserAddress, value: string) {
     setAddress((current) => ({ ...current, [field]: value }));
+  }
+
+  function applyAddressFromMap(picked: PickedAddress) {
+    setAddress((current) => ({
+      ...current,
+      address: picked.address,
+      city: picked.city,
+      state: picked.state,
+      pincode: picked.pincode,
+      latitude: picked.latitude,
+      longitude: picked.longitude,
+    }));
+    setMessage('Address selected from map. Review and save your profile.');
+    setError('');
   }
 
   return (
@@ -334,6 +356,26 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
                 />
               </ScrollIntoView>
             </Field>
+
+            <Pressable style={styles.mapButton} onPress={() => setMapPickerVisible(true)}>
+              <Ionicons name="map-outline" size={18} color={colors.accent} />
+              <View style={styles.mapButtonTextWrap}>
+                <Text style={styles.mapButtonTitle}>Pick on map</Text>
+                <Text style={styles.mapButtonSubtitle}>
+                  Search and drop a pin to auto-fill address details.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </Pressable>
+
+            {typeof address.latitude === 'number' && typeof address.longitude === 'number' ? (
+              <View style={styles.coordsPill}>
+                <Ionicons name="locate-outline" size={14} color={DARK_GREEN} />
+                <Text style={styles.coordsText}>
+                  {address.latitude.toFixed(5)}, {address.longitude.toFixed(5)}
+                </Text>
+              </View>
+            ) : null}
 
             <View style={styles.row}>
               <View style={styles.rowItem}>
@@ -486,6 +528,12 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
           onPress={handleSignOut}
         />
       </View>
+      <MapAddressPickerModal
+        visible={mapPickerVisible}
+        initialAddress={address}
+        onClose={() => setMapPickerVisible(false)}
+        onConfirm={applyAddressFromMap}
+      />
       </ScreenContent>
     </KeyboardAwareScrollView>
   );
@@ -856,6 +904,46 @@ const styles = StyleSheet.create({
   },
   rowItem: {
     flex: 1,
+  },
+  mapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: '#F9FCFA',
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  mapButtonTextWrap: {
+    flex: 1,
+    gap: 1,
+  },
+  mapButtonTitle: {
+    color: colors.textStrong,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  mapButtonSubtitle: {
+    color: colors.muted,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  coordsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    backgroundColor: LIGHT_GREEN,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  coordsText: {
+    color: DARK_GREEN,
+    fontSize: 11,
+    fontWeight: '700',
   },
   success: {
     color: colors.accent,

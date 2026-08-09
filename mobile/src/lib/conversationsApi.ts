@@ -1,8 +1,7 @@
 import { resolveUploadUri, type ChatAttachment } from '@/src/lib/chatAttachments';
+import { API_BASE } from '@/src/lib/apiBase';
 import type { LocalImage, PriceType, ProductListing } from '@/src/types/product';
 import * as FileSystem from 'expo-file-system/legacy';
-
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 
 type ApiError = { error?: string };
 

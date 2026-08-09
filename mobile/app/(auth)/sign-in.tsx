@@ -149,6 +149,7 @@ export default function SignInScreen() {
         const signedInUser = await signInWithPhone(idToken);
         navigateAfterAuth(signedInUser);
       } catch (err) {
+        setInfo('');
         setError(mapFirebaseError(err));
         completingRef.current = false;
       } finally {

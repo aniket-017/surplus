@@ -44,6 +44,8 @@ type UserAddress {
   city    String
   state   String
   pincode String
+  latitude Float?
+  longitude Float?
 }
 
 model User {

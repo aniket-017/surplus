@@ -1,4 +1,4 @@
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4369';
+import { API_BASE } from '@/src/lib/apiBase';
 
 let manifest: Record<string, number> = {};
 let manifestLoaded = false;

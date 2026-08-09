@@ -51,11 +51,35 @@ export function parseUserAddress(raw) {
     throw new Error("Invalid address");
   }
 
+  const latitudeRaw = parsed.latitude;
+  const longitudeRaw = parsed.longitude;
+  const hasCoordinates = latitudeRaw !== undefined || longitudeRaw !== undefined;
+
+  let latitude = null;
+  let longitude = null;
+
+  if (hasCoordinates) {
+    latitude = Number(latitudeRaw);
+    longitude = Number(longitudeRaw);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      throw new Error("Latitude and longitude must be valid numbers");
+    }
+    if (latitude < -90 || latitude > 90) {
+      throw new Error("Latitude must be between -90 and 90");
+    }
+    if (longitude < -180 || longitude > 180) {
+      throw new Error("Longitude must be between -180 and 180");
+    }
+  }
+
   const address = {
     address: parsed.address ? String(parsed.address).trim() : null,
     city: String(parsed.city || "").trim(),
     state: String(parsed.state || "").trim(),
     pincode: String(parsed.pincode || "").trim(),
+    latitude,
+    longitude,
   };
 
   if (!address.city || !address.state || !address.pincode) {

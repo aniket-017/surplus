@@ -5,6 +5,8 @@ export type UserAddress = {
   city: string;
   state: string;
   pincode: string;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type User = {

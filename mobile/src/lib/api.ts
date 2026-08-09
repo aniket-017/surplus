@@ -1,6 +1,5 @@
 import type { UpdateProfilePayload, User, UserRole } from '@/src/types/auth';
-
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
+import { API_BASE } from '@/src/lib/apiBase';
 
 type ApiError = { error?: string };
 

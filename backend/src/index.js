@@ -1,5 +1,6 @@
 import "dotenv/config";
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import express from "express";
@@ -20,6 +21,26 @@ import { CATEGORY_ASSETS_DIR, getCategoryImageManifest } from "./lib/categoryAss
 import { bootstrapSuperAdmin } from "./lib/bootstrapSuperAdmin.js";
 import { prisma } from "./lib/prisma.js";
 import { assertS3Config } from "./lib/s3.js";
+
+function getLanIPv4() {
+  const interfaces = os.networkInterfaces();
+  const virtualName =
+    /vmware|virtualbox|hyper-?v|vethernet|wsl|docker|loopback|bluetooth|vpn|tap|tun/i;
+  const preferredName = /wi-?fi|wlan|ethernet|en\d|eth\d|local area connection/i;
+
+  const candidates = [];
+  for (const [name, entries] of Object.entries(interfaces)) {
+    if (virtualName.test(name)) continue;
+    for (const entry of entries || []) {
+      if (entry.family === "IPv4" && !entry.internal) {
+        candidates.push({ name, address: entry.address, preferred: preferredName.test(name) });
+      }
+    }
+  }
+
+  const preferred = candidates.find((c) => c.preferred);
+  return (preferred || candidates[0])?.address || null;
+}
 
 async function backfillConversationReadState() {
   // Existing conversations may omit last-read fields entirely. MongoDB/Prisma
@@ -196,14 +217,18 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   const methods = [
     isGoogleAuthEnabled() && "Google",
     isOtpAuthEnabled() && "Email OTP",
     isPhoneAuthEnabled() && "Phone OTP",
   ].filter(Boolean);
 
+  const lanIp = getLanIPv4();
   console.log(`Server running on http://localhost:${PORT}`);
+  if (lanIp) {
+    console.log(`Network access: http://${lanIp}:${PORT}`);
+  }
   console.log(`Auth methods: ${methods.join(", ")}`);
   console.log(
     `[startup] Firebase Admin: ${isFirebaseAuthConfigured() ? "configured" : "MISSING FIREBASE_* env"}`,

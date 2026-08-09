@@ -13,12 +13,14 @@ import {
   SellerWelcomeBanner,
 } from '@/src/components/seller';
 import { useAuth } from '@/src/context/AuthContext';
+import { useRoleSwitch } from '@/src/context/RoleSwitchContext';
 import { useMyProducts } from '@/src/hooks/useMyProducts';
 import { colors, spacing } from '@/src/constants/theme';
 import { getSellerEstimatedValue } from '@/src/lib/productFormat';
 
 export default function SellerDashboardTab() {
-  const { user, setRole } = useAuth();
+  const { user } = useAuth();
+  const { switchRole, switching: roleSwitching } = useRoleSwitch();
   const { products, stats } = useMyProducts();
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState('');
@@ -26,12 +28,13 @@ export default function SellerDashboardTab() {
   const estimatedValue = useMemo(() => getSellerEstimatedValue(products), [products]);
 
   async function handleSwitchToBuyer() {
+    if (switching || roleSwitching) return;
+
     setSwitching(true);
     setSwitchError('');
 
     try {
-      await setRole('buyer');
-      router.replace('/(buyer)/(tabs)');
+      await switchRole('buyer');
     } catch (err) {
       setSwitchError(err instanceof Error ? err.message : 'Failed to switch to buyer');
     } finally {
@@ -71,7 +74,7 @@ export default function SellerDashboardTab() {
 
           {switchError ? <Text style={styles.switchError}>{switchError}</Text> : null}
 
-          <SellerSwitchToBuyerCard onPress={handleSwitchToBuyer} loading={switching} />
+          <SellerSwitchToBuyerCard onPress={handleSwitchToBuyer} loading={switching || roleSwitching} />
         </ScreenContent>
       </ScrollView>
     </DashboardScreen>

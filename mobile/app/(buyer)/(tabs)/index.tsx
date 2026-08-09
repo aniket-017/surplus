@@ -27,6 +27,7 @@ import { SellSurplusCta } from '@/src/components/buyer/SellSurplusCta';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { useBuyerLocation } from '@/src/context/LocationContext';
+import { useRoleSwitch } from '@/src/context/RoleSwitchContext';
 import { productCardWidth } from '@/src/constants/layout';
 import { colors, spacing } from '@/src/constants/theme';
 import { useBreakpoint } from '@/src/hooks/useBreakpoint';
@@ -53,7 +54,8 @@ function chipIdFromFilters(filters: BrowseFilters): string {
 }
 
 export default function BuyerHomeTab() {
-  const { token, user, setRole } = useAuth();
+  const { token, user } = useAuth();
+  const { switchRole, switching: roleSwitching } = useRoleSwitch();
   const { location } = useBuyerLocation();
   const { width, columns } = useBreakpoint();
   const cardWidth = productCardWidth(width, columns, HORIZONTAL_PADDING, GRID_GAP);
@@ -209,12 +211,11 @@ export default function BuyerHomeTab() {
   }
 
   async function handleSellSurplus() {
-    if (switchingToSell) return;
+    if (switchingToSell || roleSwitching) return;
 
     setSwitchingToSell(true);
     try {
-      await setRole('seller');
-      router.replace('/(seller)/(tabs)');
+      await switchRole('seller');
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to switch to seller');
       setSwitchingToSell(false);
@@ -231,7 +232,7 @@ export default function BuyerHomeTab() {
           onFilterPress={() => setFiltersVisible(true)}
           activeFilterCount={activeFilterCount}
         />
-        <SellSurplusCta onPress={() => void handleSellSurplus()} loading={switchingToSell} />
+        <SellSurplusCta onPress={() => void handleSellSurplus()} loading={switchingToSell || roleSwitching} />
         <CategoryCarousel
           categories={categories}
           activeCategory={activeCategory}
@@ -241,7 +242,7 @@ export default function BuyerHomeTab() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
     ),
-    [search, categories, activeCategory, activeFilter, activeFilterCount, error, switchingToSell],
+    [search, categories, activeCategory, activeFilter, activeFilterCount, error, switchingToSell, roleSwitching],
   );
 
   return (

@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/src/context/AuthContext';
 import { LocationProvider } from '@/src/context/LocationContext';
+import { RoleSwitchProvider } from '@/src/context/RoleSwitchContext';
 import { UnreadMessagesProvider } from '@/src/context/UnreadMessagesContext';
 
 SplashScreen.preventAutoHideAsync();
@@ -20,17 +21,19 @@ export default function RootLayout() {
       {/* App screens are light-themed; keep system icons dark for contrast. */}
       <StatusBar style="dark" />
       <AuthProvider>
-        <UnreadMessagesProvider>
-          <LocationProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="onboarding" />
-              <Stack.Screen name="(buyer)" />
-              <Stack.Screen name="(seller)" />
-            </Stack>
-          </LocationProvider>
-        </UnreadMessagesProvider>
+        <RoleSwitchProvider>
+          <UnreadMessagesProvider>
+            <LocationProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="onboarding" />
+                <Stack.Screen name="(buyer)" />
+                <Stack.Screen name="(seller)" />
+              </Stack>
+            </LocationProvider>
+          </UnreadMessagesProvider>
+        </RoleSwitchProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

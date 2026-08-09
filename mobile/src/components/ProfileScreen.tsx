@@ -15,6 +15,7 @@ import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/Keyboa
 import { MapAddressPickerModal, type PickedAddress } from '@/src/components/MapAddressPickerModal';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
+import { useRoleSwitch } from '@/src/context/RoleSwitchContext';
 import { colors, spacing } from '@/src/constants/theme';
 import { formatPhoneForDisplay } from '@/src/lib/phone';
 import type { User, UserAddress, UserRole } from '@/src/types/auth';
@@ -49,7 +50,8 @@ type ProfileScreenProps = {
 };
 
 export function ProfileScreen({ role }: ProfileScreenProps) {
-  const { user, signOut, setRole, updateProfile } = useAuth();
+  const { user, signOut, updateProfile } = useAuth();
+  const { switchRole, switching: roleSwitching } = useRoleSwitch();
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [address, setAddress] = useState<UserAddress>(user?.address || emptyAddress());
@@ -171,15 +173,14 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
   }
 
   async function handleSwitchRole() {
-    if (switching) return;
+    if (switching || roleSwitching) return;
 
     const nextRole = role === 'buyer' ? 'seller' : 'buyer';
     setSwitching(true);
     setError('');
 
     try {
-      await setRole(nextRole);
-      router.replace(nextRole === 'buyer' ? '/(buyer)/(tabs)' : '/(seller)/(tabs)');
+      await switchRole(nextRole);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to switch role');
     } finally {
@@ -496,7 +497,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
           title={switchLabel}
           subtitle={switchSubtitle}
           onPress={handleSwitchRole}
-          loading={switching}
+          loading={switching || roleSwitching}
         />
 
         <View style={styles.actionDivider} />

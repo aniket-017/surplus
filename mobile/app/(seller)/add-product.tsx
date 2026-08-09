@@ -127,7 +127,17 @@ export default function AddProductScreen() {
       <KeyboardAwareScrollView contentContainerStyle={styles.container}>
         <ScreenContent style={styles.screenContent}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
+          <Pressable
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(seller)/(tabs)');
+              }
+            }}
+            hitSlop={8}
+            style={styles.backBtn}
+          >
             <Ionicons name="chevron-back" size={20} color={colors.accent} />
             <Text style={styles.backText}>Back</Text>
           </Pressable>

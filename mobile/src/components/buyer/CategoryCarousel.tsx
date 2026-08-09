@@ -1,8 +1,13 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { CategoryImage } from '@/src/components/CategoryImage';
 import { colors, spacing } from '@/src/constants/theme';
 import type { ProductCategory } from '@/src/types/product';
+
+/** Show ~4 full cards + a sliver of the next to hint horizontal scroll. */
+const VISIBLE_CARDS = 4.2;
+const CARD_GAP = spacing.xs;
+const SCREEN_PADDING = spacing.lg;
 
 type CategoryCarouselProps = {
   categories: ProductCategory[];
@@ -15,10 +20,16 @@ export function CategoryCarousel({
   activeCategory,
   onSelectCategory,
 }: CategoryCarouselProps) {
+  const { width: screenWidth } = useWindowDimensions();
+  const contentWidth = screenWidth - SCREEN_PADDING * 2;
+  const cardWidth =
+    (contentWidth - CARD_GAP * Math.floor(VISIBLE_CARDS)) / VISIBLE_CARDS;
+  const iconSize = Math.round(cardWidth * 0.68);
+
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <Text style={styles.title}>Shop by Category</Text>
+        <Text style={styles.title}>Browse by Category</Text>
         <Pressable onPress={() => onSelectCategory('')}>
           <Text style={styles.viewAll}>View all</Text>
         </Pressable>
@@ -31,10 +42,16 @@ export function CategoryCarousel({
           return (
             <Pressable
               key={category.name}
-              style={[styles.card, active && styles.cardActive]}
+              style={[styles.card, { width: cardWidth }, active && styles.cardActive]}
               onPress={() => onSelectCategory(active ? '' : category.name)}
             >
-              <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
+              <View
+                style={[
+                  styles.iconWrap,
+                  { width: iconSize, height: iconSize },
+                  active && styles.iconWrapActive,
+                ]}
+              >
                 <CategoryImage
                   name={category.name}
                   imageUrl={category.imageUrl}
@@ -72,33 +89,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   row: {
-    gap: spacing.sm,
+    gap: CARD_GAP,
     paddingRight: spacing.sm,
   },
   card: {
-    width: 92,
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: colors.surface,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: 4,
   },
   cardActive: {
     borderColor: colors.accent,
     backgroundColor: 'rgba(92, 179, 53, 0.08)',
   },
   iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: '#EEF2F6',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    padding: 6,
+    padding: 4,
   },
   iconWrapActive: {
     backgroundColor: '#E8F5E3',
@@ -109,7 +123,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textStrong,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
   },

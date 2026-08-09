@@ -19,17 +19,17 @@ export function BuyerSearchBar({
   return (
     <View style={styles.container}>
       <View style={styles.searchWrap}>
-        <Ionicons name="search-outline" size={18} color={colors.muted} />
+        <Ionicons name="search-outline" size={16} color={colors.muted} />
         <TextInput
           style={styles.input}
           value={value}
           onChangeText={onChangeText}
-          placeholder="Search materials, products or sellers..."
+          placeholder="Search products, materials, brands..."
           placeholderTextColor={colors.muted}
         />
       </View>
       <Pressable style={styles.filterButton} onPress={onFilterPress}>
-        <Ionicons name="options-outline" size={18} color={colors.textStrong} />
+        <Ionicons name="options-outline" size={16} color={colors.textStrong} />
         <Text style={styles.filterText}>Filters</Text>
         {activeFilterCount > 0 ? (
           <View style={styles.badge}>
@@ -57,13 +57,13 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: spacing.sm,
-    minHeight: 48,
+    minHeight: 40,
   },
   input: {
     flex: 1,
     fontSize: 14,
     color: colors.textStrong,
-    paddingVertical: 10,
+    paddingVertical: 6,
   },
   filterButton: {
     flexDirection: 'row',
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
-    minHeight: 48,
+    minHeight: 40,
   },
   filterText: {
     color: colors.textStrong,

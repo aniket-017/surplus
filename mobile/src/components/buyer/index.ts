@@ -5,3 +5,4 @@ export { BuyerSearchBar } from './BuyerSearchBar';
 export { CategoryCarousel } from './CategoryCarousel';
 export { ListingFilterChips } from './ListingFilterChips';
 export { ProductListingCard } from './ProductListingCard';
+export { SellSurplusCta } from './SellSurplusCta';

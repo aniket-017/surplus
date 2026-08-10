@@ -9,6 +9,7 @@ export default function OnboardingProfilePage() {
   const navigate = useNavigate()
   const [name, setName] = useState(user?.name?.trim() ?? '')
   const [email, setEmail] = useState(user?.email?.trim() ?? '')
+  const [referralCode, setReferralCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -35,9 +36,11 @@ export default function OnboardingProfilePage() {
     setLoading(true)
 
     try {
+      const trimmedReferral = referralCode.trim()
       const updated = await updateProfile({
         name: trimmedName,
         ...(trimmedEmail ? { email: trimmedEmail.toLowerCase() } : {}),
+        ...(trimmedReferral ? { referralCode: trimmedReferral } : {}),
       })
       navigate(getPostAuthPath(updated), { replace: true })
     } catch (err) {
@@ -91,6 +94,22 @@ export default function OnboardingProfilePage() {
               onChange={(event) => setEmail(event.target.value)}
               autoComplete="email"
               disabled={loading}
+            />
+
+            <label className="auth-label" htmlFor="onboarding-referral">
+              Referral code (optional)
+            </label>
+            <input
+              id="onboarding-referral"
+              type="text"
+              className="auth-input"
+              placeholder="e.g. PARTNER2026"
+              value={referralCode}
+              onChange={(event) => setReferralCode(event.target.value.toUpperCase())}
+              autoComplete="off"
+              autoCapitalize="characters"
+              disabled={loading}
+              maxLength={32}
             />
 
             {error && <p className="auth-error">{error}</p>}

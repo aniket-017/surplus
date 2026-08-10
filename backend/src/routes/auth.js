@@ -396,6 +396,34 @@ router.patch("/profile", requireAuth, async (req, res) => {
       }
     }
 
+    const referralCodeRaw =
+      req.body.referralCode !== undefined
+        ? String(req.body.referralCode || "").trim().toUpperCase()
+        : "";
+
+    if (referralCodeRaw) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { referralCodeId: true },
+      });
+
+      if (!currentUser?.referralCodeId) {
+        const referral = await prisma.referralCode.findFirst({
+          where: { code: referralCodeRaw, isActive: true },
+          select: { id: true },
+        });
+
+        if (!referral) {
+          return res.status(400).json({
+            error: "Invalid or inactive referral code",
+          });
+        }
+
+        updateData.referralCodeId = referral.id;
+        updateData.referralAppliedAt = new Date();
+      }
+    }
+
     if (!Object.keys(updateData).length) {
       return res.status(400).json({ error: "No profile fields to update" });
     }

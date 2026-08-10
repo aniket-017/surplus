@@ -188,3 +188,26 @@ export function revokeSuperadmin(id) {
     method: 'DELETE',
   })
 }
+
+export function getSuperadminReferralCodes() {
+  return apiFetch('/api/superadmin/referral-codes')
+}
+
+export function createSuperadminReferralCode({ code, label }) {
+  return apiFetch('/api/superadmin/referral-codes', {
+    method: 'POST',
+    body: JSON.stringify({ code, label }),
+  })
+}
+
+export function updateSuperadminReferralCode(id, payload) {
+  return apiFetch(`/api/superadmin/referral-codes/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getSuperadminReferralCodeUsers(id, { page = 1, limit = 20 } = {}) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  return apiFetch(`/api/superadmin/referral-codes/${id}/users?${params}`)
+}

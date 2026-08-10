@@ -37,6 +37,7 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState<Step>(initialStep);
   const [name, setName] = useState(user?.name?.trim() ?? '');
   const [email, setEmail] = useState(user?.email?.trim() ?? '');
+  const [referralCode, setReferralCode] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingRole, setLoadingRole] = useState<UserRole | null>(null);
   const [error, setError] = useState('');
@@ -72,9 +73,11 @@ export default function OnboardingScreen() {
     setError('');
 
     try {
+      const trimmedReferral = referralCode.trim();
       const updated = await updateProfile({
         name: trimmedName,
         ...(trimmedEmail ? { email: trimmedEmail } : {}),
+        ...(trimmedReferral ? { referralCode: trimmedReferral } : {}),
       });
 
       if (updated.role) {
@@ -152,9 +155,23 @@ export default function OnboardingScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  returnKeyType="next"
+                  editable={!savingProfile}
+                />
+
+                <Text style={styles.label}>Referral code (optional)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={referralCode}
+                  onChangeText={(value) => setReferralCode(value.toUpperCase())}
+                  placeholder="e.g. PARTNER2026"
+                  placeholderTextColor={colors.muted}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
                   returnKeyType="done"
                   onSubmitEditing={handleContinueProfile}
                   editable={!savingProfile}
+                  maxLength={32}
                 />
               </View>
 

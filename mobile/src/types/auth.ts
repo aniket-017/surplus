@@ -24,4 +24,5 @@ export type UpdateProfilePayload = {
   name?: string;
   email?: string | null;
   address?: UserAddress | null;
+  referralCode?: string;
 };

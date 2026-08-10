@@ -938,6 +938,186 @@ router.delete("/admins/:id", async (req, res) => {
   }
 });
 
+const REFERRAL_CODE_RE = /^[A-Z0-9_-]{3,32}$/;
+
+function normalizeReferralCode(raw) {
+  return String(raw || "")
+    .trim()
+    .toUpperCase();
+}
+
+function formatReferralCode(item) {
+  return {
+    id: item.id,
+    code: item.code,
+    label: item.label ?? null,
+    isActive: Boolean(item.isActive),
+    userCount: item._count?.users ?? 0,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+}
+
+router.get("/referral-codes", async (_req, res) => {
+  try {
+    const codes = await prisma.referralCode.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { users: true } },
+      },
+    });
+
+    res.json({ referralCodes: codes.map(formatReferralCode) });
+  } catch (error) {
+    console.error("Superadmin list referral codes failed:", error);
+    res.status(500).json({ error: "Failed to list referral codes" });
+  }
+});
+
+router.post("/referral-codes", async (req, res) => {
+  const code = normalizeReferralCode(req.body.code);
+  const labelRaw =
+    req.body.label !== undefined ? String(req.body.label || "").trim() : "";
+  const label = labelRaw || null;
+
+  if (!REFERRAL_CODE_RE.test(code)) {
+    return res.status(400).json({
+      error:
+        "Referral code must be 3–32 characters (letters, numbers, underscore, or hyphen)",
+    });
+  }
+
+  try {
+    const existing = await prisma.referralCode.findUnique({
+      where: { code },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return res.status(409).json({ error: "This referral code already exists" });
+    }
+
+    const created = await prisma.referralCode.create({
+      data: { code, label },
+      include: {
+        _count: { select: { users: true } },
+      },
+    });
+
+    res.status(201).json({ referralCode: formatReferralCode(created) });
+  } catch (error) {
+    console.error("Superadmin create referral code failed:", error);
+
+    if (error.code === "P2002") {
+      return res.status(409).json({ error: "This referral code already exists" });
+    }
+
+    res.status(500).json({ error: "Failed to create referral code" });
+  }
+});
+
+router.patch("/referral-codes/:id", async (req, res) => {
+  if (!MONGO_OBJECT_ID_RE.test(req.params.id)) {
+    return res.status(400).json({ error: "Invalid referral code id" });
+  }
+
+  const updateData = {};
+
+  if (req.body.isActive !== undefined) {
+    updateData.isActive = Boolean(req.body.isActive);
+  }
+
+  if (req.body.label !== undefined) {
+    const labelRaw = String(req.body.label || "").trim();
+    updateData.label = labelRaw || null;
+  }
+
+  if (!Object.keys(updateData).length) {
+    return res.status(400).json({ error: "No fields to update" });
+  }
+
+  try {
+    const existing = await prisma.referralCode.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Referral code not found" });
+    }
+
+    const updated = await prisma.referralCode.update({
+      where: { id: req.params.id },
+      data: updateData,
+      include: {
+        _count: { select: { users: true } },
+      },
+    });
+
+    res.json({ referralCode: formatReferralCode(updated) });
+  } catch (error) {
+    console.error("Superadmin update referral code failed:", error);
+    res.status(500).json({ error: "Failed to update referral code" });
+  }
+});
+
+router.get("/referral-codes/:id/users", async (req, res) => {
+  if (!MONGO_OBJECT_ID_RE.test(req.params.id)) {
+    return res.status(400).json({ error: "Invalid referral code id" });
+  }
+
+  try {
+    const existing = await prisma.referralCode.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, code: true, label: true },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Referral code not found" });
+    }
+
+    const { page, limit, skip } = parsePagination(req.query);
+
+    const [total, users] = await Promise.all([
+      prisma.user.count({ where: { referralCodeId: req.params.id } }),
+      prisma.user.findMany({
+        where: { referralCodeId: req.params.id },
+        orderBy: { referralAppliedAt: "desc" },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          createdAt: true,
+          referralAppliedAt: true,
+        },
+      }),
+    ]);
+
+    res.json({
+      referralCode: existing,
+      users: users.map((user) => ({
+        id: user.id,
+        name: user.name ?? null,
+        email: user.email ?? null,
+        phone: user.phone ?? null,
+        role: user.role ? user.role.toLowerCase() : null,
+        createdAt: user.createdAt,
+        referralAppliedAt: user.referralAppliedAt ?? null,
+      })),
+      total,
+      page,
+      limit,
+    });
+  } catch (error) {
+    console.error("Superadmin list referral code users failed:", error);
+    res.status(500).json({ error: "Failed to list referral users" });
+  }
+});
+
 function formatAdminNotification(notification, readCount = null) {
   return {
     id: notification.id,

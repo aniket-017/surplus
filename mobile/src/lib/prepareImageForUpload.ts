@@ -1,5 +1,4 @@
 import { Image } from 'react-native';
-import * as ImageManipulator from 'expo-image-manipulator';
 
 import type { LocalImage } from '@/src/types/product';
 import { resolveUploadUri } from '@/src/lib/chatAttachments';
@@ -30,6 +29,8 @@ export async function prepareImageForUpload(image: LocalImage): Promise<LocalIma
   const sourceUri = await resolveUploadUri(image);
 
   try {
+    // Lazy import so a stale native build doesn't crash the whole app at load time.
+    const ImageManipulator = await import('expo-image-manipulator');
     const size = await getImageSize(sourceUri).catch(() => null);
     const actions: ImageManipulator.Action[] = [];
 

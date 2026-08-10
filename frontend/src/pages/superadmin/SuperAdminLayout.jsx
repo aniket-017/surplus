@@ -8,6 +8,7 @@ const NAV = [
   { to: '/superadmin/products', label: 'Products' },
   { to: '/superadmin/reports', label: 'Reports' },
   { to: '/superadmin/notifications', label: 'Notifications' },
+  { to: '/superadmin/referral-codes', label: 'Referral codes' },
   { to: '/superadmin/admins', label: 'Admins' },
 ]
 

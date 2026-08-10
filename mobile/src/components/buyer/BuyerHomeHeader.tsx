@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { LocationPickerModal } from '@/src/components/buyer/LocationPickerModal';
+import { useAdminNotificationUnreadCount } from '@/src/context/AdminNotificationsContext';
 import { useAuth } from '@/src/context/AuthContext';
 import { useBuyerLocation } from '@/src/context/LocationContext';
 import { colors, spacing } from '@/src/constants/theme';
@@ -11,6 +13,7 @@ import { formatBuyerLocation } from '@/src/types/location';
 export function BuyerHomeHeader() {
   const { user } = useAuth();
   const { location } = useBuyerLocation();
+  const unreadCount = useAdminNotificationUnreadCount();
   const [pickerVisible, setPickerVisible] = useState(false);
 
   const profileLabel = user?.address?.city
@@ -38,8 +41,19 @@ export function BuyerHomeHeader() {
       </Pressable>
 
       <View style={styles.actions}>
-        <Pressable style={styles.iconButton} hitSlop={8}>
+        <Pressable
+          style={styles.iconButton}
+          hitSlop={8}
+          onPress={() => router.push('/(buyer)/notifications')}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+        >
           <Ionicons name="notifications-outline" size={20} color={colors.textStrong} />
+          {unreadCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : String(unreadCount)}</Text>
+            </View>
+          ) : null}
         </Pressable>
       </View>
 
@@ -91,5 +105,24 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.bg,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '800',
   },
 });

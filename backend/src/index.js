@@ -16,6 +16,7 @@ import conversationRoutes from "./routes/conversations.js";
 import pushTokenRoutes from "./routes/pushTokens.js";
 import savedRoutes from "./routes/saved.js";
 import reportsRoutes from "./routes/reports.js";
+import notificationRoutes from "./routes/notifications.js";
 import superadminRoutes from "./routes/superadmin.js";
 import { backfillCategoryMeta } from "./lib/category.js";
 import { CATEGORY_ASSETS_DIR, getCategoryImageManifest } from "./lib/categoryAssets.js";
@@ -196,6 +197,7 @@ app.use("/api/conversations", conversationRoutes);
 app.use("/api/push-tokens", pushTokenRoutes);
 app.use("/api/saved", savedRoutes);
 app.use("/api/reports", reportsRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/superadmin", superadminRoutes);
 
 if (FRONTEND_DIST_EXISTS) {

@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
+import { useAdminNotificationUnreadCount } from '@/src/context/AdminNotificationsContext';
 import { colors, spacing } from '@/src/constants/theme';
 
 type SellerListingsHeaderProps = {
@@ -12,6 +14,8 @@ export function SellerListingsHeader({
   totalCount,
   onSearchPress,
 }: SellerListingsHeaderProps) {
+  const unreadCount = useAdminNotificationUnreadCount();
+
   return (
     <View style={styles.header}>
       <View style={styles.titleBlock}>
@@ -22,6 +26,20 @@ export function SellerListingsHeader({
       </View>
 
       <View style={styles.actions}>
+        <Pressable
+          style={styles.iconButton}
+          onPress={() => router.push('/(seller)/notifications')}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+        >
+          <Ionicons name="notifications-outline" size={20} color={colors.textStrong} />
+          {unreadCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : String(unreadCount)}</Text>
+            </View>
+          ) : null}
+        </Pressable>
         <Pressable style={styles.iconButton} onPress={onSearchPress} hitSlop={8}>
           <Ionicons name="search-outline" size={20} color={colors.textStrong} />
         </Pressable>
@@ -67,5 +85,24 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.bg,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '800',
   },
 });

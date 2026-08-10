@@ -8,6 +8,7 @@ export default function BuyerLayout() {
       <Stack.Screen name="products/[id]" />
       <Stack.Screen name="messages/[id]" />
       <Stack.Screen name="saved" />
+      <Stack.Screen name="notifications" />
     </Stack>
   );
 }

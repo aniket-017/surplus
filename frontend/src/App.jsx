@@ -27,6 +27,7 @@ import UsersPage from './pages/superadmin/UsersPage'
 import UserChatsPage from './pages/superadmin/UserChatsPage'
 import ProductsPage from './pages/superadmin/ProductsPage'
 import ReportsPage from './pages/superadmin/ReportsPage'
+import NotificationsPage from './pages/superadmin/NotificationsPage'
 import AdminsPage from './pages/superadmin/AdminsPage'
 
 function BuyerProfilePage() {
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="users/:id/chats" element={<UserChatsPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="admins" element={<AdminsPage />} />
           </Route>
 

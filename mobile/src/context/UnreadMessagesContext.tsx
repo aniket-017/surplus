@@ -13,6 +13,7 @@ import { AppState, Platform, type AppStateStatus } from 'react-native';
 
 import { useAuth } from '@/src/context/AuthContext';
 import { notifyActiveThreadRefresh } from '@/src/lib/chatCache';
+import { setMessageUnreadForBadge } from '@/src/lib/badgeCounts';
 import {
   getUnreadCount,
   markConversationAsRead,
@@ -24,6 +25,7 @@ import {
   getConversationRoute,
   getLastNotificationResponseAsync,
   getNotificationData,
+  isAdminNotification,
   isExpoGo,
   registerForPushNotificationsAsync,
   setAppBadgeCount,
@@ -50,22 +52,25 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
     roleRef.current = user?.role;
   }, [user?.role]);
 
+  const applyUnreadCount = useCallback(async (count: number) => {
+    setUnreadCount(count);
+    const combined = setMessageUnreadForBadge(count);
+    await setAppBadgeCount(combined);
+  }, []);
+
   const refreshUnreadCount = useCallback(async () => {
     if (!token) {
-      setUnreadCount(0);
-      await setAppBadgeCount(0);
+      await applyUnreadCount(0);
       return;
     }
 
     try {
       const data = await getUnreadCount(token);
-      const count = data.unreadCount || 0;
-      setUnreadCount(count);
-      await setAppBadgeCount(count);
+      await applyUnreadCount(data.unreadCount || 0);
     } catch {
       // Keep the last known count if the request fails.
     }
-  }, [token]);
+  }, [token, applyUnreadCount]);
 
   const markConversationRead = useCallback(
     async (conversationId: string) => {
@@ -73,20 +78,17 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
 
       try {
         const data = await markConversationAsRead(token, conversationId);
-        const count = data.unreadCount || 0;
-        setUnreadCount(count);
-        await setAppBadgeCount(count);
+        await applyUnreadCount(data.unreadCount || 0);
       } catch {
         await refreshUnreadCount();
       }
     },
-    [token, refreshUnreadCount],
+    [token, refreshUnreadCount, applyUnreadCount],
   );
 
   useEffect(() => {
     if (!token) {
-      setUnreadCount(0);
-      setAppBadgeCount(0);
+      void applyUnreadCount(0);
       return;
     }
 
@@ -120,7 +122,7 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [token, refreshUnreadCount]);
+  }, [token, refreshUnreadCount, applyUnreadCount]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
@@ -143,9 +145,10 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
     async function attachListeners() {
       receivedSub = await addNotificationReceivedListener((notification) => {
         const data = getNotificationData(notification);
+        if (isAdminNotification(data)) return;
+
         if (typeof data.unreadCount === 'number') {
-          setUnreadCount(data.unreadCount);
-          setAppBadgeCount(data.unreadCount);
+          void applyUnreadCount(data.unreadCount);
         } else {
           refreshUnreadCount();
         }
@@ -162,6 +165,7 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
 
       responseSub = await addNotificationResponseReceivedListener((response) => {
         const data = getNotificationData(response.notification);
+        if (isAdminNotification(data)) return;
         if (!data.conversationId) return;
 
         const role =
@@ -182,7 +186,7 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
       receivedSub?.remove();
       responseSub?.remove();
     };
-  }, [refreshUnreadCount]);
+  }, [refreshUnreadCount, applyUnreadCount]);
 
   useEffect(() => {
     if (!token || isExpoGo()) return;
@@ -194,6 +198,7 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
       handled = true;
 
       const data = getNotificationData(response.notification);
+      if (isAdminNotification(data)) return;
       if (!data.conversationId) return;
 
       // Only open chats from taps that happened in the last 60 seconds

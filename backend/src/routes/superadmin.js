@@ -10,6 +10,7 @@ import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
 import { deleteProductImages as deleteProductImagesFromS3 } from "../lib/s3.js";
 import { formatMessage } from "../lib/conversations.js";
+import { notifyAdminAnnouncement } from "../lib/pushNotifications.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireSuperAdmin } from "../middleware/requireSuperAdmin.js";
 
@@ -17,6 +18,10 @@ const router = Router();
 
 const PAGE_SIZE_DEFAULT = 20;
 const PAGE_SIZE_MAX = 100;
+const NOTIFICATION_TITLE_MAX = 80;
+const NOTIFICATION_BODY_MAX = 500;
+const NOTIFICATION_AUDIENCES = new Set(["ALL", "BUYERS", "SELLERS", "SPECIFIC"]);
+const MONGO_OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
 function parsePagination(query) {
   const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
@@ -280,6 +285,7 @@ router.get("/users", async (req, res) => {
           OR: [
             { email: { contains: q } },
             { name: { contains: q } },
+            { phone: { contains: q } },
           ],
         }
       : {};
@@ -294,6 +300,7 @@ router.get("/users", async (req, res) => {
         select: {
           id: true,
           email: true,
+          phone: true,
           name: true,
           role: true,
           isSuperAdmin: true,
@@ -315,6 +322,7 @@ router.get("/users", async (req, res) => {
       users: users.map((user) => ({
         id: user.id,
         email: user.email,
+        phone: user.phone,
         name: user.name,
         role: user.role ? user.role.toLowerCase() : null,
         isSuperAdmin: user.isSuperAdmin,
@@ -927,6 +935,221 @@ router.delete("/admins/:id", async (req, res) => {
   } catch (error) {
     console.error("Superadmin revoke admin failed:", error);
     res.status(500).json({ error: "Failed to revoke superadmin" });
+  }
+});
+
+function formatAdminNotification(notification, readCount = null) {
+  return {
+    id: notification.id,
+    title: notification.title,
+    body: notification.body,
+    audience: notification.audience,
+    targetUserIds: notification.targetUserIds || [],
+    recipientCount: notification.recipientCount,
+    readCount,
+    createdBy: notification.createdBy
+      ? {
+          id: notification.createdBy.id,
+          name: notification.createdBy.name,
+          email: notification.createdBy.email,
+        }
+      : null,
+    createdAt: notification.createdAt,
+  };
+}
+
+async function resolveNotificationRecipients(audience, targetUserIds = []) {
+  const notBanned = { isBanned: false };
+
+  if (audience === "ALL") {
+    const users = await prisma.user.findMany({
+      where: {
+        ...notBanned,
+        OR: [{ role: "BUYER" }, { role: "SELLER" }],
+      },
+      select: { id: true },
+    });
+    return users.map((user) => user.id);
+  }
+
+  if (audience === "BUYERS") {
+    const users = await prisma.user.findMany({
+      where: { ...notBanned, role: "BUYER" },
+      select: { id: true },
+    });
+    return users.map((user) => user.id);
+  }
+
+  if (audience === "SELLERS") {
+    const users = await prisma.user.findMany({
+      where: { ...notBanned, role: "SELLER" },
+      select: { id: true },
+    });
+    return users.map((user) => user.id);
+  }
+
+  const uniqueIds = [
+    ...new Set(
+      (Array.isArray(targetUserIds) ? targetUserIds : [])
+        .map((id) => String(id || "").trim())
+        .filter((id) => MONGO_OBJECT_ID_RE.test(id)),
+    ),
+  ];
+
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const users = await prisma.user.findMany({
+    where: {
+      id: { in: uniqueIds },
+      ...notBanned,
+      OR: [{ role: "BUYER" }, { role: "SELLER" }],
+    },
+    select: { id: true },
+  });
+  return users.map((user) => user.id);
+}
+
+router.get("/notifications", async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePagination(req.query);
+
+    const [total, notifications] = await Promise.all([
+      prisma.notification.count(),
+      prisma.notification.findMany({
+        include: {
+          createdBy: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    res.json({
+      notifications: notifications.map((item) => formatAdminNotification(item)),
+      total,
+      page,
+      limit,
+    });
+  } catch (error) {
+    console.error("Superadmin list notifications failed:", error);
+    res.status(500).json({ error: "Failed to load notifications" });
+  }
+});
+
+router.get("/notifications/:id", async (req, res) => {
+  try {
+    const notification = await prisma.notification.findUnique({
+      where: { id: req.params.id },
+      include: {
+        createdBy: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    if (!notification) {
+      return res.status(404).json({ error: "Notification not found" });
+    }
+
+    const readCount = await prisma.userNotification.count({
+      where: {
+        notificationId: notification.id,
+        readAt: { not: null },
+      },
+    });
+
+    res.json({ notification: formatAdminNotification(notification, readCount) });
+  } catch (error) {
+    console.error("Superadmin notification detail failed:", error);
+    res.status(500).json({ error: "Failed to load notification" });
+  }
+});
+
+router.post("/notifications", async (req, res) => {
+  try {
+    const title = String(req.body.title || "").trim();
+    const body = String(req.body.body || "").trim();
+    const audience = String(req.body.audience || "").trim().toUpperCase();
+    const targetUserIds = Array.isArray(req.body.targetUserIds) ? req.body.targetUserIds : [];
+
+    if (!title) {
+      return res.status(400).json({ error: "Title is required" });
+    }
+    if (title.length > NOTIFICATION_TITLE_MAX) {
+      return res.status(400).json({
+        error: `Title must be ${NOTIFICATION_TITLE_MAX} characters or fewer`,
+      });
+    }
+    if (!body) {
+      return res.status(400).json({ error: "Body is required" });
+    }
+    if (body.length > NOTIFICATION_BODY_MAX) {
+      return res.status(400).json({
+        error: `Body must be ${NOTIFICATION_BODY_MAX} characters or fewer`,
+      });
+    }
+    if (!NOTIFICATION_AUDIENCES.has(audience)) {
+      return res.status(400).json({ error: "Invalid audience" });
+    }
+    if (audience === "SPECIFIC" && targetUserIds.length === 0) {
+      return res.status(400).json({ error: "Select at least one user" });
+    }
+
+    const recipientIds = await resolveNotificationRecipients(audience, targetUserIds);
+    if (recipientIds.length === 0) {
+      return res.status(400).json({ error: "No matching recipients found" });
+    }
+
+    const notification = await prisma.notification.create({
+      data: {
+        title,
+        body,
+        audience,
+        targetUserIds: audience === "SPECIFIC" ? recipientIds : [],
+        createdById: req.user.id,
+        recipientCount: recipientIds.length,
+      },
+      include: {
+        createdBy: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    const receiptRows = recipientIds.map((userId) => ({
+      notificationId: notification.id,
+      userId,
+      readAt: null,
+    }));
+
+    // Mongo createMany does not support skipDuplicates the same way; insert in chunks.
+    const CHUNK = 500;
+    for (let i = 0; i < receiptRows.length; i += CHUNK) {
+      await prisma.userNotification.createMany({
+        data: receiptRows.slice(i, i + CHUNK),
+      });
+    }
+
+    notifyAdminAnnouncement({
+      userIds: recipientIds,
+      title,
+      body,
+      notificationId: notification.id,
+    }).catch((error) => {
+      console.error("Admin announcement push failed:", error?.message || error);
+    });
+
+    res.status(201).json({
+      notification: formatAdminNotification(notification, 0),
+    });
+  } catch (error) {
+    console.error("Superadmin send notification failed:", error);
+    res.status(500).json({ error: "Failed to send notification" });
   }
 });
 

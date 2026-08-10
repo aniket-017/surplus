@@ -1,6 +1,7 @@
 import { prisma } from "./prisma.js";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
+const EXPO_PUSH_CHUNK_SIZE = 100;
 
 function isExpoPushToken(token) {
   return typeof token === "string" && /^ExponentPushToken\[.+\]$/.test(token);
@@ -12,6 +13,19 @@ function formatNotificationBody(message) {
   if (message.imageUrl) return "Sent a photo";
   if (message.fileUrl) return message.fileName ? `Sent ${message.fileName}` : "Sent a document";
   return "Sent a message";
+}
+
+function getExpoHeaders() {
+  const headers = {
+    Accept: "application/json",
+    "Accept-Encoding": "gzip, deflate",
+    "Content-Type": "application/json",
+  };
+  const expoAccessToken = process.env.EXPO_ACCESS_TOKEN?.trim();
+  if (expoAccessToken) {
+    headers.Authorization = `Bearer ${expoAccessToken}`;
+  }
+  return headers;
 }
 
 async function cleanupInvalidTokens(tokens, tickets) {
@@ -35,7 +49,50 @@ async function cleanupInvalidTokens(tokens, tickets) {
   });
 }
 
-export async function sendPushToUser(userId, { title, body, data }) {
+async function sendExpoMessages(messages) {
+  if (!messages.length) return;
+
+  for (let i = 0; i < messages.length; i += EXPO_PUSH_CHUNK_SIZE) {
+    const chunk = messages.slice(i, i + EXPO_PUSH_CHUNK_SIZE);
+    const tokens = chunk.map((message) => message.to);
+
+    try {
+      const response = await fetch(EXPO_PUSH_URL, {
+        method: "POST",
+        headers: getExpoHeaders(),
+        body: JSON.stringify(chunk),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        console.error("Expo push request failed:", response.status, errorText);
+        continue;
+      }
+
+      const result = await response.json().catch(() => null);
+      const tickets = Array.isArray(result?.data) ? result.data : [];
+      await cleanupInvalidTokens(tokens, tickets);
+    } catch (error) {
+      console.error("Failed to send Expo push chunk:", error?.message || error);
+    }
+  }
+}
+
+function buildPushMessage(token, { title, body, data, channelId = "messages" }) {
+  return {
+    to: token,
+    sound: "default",
+    title,
+    body,
+    data,
+    badge: typeof data?.unreadCount === "number" ? data.unreadCount : undefined,
+    channelId,
+    priority: "high",
+    ttl: 86400,
+  };
+}
+
+export async function sendPushToUser(userId, { title, body, data, channelId = "messages" }) {
   try {
     const records = await prisma.pushToken.findMany({
       where: { userId },
@@ -45,45 +102,34 @@ export async function sendPushToUser(userId, { title, body, data }) {
     const tokens = records.map((record) => record.token).filter(isExpoPushToken);
     if (tokens.length === 0) return;
 
-    const messages = tokens.map((token) => ({
-      to: token,
-      sound: "default",
-      title,
-      body,
-      data,
-      badge: typeof data?.unreadCount === "number" ? data.unreadCount : undefined,
-      channelId: "messages",
-      priority: "high",
-      ttl: 86400,
-    }));
-
-    const headers = {
-      Accept: "application/json",
-      "Accept-Encoding": "gzip, deflate",
-      "Content-Type": "application/json",
-    };
-    const expoAccessToken = process.env.EXPO_ACCESS_TOKEN?.trim();
-    if (expoAccessToken) {
-      headers.Authorization = `Bearer ${expoAccessToken}`;
-    }
-
-    const response = await fetch(EXPO_PUSH_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(messages),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      console.error("Expo push request failed:", response.status, errorText);
-      return;
-    }
-
-    const result = await response.json().catch(() => null);
-    const tickets = Array.isArray(result?.data) ? result.data : [];
-    await cleanupInvalidTokens(tokens, tickets);
+    const messages = tokens.map((token) =>
+      buildPushMessage(token, { title, body, data, channelId }),
+    );
+    await sendExpoMessages(messages);
   } catch (error) {
     console.error("Failed to send push notification:", error?.message || error);
+  }
+}
+
+export async function sendPushToUsers(userIds, { title, body, data, channelId = "messages" }) {
+  try {
+    const uniqueIds = [...new Set((userIds || []).filter(Boolean))];
+    if (uniqueIds.length === 0) return;
+
+    const records = await prisma.pushToken.findMany({
+      where: { userId: { in: uniqueIds } },
+      select: { token: true },
+    });
+
+    const tokens = records.map((record) => record.token).filter(isExpoPushToken);
+    if (tokens.length === 0) return;
+
+    const messages = tokens.map((token) =>
+      buildPushMessage(token, { title, body, data, channelId }),
+    );
+    await sendExpoMessages(messages);
+  } catch (error) {
+    console.error("Failed to send batch push notifications:", error?.message || error);
   }
 }
 
@@ -110,5 +156,18 @@ export async function notifyNewMessage({
       recipientRole,
       unreadCount,
     },
+    channelId: "messages",
+  });
+}
+
+export async function notifyAdminAnnouncement({ userIds, title, body, notificationId }) {
+  await sendPushToUsers(userIds, {
+    title,
+    body: String(body || "").slice(0, 140),
+    data: {
+      type: "admin_notification",
+      notificationId,
+    },
+    channelId: "announcements",
   });
 }

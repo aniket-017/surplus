@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 export type MessageNotificationData = {
   type?: string;
   conversationId?: string;
+  notificationId?: string;
   recipientRole?: 'buyer' | 'seller' | string;
   unreadCount?: number;
 };
@@ -67,6 +68,14 @@ export async function ensureAndroidMessageChannel() {
   await Notifications.setNotificationChannelAsync('messages', {
     name: 'Messages',
     importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#16A34A',
+    sound: 'default',
+  });
+
+  await Notifications.setNotificationChannelAsync('announcements', {
+    name: 'Announcements',
+    importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#16A34A',
     sound: 'default',
@@ -161,4 +170,15 @@ export function getConversationRoute(
     pathname: '/messages/[id]' as const,
     params: { id: conversationId },
   };
+}
+
+export function getNotificationsInboxRoute(role: 'buyer' | 'seller' | null | undefined) {
+  if (role === 'seller') {
+    return '/(seller)/notifications' as const;
+  }
+  return '/(buyer)/notifications' as const;
+}
+
+export function isAdminNotification(data: MessageNotificationData) {
+  return data.type === 'admin_notification';
 }

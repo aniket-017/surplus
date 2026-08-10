@@ -12,6 +12,7 @@ import {
   SellerSwitchToBuyerCard,
   SellerWelcomeBanner,
 } from '@/src/components/seller';
+import { useAdminNotificationUnreadCount } from '@/src/context/AdminNotificationsContext';
 import { useAuth } from '@/src/context/AuthContext';
 import { useRoleSwitch } from '@/src/context/RoleSwitchContext';
 import { useMyProducts } from '@/src/hooks/useMyProducts';
@@ -22,6 +23,7 @@ export default function SellerDashboardTab() {
   const { user } = useAuth();
   const { switchRole, switching: roleSwitching } = useRoleSwitch();
   const { products, stats } = useMyProducts();
+  const unreadCount = useAdminNotificationUnreadCount();
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState('');
 
@@ -48,6 +50,22 @@ export default function SellerDashboardTab() {
         <ScreenContent style={styles.screenContent}>
           <View style={styles.header}>
             <Logo size="sm" />
+            <Pressable
+              style={styles.bellButton}
+              onPress={() => router.push('/(seller)/notifications')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+            >
+              <Ionicons name="notifications-outline" size={20} color={colors.textStrong} />
+              {unreadCount > 0 ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 99 ? '99+' : String(unreadCount)}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
           </View>
 
           <SellerWelcomeBanner name={user?.name} />
@@ -90,7 +108,38 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bellButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.bg,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '800',
   },
   actions: {
     gap: spacing.sm,

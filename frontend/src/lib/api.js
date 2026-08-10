@@ -160,6 +160,18 @@ export function updateSuperadminReport(id, status) {
   })
 }
 
+export function getSuperadminNotifications({ page = 1, limit = 20 } = {}) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  return apiFetch(`/api/superadmin/notifications?${params}`)
+}
+
+export function sendSuperadminNotification({ title, body, audience, targetUserIds = [] }) {
+  return apiFetch('/api/superadmin/notifications', {
+    method: 'POST',
+    body: JSON.stringify({ title, body, audience, targetUserIds }),
+  })
+}
+
 export function getSuperadmins() {
   return apiFetch('/api/superadmin/admins')
 }

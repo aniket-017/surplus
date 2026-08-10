@@ -2,7 +2,6 @@ import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { memo, useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Platform,
   Pressable,
@@ -13,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { ConversationListSkeleton } from '@/src/components/messages/ConversationListSkeleton';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { useUnreadMessages } from '@/src/context/UnreadMessagesContext';
@@ -146,11 +146,7 @@ export function ConversationList({ emptySubtitle }: ConversationListProps) {
   );
 
   if (loading && conversations.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={colors.accent} size="large" />
-      </View>
-    );
+    return <ConversationListSkeleton />;
   }
 
   if (error && conversations.length === 0) {

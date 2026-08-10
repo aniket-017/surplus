@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -16,6 +15,7 @@ import {
   CATEGORY_GRID_PADDING,
   getCategoryTileWidth,
 } from '@/src/components/buyer/BuyerCategoryCard';
+import { CategoriesGridSkeleton } from '@/src/components/buyer/CategoriesGridSkeleton';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
@@ -74,9 +74,7 @@ export default function BuyerCategoriesTab() {
         </View>
 
         {loading ? (
-          <View style={styles.centered}>
-            <ActivityIndicator color={colors.accent} size="large" />
-          </View>
+          <CategoriesGridSkeleton columns={categoryColumns} tileWidth={tileWidth} />
         ) : error ? (
           <View style={styles.centered}>
             <Text style={styles.error}>{error}</Text>

@@ -2,6 +2,7 @@ export { BuyerCategoryCard } from './BuyerCategoryCard';
 export { BuyerHomeHeader } from './BuyerHomeHeader';
 export { BuyerPlaceholderTab } from './BuyerPlaceholderTab';
 export { BuyerSearchBar } from './BuyerSearchBar';
+export { CategoriesGridSkeleton } from './CategoriesGridSkeleton';
 export { CategoryCarousel } from './CategoryCarousel';
 export { HomeListingsSkeleton } from './HomeListingsSkeleton';
 export { ListingFilterChips } from './ListingFilterChips';

@@ -277,7 +277,14 @@ export async function listSubCategoriesForCategory(category) {
   });
 
   return grouped
-    .map((item) => String(item.subCategory || "").trim())
+    .map((item) => {
+      const name = String(item.subCategory || "").trim();
+      if (!name) return null;
+      return {
+        name,
+        count: item._count.subCategory,
+      };
+    })
     .filter(Boolean);
 }
 

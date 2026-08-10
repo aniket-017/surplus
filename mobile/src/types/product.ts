@@ -88,6 +88,11 @@ export type ProductCategory = {
   imageUrl?: string | null;
 };
 
+export type ProductSubCategory = {
+  name: string;
+  count: number;
+};
+
 export type BrowseSort = 'recent' | 'price_asc' | 'price_desc';
 
 export type BrowseProductsParams = {

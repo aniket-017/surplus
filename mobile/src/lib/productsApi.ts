@@ -6,6 +6,7 @@ import type {
   ProductCategory,
   ProductFormValues,
   ProductListing,
+  ProductSubCategory,
 } from '@/src/types/product';
 import { API_BASE } from '@/src/lib/apiBase';
 import { prepareImageForUpload } from '@/src/lib/prepareImageForUpload';
@@ -257,7 +258,7 @@ export async function getProductSubCategories(token: string, category: string) {
     },
   });
 
-  return parseResponse<{ subCategories: string[] }>(res);
+  return parseResponse<{ subCategories: ProductSubCategory[] }>(res);
 }
 
 export function getImageUrl(path: string) {

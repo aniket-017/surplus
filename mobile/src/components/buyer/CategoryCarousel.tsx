@@ -13,14 +13,12 @@ const SKELETON_COUNT = 5;
 
 type CategoryCarouselProps = {
   categories: ProductCategory[];
-  activeCategory: string;
   onSelectCategory: (category: string) => void;
   loading?: boolean;
 };
 
 export function CategoryCarousel({
   categories,
-  activeCategory,
   onSelectCategory,
   loading = false,
 }: CategoryCarouselProps) {
@@ -53,34 +51,24 @@ export function CategoryCarousel({
                 <SkeletonBone width="70%" height={11} radius={6} delay={i * 60 + 40} />
               </View>
             ))
-          : categories.map((category) => {
-              const active = activeCategory === category.name;
-
-              return (
-                <Pressable
-                  key={category.name}
-                  style={[styles.card, { width: cardWidth }, active && styles.cardActive]}
-                  onPress={() => onSelectCategory(active ? '' : category.name)}
-                >
-                  <View
-                    style={[
-                      styles.iconWrap,
-                      { width: iconSize, height: iconSize },
-                      active && styles.iconWrapActive,
-                    ]}
-                  >
-                    <CategoryImage
-                      name={category.name}
-                      imageUrl={category.imageUrl}
-                      style={styles.image}
-                    />
-                  </View>
-                  <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
-                    {category.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
+          : categories.map((category) => (
+              <Pressable
+                key={category.name}
+                style={[styles.card, { width: cardWidth }]}
+                onPress={() => onSelectCategory(category.name)}
+              >
+                <View style={[styles.iconWrap, { width: iconSize, height: iconSize }]}>
+                  <CategoryImage
+                    name={category.name}
+                    imageUrl={category.imageUrl}
+                    style={styles.image}
+                  />
+                </View>
+                <Text style={styles.label} numberOfLines={1}>
+                  {category.name}
+                </Text>
+              </Pressable>
+            ))}
       </ScrollView>
     </View>
   );
@@ -119,10 +107,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     paddingHorizontal: 4,
   },
-  cardActive: {
-    borderColor: colors.accent,
-    backgroundColor: 'rgba(92, 179, 53, 0.08)',
-  },
   iconWrap: {
     borderRadius: 10,
     backgroundColor: '#EEF2F6',
@@ -130,9 +114,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
     padding: 4,
-  },
-  iconWrapActive: {
-    backgroundColor: '#E8F5E3',
   },
   image: {
     width: '100%',
@@ -143,8 +124,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
-  },
-  labelActive: {
-    color: colors.accent,
   },
 });

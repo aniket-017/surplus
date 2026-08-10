@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -58,7 +58,6 @@ export default function BuyerHomeTab() {
   const { location } = useBuyerLocation();
   const { width, columns } = useBreakpoint();
   const cardWidth = productCardWidth(width, columns, HORIZONTAL_PADDING, GRID_GAP);
-  const { category: categoryParam } = useLocalSearchParams<{ category?: string }>();
 
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -73,15 +72,8 @@ export default function BuyerHomeTab() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [switchingToSell, setSwitchingToSell] = useState(false);
 
-  const activeCategory = filters.category;
   const activeFilter = chipIdFromFilters(filters);
   const activeFilterCount = countActiveFilters(filters);
-
-  useEffect(() => {
-    if (typeof categoryParam === 'string' && categoryParam.length > 0) {
-      setFilters((prev) => ({ ...prev, category: categoryParam, subCategory: '' }));
-    }
-  }, [categoryParam]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -113,7 +105,6 @@ export default function BuyerHomeTab() {
           browseProducts(token, {
             search: debouncedSearch || undefined,
             category: filters.category || undefined,
-            subCategory: filters.subCategory || undefined,
             sort: filters.sort,
             city: filters.nearMe && nearMeCity ? nearMeCity : undefined,
             minPrice: parseOptionalPrice(filters.minPrice),
@@ -194,11 +185,15 @@ export default function BuyerHomeTab() {
   );
 
   function handleCategorySelect(category: string) {
-    setFilters((prev) => ({
-      ...prev,
-      category,
-      subCategory: category === prev.category ? prev.subCategory : '',
-    }));
+    if (!category) {
+      router.push('/(buyer)/(tabs)/categories');
+      return;
+    }
+
+    router.push({
+      pathname: '/category/[name]',
+      params: { name: category },
+    });
   }
 
   function handleFilterChange(filterId: string, nextSort: BrowseSort) {
@@ -238,7 +233,6 @@ export default function BuyerHomeTab() {
         <SellSurplusCta onPress={() => void handleSellSurplus()} loading={switchingToSell || roleSwitching} />
         <CategoryCarousel
           categories={categories}
-          activeCategory={activeCategory}
           onSelectCategory={handleCategorySelect}
           loading={loading}
         />
@@ -249,7 +243,6 @@ export default function BuyerHomeTab() {
     [
       search,
       categories,
-      activeCategory,
       activeFilter,
       activeFilterCount,
       error,
@@ -314,7 +307,6 @@ export default function BuyerHomeTab() {
         filters={filters}
         categories={categories}
         nearMeCity={nearMeCity}
-        token={token}
         onApply={handleApplyFilters}
       />
     </SafeAreaView>

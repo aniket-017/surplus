@@ -60,8 +60,8 @@ export default function BuyerCategoriesTab() {
 
   function handleSelectCategory(category: string) {
     router.push({
-      pathname: '/(buyer)/(tabs)',
-      params: { category },
+      pathname: '/category/[name]',
+      params: { name: category },
     });
   }
 

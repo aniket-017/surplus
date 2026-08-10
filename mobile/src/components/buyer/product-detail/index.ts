@@ -8,6 +8,7 @@ export { ProductDetailSkeleton } from './ProductDetailSkeleton';
 export { ProductGallery } from './ProductGallery';
 export { ProductHero } from './ProductHero';
 export { QuickStatsRow } from './QuickStatsRow';
+export { ReportModal } from './ReportModal';
 export { SectionCard } from './SectionCard';
 export { SellerTrustCard } from './SellerTrustCard';
 export { SimilarListings } from './SimilarListings';

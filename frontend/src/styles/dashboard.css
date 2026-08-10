@@ -3435,6 +3435,12 @@
   align-items: flex-start;
 }
 
+.sa-muted-text {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 0.15rem;
+}
+
 .sa-preview {
   max-width: 220px;
   overflow: hidden;

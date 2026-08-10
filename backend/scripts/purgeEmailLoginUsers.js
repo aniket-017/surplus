@@ -36,6 +36,7 @@ async function deleteProductWithRelations(productId) {
   });
   await deleteConversationsByIds(conversations.map((c) => c.id));
   await prisma.savedListing.deleteMany({ where: { productId } });
+  await prisma.listingReport.deleteMany({ where: { productId } });
   await deleteProductImagesFromS3(product.images);
   await prisma.product.delete({ where: { id: productId } });
   return product;

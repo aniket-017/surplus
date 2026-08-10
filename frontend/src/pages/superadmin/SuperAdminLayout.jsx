@@ -6,6 +6,7 @@ const NAV = [
   { to: '/superadmin', label: 'Overview', end: true },
   { to: '/superadmin/users', label: 'Users' },
   { to: '/superadmin/products', label: 'Products' },
+  { to: '/superadmin/reports', label: 'Reports' },
   { to: '/superadmin/admins', label: 'Admins' },
 ]
 

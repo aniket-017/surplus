@@ -33,6 +33,20 @@ enum ListingStatus {
   DELETED
 }
 
+enum ReportReason {
+  SPAM
+  MISLEADING
+  PROHIBITED
+  WRONG_CATEGORY
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+}
+
 type ProductAttribute {
   key   String
   value String
@@ -73,6 +87,7 @@ model User {
   sellerConversations Conversation[] @relation("SellerConversations")
   messages            Message[]
   savedListings       SavedListing[]
+  reportsFiled        ListingReport[]
   pushTokens          PushToken[]
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -136,6 +151,7 @@ model Product {
 
   conversations Conversation[]
   savedBy       SavedListing[]
+  reports       ListingReport[]
 
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @updatedAt @map("updated_at")
@@ -198,6 +214,25 @@ model SavedListing {
   @@unique([userId, productId])
   @@index([userId])
   @@map("saved_listings")
+}
+
+model ListingReport {
+  id         String       @id @default(auto()) @map("_id") @db.ObjectId
+  reporterId String       @map("reporter_id") @db.ObjectId
+  productId  String       @map("product_id") @db.ObjectId
+  reporter   User         @relation(fields: [reporterId], references: [id])
+  product    Product      @relation(fields: [productId], references: [id])
+  reason     ReportReason
+  details    String?
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  @@unique([reporterId, productId])
+  @@index([productId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("listing_reports")
 }
 
 model CategoryMeta {

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing } from '@/src/constants/theme';
 
@@ -7,6 +7,7 @@ type DetailHeaderProps = {
   onBack: () => void;
   saved: boolean;
   onToggleSave: () => void;
+  onReport: () => void;
   shareTitle: string;
   shareMessage: string;
 };
@@ -15,6 +16,7 @@ export function DetailHeader({
   onBack,
   saved,
   onToggleSave,
+  onReport,
   shareTitle,
   shareMessage,
 }: DetailHeaderProps) {
@@ -27,10 +29,6 @@ export function DetailHeader({
     } catch {
       // user dismissed
     }
-  }
-
-  function handleReport() {
-    Alert.alert('Report listing', 'Report functionality is coming soon.');
   }
 
   return (
@@ -51,7 +49,13 @@ export function DetailHeader({
             color={saved ? colors.accent : colors.textStrong}
           />
         </Pressable>
-        <Pressable onPress={handleReport} hitSlop={8} style={styles.iconButton}>
+        <Pressable
+          onPress={onReport}
+          hitSlop={8}
+          style={styles.iconButton}
+          accessibilityRole="button"
+          accessibilityLabel="Report listing"
+        >
           <Ionicons name="flag-outline" size={20} color={colors.textStrong} />
         </Pressable>
       </View>

@@ -20,12 +20,14 @@ import {
   ProductGallery,
   ProductHero,
   QuickStatsRow,
+  ReportModal,
   SellerTrustCard,
   SimilarListings,
   SpecsGrid,
   StickyActionBar,
   WhyBuySection,
 } from '@/src/components/buyer/product-detail';
+import type { ReportReasonValue } from '@/src/components/buyer/product-detail/ReportModal';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing } from '@/src/constants/theme';
@@ -39,6 +41,7 @@ import {
 } from '@/src/lib/conversationsApi';
 import { formatListingPrice } from '@/src/lib/productFormat';
 import { browseProducts, getBrowseProduct } from '@/src/lib/productsApi';
+import { reportListing } from '@/src/lib/reportsApi';
 import type { ProductListing } from '@/src/types/product';
 
 const STICKY_BAR_HEIGHT = 88;
@@ -59,6 +62,10 @@ export default function BuyerProductDetailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [inquiryVisible, setInquiryVisible] = useState(false);
   const [inquiryMessage, setInquiryMessage] = useState('');
+  const [reportVisible, setReportVisible] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReasonValue | null>(null);
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   const loadProduct = useCallback(async () => {
     if (!token || !id) {
@@ -119,6 +126,36 @@ export default function BuyerProductDetailScreen() {
     setInquiryVisible(true);
   }
 
+  function openReportModal() {
+    setReportReason(null);
+    setReportDetails('');
+    setReportVisible(true);
+  }
+
+  async function handleSubmitReport() {
+    if (!token || !product || !reportReason || reportSubmitting) return;
+    if (reportReason === 'OTHER' && !reportDetails.trim()) {
+      Alert.alert('Details required', 'Please describe the issue for this report.');
+      return;
+    }
+
+    setReportSubmitting(true);
+    try {
+      await reportListing(token, product.id, {
+        reason: reportReason,
+        details: reportDetails,
+      });
+      setReportVisible(false);
+      setReportReason(null);
+      setReportDetails('');
+      Alert.alert('Report submitted', 'Thanks. Our team will review this listing.');
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to submit report');
+    } finally {
+      setReportSubmitting(false);
+    }
+  }
+
   async function handleSubmitInquiry() {
     if (!token || !product) return;
 
@@ -145,6 +182,7 @@ export default function BuyerProductDetailScreen() {
           onBack={() => router.back()}
           saved={false}
           onToggleSave={() => {}}
+          onReport={() => {}}
           shareTitle=""
           shareMessage=""
         />
@@ -160,6 +198,7 @@ export default function BuyerProductDetailScreen() {
           onBack={() => router.back()}
           saved={false}
           onToggleSave={() => {}}
+          onReport={() => {}}
           shareTitle=""
           shareMessage=""
         />
@@ -178,6 +217,7 @@ export default function BuyerProductDetailScreen() {
         onBack={() => router.back()}
         saved={saved}
         onToggleSave={handleToggleSave}
+        onReport={openReportModal}
         shareTitle={product.title}
         shareMessage={shareMessage}
       />
@@ -223,6 +263,21 @@ export default function BuyerProductDetailScreen() {
           setInquiryMessage('');
         }}
         onSubmit={handleSubmitInquiry}
+      />
+
+      <ReportModal
+        visible={reportVisible}
+        submitting={reportSubmitting}
+        reason={reportReason}
+        details={reportDetails}
+        onChangeReason={setReportReason}
+        onChangeDetails={setReportDetails}
+        onClose={() => {
+          setReportVisible(false);
+          setReportReason(null);
+          setReportDetails('');
+        }}
+        onSubmit={handleSubmitReport}
       />
     </SafeAreaView>
   );

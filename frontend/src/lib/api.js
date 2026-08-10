@@ -146,6 +146,20 @@ export function deleteSuperadminProduct(id) {
   })
 }
 
+export function getSuperadminReports({ page = 1, limit = 20, q = '', status = '' } = {}) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  if (q) params.set('q', q)
+  if (status) params.set('status', status)
+  return apiFetch(`/api/superadmin/reports?${params}`)
+}
+
+export function updateSuperadminReport(id, status) {
+  return apiFetch(`/api/superadmin/reports/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
+}
+
 export function getSuperadmins() {
   return apiFetch('/api/superadmin/admins')
 }

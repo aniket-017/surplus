@@ -70,6 +70,7 @@ async function deleteProductWithRelations(productId) {
   await deleteConversationsByIds(conversationIds);
 
   await prisma.savedListing.deleteMany({ where: { productId } });
+  await prisma.listingReport.deleteMany({ where: { productId } });
   await deleteProductImagesFromS3(product.images);
   await prisma.product.delete({ where: { id: productId } });
 
@@ -203,6 +204,7 @@ router.get("/overview", async (_req, res) => {
       products,
       conversations,
       messages,
+      openReports,
       recentUsers,
       recentProducts,
     ] = await Promise.all([
@@ -214,6 +216,7 @@ router.get("/overview", async (_req, res) => {
       prisma.product.count(),
       prisma.conversation.count(),
       prisma.message.count(),
+      prisma.listingReport.count({ where: { status: "OPEN" } }),
       prisma.user.findMany({
         orderBy: { createdAt: "desc" },
         take: 8,
@@ -253,6 +256,7 @@ router.get("/overview", async (_req, res) => {
         products,
         conversations,
         messages,
+        openReports,
       },
       recentUsers: recentUsers.map((user) => ({
         ...user,
@@ -691,6 +695,138 @@ router.delete("/products/:id", async (req, res) => {
   } catch (error) {
     console.error("Superadmin delete product failed:", error);
     res.status(500).json({ error: "Failed to delete product" });
+  }
+});
+
+router.get("/reports", async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePagination(req.query);
+    const q = String(req.query.q || "").trim();
+    const status = String(req.query.status || "").trim().toUpperCase();
+
+    const statusFilter =
+      status && ["OPEN", "REVIEWED", "DISMISSED"].includes(status)
+        ? { status }
+        : {};
+
+    const where = {
+      ...statusFilter,
+      ...(q
+        ? {
+            OR: [
+              { details: { contains: q } },
+              { product: { title: { contains: q } } },
+              { product: { seller: { email: { contains: q } } } },
+              { product: { seller: { name: { contains: q } } } },
+              { reporter: { email: { contains: q } } },
+              { reporter: { name: { contains: q } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, reports] = await Promise.all([
+      prisma.listingReport.count({ where }),
+      prisma.listingReport.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+        include: {
+          reporter: {
+            select: { id: true, email: true, name: true },
+          },
+          product: {
+            select: {
+              id: true,
+              title: true,
+              category: true,
+              listingStatus: true,
+              seller: {
+                select: { id: true, email: true, name: true },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    res.json({
+      page,
+      limit,
+      total,
+      reports: reports.map((report) => ({
+        id: report.id,
+        reason: report.reason,
+        details: report.details,
+        status: report.status,
+        createdAt: report.createdAt,
+        updatedAt: report.updatedAt,
+        reporter: report.reporter,
+        product: report.product,
+      })),
+    });
+  } catch (error) {
+    console.error("Superadmin list reports failed:", error);
+    res.status(500).json({ error: "Failed to list reports" });
+  }
+});
+
+router.patch("/reports/:id", async (req, res) => {
+  try {
+    const status = String(req.body.status || "")
+      .trim()
+      .toUpperCase();
+
+    if (!["REVIEWED", "DISMISSED"].includes(status)) {
+      return res.status(400).json({ error: "Status must be REVIEWED or DISMISSED" });
+    }
+
+    const existing = await prisma.listingReport.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Report not found" });
+    }
+
+    const report = await prisma.listingReport.update({
+      where: { id: existing.id },
+      data: { status },
+      include: {
+        reporter: {
+          select: { id: true, email: true, name: true },
+        },
+        product: {
+          select: {
+            id: true,
+            title: true,
+            category: true,
+            listingStatus: true,
+            seller: {
+              select: { id: true, email: true, name: true },
+            },
+          },
+        },
+      },
+    });
+
+    res.json({
+      report: {
+        id: report.id,
+        reason: report.reason,
+        details: report.details,
+        status: report.status,
+        createdAt: report.createdAt,
+        updatedAt: report.updatedAt,
+        reporter: report.reporter,
+        product: report.product,
+      },
+    });
+  } catch (error) {
+    console.error("Superadmin update report failed:", error);
+    res.status(500).json({ error: "Failed to update report" });
   }
 });
 

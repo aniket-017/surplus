@@ -1,8 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing } from '@/src/constants/theme';
-import { formatAttributeKey } from '@/src/lib/productFormat';
-import type { ProductAttribute } from '@/src/types/product';
+import { formatAttributeKey, type ProductAttribute } from '@/src/types/product';
 
 import { SectionCard } from './SectionCard';
 
@@ -44,10 +43,7 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: 4,
     paddingVertical: spacing.sm,
   },
   rowBorder: {
@@ -55,21 +51,17 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   key: {
-    flex: 1,
     color: colors.muted,
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
-    paddingTop: 2,
   },
   value: {
-    flex: 1.2,
     color: colors.textStrong,
     fontSize: 15,
     fontWeight: '700',
-    lineHeight: 20,
-    textAlign: 'right',
+    lineHeight: 22,
   },
   empty: {
     color: colors.muted,

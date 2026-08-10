@@ -27,6 +27,12 @@ enum ProductCondition {
   REFURBISHED
 }
 
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  DELETED
+}
+
 type ProductAttribute {
   key   String
   value String
@@ -119,6 +125,7 @@ model Product {
   price        Float
   priceType    PriceType          @map("price_type")
   condition    ProductCondition
+  listingStatus ListingStatus     @default(ACTIVE) @map("listing_status")
 
   images       String[]
 
@@ -135,6 +142,7 @@ model Product {
 
   @@index([sellerId])
   @@index([category, subCategory])
+  @@index([listingStatus])
   @@map("products")
 }
 

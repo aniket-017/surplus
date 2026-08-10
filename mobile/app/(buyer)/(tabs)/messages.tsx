@@ -8,7 +8,7 @@ export default function BuyerMessagesTab() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Chats</Text>
+        <Text style={styles.title}>Messages</Text>
       </View>
       <ConversationList emptySubtitle="Send an inquiry from a listing to start a conversation." />
     </SafeAreaView>

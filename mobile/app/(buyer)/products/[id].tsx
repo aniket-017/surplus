@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -17,6 +16,7 @@ import {
   InquiryUrgency,
   LocationSection,
   MarketRateCard,
+  ProductDetailSkeleton,
   ProductGallery,
   ProductHero,
   QuickStatsRow,
@@ -140,10 +140,15 @@ export default function BuyerProductDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.centered}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <DetailHeader
+          onBack={() => router.back()}
+          saved={false}
+          onToggleSave={() => {}}
+          shareTitle=""
+          shareMessage=""
+        />
+        <ProductDetailSkeleton />
       </SafeAreaView>
     );
   }

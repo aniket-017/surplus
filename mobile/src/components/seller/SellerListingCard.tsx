@@ -6,16 +6,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from '@/src/constants/theme';
 import { formatListingPrice, formatPrice } from '@/src/lib/productFormat';
 import { getImageUrl } from '@/src/lib/productsApi';
-import type { Product } from '@/src/types/product';
+import type { ListingStatus, Product } from '@/src/types/product';
 
 type SellerListingCardProps = {
   product: Product;
   onPress: () => void;
   onEdit: () => void;
+  onMarkSold: () => void;
+  onDelete: () => void;
 };
 
 const PRICE_GREEN = '#1B5E20';
-const PENDING_ORANGE = '#F57C00';
+const SOLD_BLUE = '#1565C0';
+const DELETED_GRAY = '#607D8B';
 
 function getTotalPrice(product: Product) {
   if (
@@ -29,9 +32,19 @@ function getTotalPrice(product: Product) {
   return product.price;
 }
 
-function getListingStatus(product: Product) {
-  if (product.condition === 'refurbished') {
-    return { label: 'Pending', tone: 'pending' as const };
+function resolveListingStatus(product: Product): ListingStatus {
+  return product.listingStatus ?? 'active';
+}
+
+function getListingBadge(product: Product) {
+  const status = resolveListingStatus(product);
+
+  if (status === 'sold') {
+    return { label: 'Sold', tone: 'sold' as const };
+  }
+
+  if (status === 'deleted') {
+    return { label: 'Deleted', tone: 'deleted' as const };
   }
 
   return { label: 'Active', tone: 'active' as const };
@@ -74,10 +87,19 @@ type ListingMenuProps = {
   visible: boolean;
   onClose: () => void;
   onView: () => void;
-  onEdit: () => void;
+  onEdit?: () => void;
+  onMarkSold?: () => void;
+  onDelete?: () => void;
 };
 
-function ListingMenu({ visible, onClose, onView, onEdit }: ListingMenuProps) {
+function ListingMenu({
+  visible,
+  onClose,
+  onView,
+  onEdit,
+  onMarkSold,
+  onDelete,
+}: ListingMenuProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.menuBackdrop} onPress={onClose}>
@@ -93,17 +115,54 @@ function ListingMenu({ visible, onClose, onView, onEdit }: ListingMenuProps) {
               <Ionicons name="eye-outline" size={18} color={colors.textStrong} />
               <Text style={styles.menuItemText}>View Details</Text>
             </Pressable>
-            <View style={styles.menuDivider} />
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => {
-                onClose();
-                onEdit();
-              }}
-            >
-              <Ionicons name="create-outline" size={18} color={colors.accent} />
-              <Text style={[styles.menuItemText, styles.menuItemTextAccent]}>Edit Listing</Text>
-            </Pressable>
+
+            {onEdit ? (
+              <>
+                <View style={styles.menuDivider} />
+                <Pressable
+                  style={styles.menuItem}
+                  onPress={() => {
+                    onClose();
+                    onEdit();
+                  }}
+                >
+                  <Ionicons name="create-outline" size={18} color={colors.accent} />
+                  <Text style={[styles.menuItemText, styles.menuItemTextAccent]}>Edit Listing</Text>
+                </Pressable>
+              </>
+            ) : null}
+
+            {onMarkSold ? (
+              <>
+                <View style={styles.menuDivider} />
+                <Pressable
+                  style={styles.menuItem}
+                  onPress={() => {
+                    onClose();
+                    onMarkSold();
+                  }}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={18} color={SOLD_BLUE} />
+                  <Text style={[styles.menuItemText, styles.menuItemTextSold]}>Mark as Sold</Text>
+                </Pressable>
+              </>
+            ) : null}
+
+            {onDelete ? (
+              <>
+                <View style={styles.menuDivider} />
+                <Pressable
+                  style={styles.menuItem}
+                  onPress={() => {
+                    onClose();
+                    onDelete();
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={18} color={colors.error} />
+                  <Text style={[styles.menuItemText, styles.menuItemTextDanger]}>Delete</Text>
+                </Pressable>
+              </>
+            ) : null}
           </View>
         </Pressable>
       </Pressable>
@@ -111,11 +170,21 @@ function ListingMenu({ visible, onClose, onView, onEdit }: ListingMenuProps) {
   );
 }
 
-export function SellerListingCard({ product, onPress, onEdit }: SellerListingCardProps) {
+export function SellerListingCard({
+  product,
+  onPress,
+  onEdit,
+  onMarkSold,
+  onDelete,
+}: SellerListingCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const status = getListingStatus(product);
+  const status = getListingBadge(product);
+  const listingStatus = resolveListingStatus(product);
   const totalPrice = getTotalPrice(product);
   const unitPriceLabel = formatListingPrice(product);
+  const canEdit = listingStatus !== 'deleted';
+  const canMarkSold = listingStatus === 'active';
+  const canDelete = listingStatus !== 'deleted';
 
   return (
     <>
@@ -133,7 +202,9 @@ export function SellerListingCard({ product, onPress, onEdit }: SellerListingCar
           <View
             style={[
               styles.statusBadge,
-              status.tone === 'active' ? styles.statusBadgeActive : styles.statusBadgePending,
+              status.tone === 'active' && styles.statusBadgeActive,
+              status.tone === 'sold' && styles.statusBadgeSold,
+              status.tone === 'deleted' && styles.statusBadgeDeleted,
             ]}
           >
             <Text style={styles.statusBadgeText}>{status.label}</Text>
@@ -190,7 +261,9 @@ export function SellerListingCard({ product, onPress, onEdit }: SellerListingCar
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}
         onView={onPress}
-        onEdit={onEdit}
+        onEdit={canEdit ? onEdit : undefined}
+        onMarkSold={canMarkSold ? onMarkSold : undefined}
+        onDelete={canDelete ? onDelete : undefined}
       />
     </>
   );
@@ -228,8 +301,11 @@ const styles = StyleSheet.create({
   statusBadgeActive: {
     backgroundColor: colors.accent,
   },
-  statusBadgePending: {
-    backgroundColor: PENDING_ORANGE,
+  statusBadgeSold: {
+    backgroundColor: SOLD_BLUE,
+  },
+  statusBadgeDeleted: {
+    backgroundColor: DELETED_GRAY,
   },
   statusBadgeText: {
     color: colors.white,
@@ -335,6 +411,14 @@ const styles = StyleSheet.create({
   },
   menuItemTextAccent: {
     color: colors.accent,
+    fontWeight: '700',
+  },
+  menuItemTextSold: {
+    color: SOLD_BLUE,
+    fontWeight: '700',
+  },
+  menuItemTextDanger: {
+    color: colors.error,
     fontWeight: '700',
   },
   menuDivider: {

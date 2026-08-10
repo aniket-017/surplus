@@ -453,7 +453,6 @@ export function ChatThreadScreen() {
   return (
     <View style={[styles.safeArea, { paddingTop: topInset }]}>
       <ChatHeader
-        role={user?.role ?? undefined}
         otherParty={otherParty}
         product={product}
         onBack={() => router.back()}

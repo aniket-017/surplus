@@ -14,6 +14,7 @@ import { notifyNewMessage } from "../lib/pushNotifications.js";
 import { uploadMessageFile, uploadMessageImage as uploadMessageImageToS3 } from "../lib/s3.js";
 import { getMessageUploadFile, isImageUpload, uploadMessageAttachment } from "../lib/upload.js";
 import { requireAuth } from "../middleware/auth.js";
+import { isActiveListing } from "../lib/product.js";
 
 const router = Router();
 
@@ -88,10 +89,10 @@ router.post("/", requireAuth, async (req, res) => {
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { id: true, sellerId: true },
+      select: { id: true, sellerId: true, listingStatus: true },
     });
 
-    if (!product) {
+    if (!product || !isActiveListing(product)) {
       return res.status(404).json({ error: "Product not found" });
     }
 

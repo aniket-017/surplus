@@ -5,6 +5,27 @@ export type ProductAttribute = {
   value: string;
 };
 
+/** Turn camelCase / snake_case keys into readable labels (outerDiameter → Outer Diameter). */
+export function formatAttributeKey(key: string) {
+  const trimmed = key.trim();
+  if (!trimmed) return '';
+
+  return trimmed
+    .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+export function humanizeAttributes(attributes: ProductAttribute[]): ProductAttribute[] {
+  return attributes.map((attribute) => ({
+    key: formatAttributeKey(attribute.key),
+    value: attribute.value.trim(),
+  }));
+}
+
 export type ProductLocation = {
   address?: string | null;
   city: string;
@@ -14,6 +35,7 @@ export type ProductLocation = {
 
 export type PriceType = 'fixed' | 'negotiable' | 'per_kg' | 'per_unit' | 'per_lot';
 export type ProductCondition = 'new' | 'used' | 'surplus' | 'refurbished';
+export type ListingStatus = 'active' | 'sold' | 'deleted';
 
 export type ProductAnalysis = {
   title: string;
@@ -37,6 +59,7 @@ export type Product = {
   price: number;
   priceType: PriceType;
   condition: ProductCondition;
+  listingStatus?: ListingStatus;
   images: string[];
   attributes: ProductAttribute[];
   location: ProductLocation;
@@ -70,6 +93,7 @@ export type BrowseSort = 'recent' | 'price_asc' | 'price_desc';
 export type BrowseProductsParams = {
   search?: string;
   category?: string;
+  subCategory?: string;
   sort?: BrowseSort;
   city?: string;
   state?: string;
@@ -185,7 +209,7 @@ export function productToFormValues(product: Product): ProductFormValues {
     price: String(product.price),
     priceType: product.priceType,
     condition: product.condition,
-    attributes: product.attributes,
+    attributes: humanizeAttributes(product.attributes),
     location: {
       address: product.location.address ?? '',
       city: product.location.city,

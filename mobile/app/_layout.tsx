@@ -1,7 +1,6 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/src/context/AuthContext';
@@ -12,10 +11,6 @@ import { UnreadMessagesProvider } from '@/src/context/UnreadMessagesContext';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
-
   return (
     <SafeAreaProvider>
       {/* App screens are light-themed; keep system icons dark for contrast. */}

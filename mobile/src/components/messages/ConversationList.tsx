@@ -29,15 +29,8 @@ function getPreview(conversation: ConversationSummary) {
   return 'Inquiry sent';
 }
 
-function getRowTitle(conversation: ConversationSummary, role: 'buyer' | 'seller' | null | undefined) {
-  const productTitle = conversation.product?.title || 'Listing';
-
-  if (role === 'seller') {
-    const buyerName = conversation.otherParty?.name || 'User';
-    return `${buyerName} - ${productTitle}`;
-  }
-
-  return productTitle;
+function getRowTitle(conversation: ConversationSummary) {
+  return conversation.otherParty?.name || 'User';
 }
 
 type ConversationListProps = {
@@ -50,7 +43,7 @@ type ConversationRowProps = {
 };
 
 const ConversationRow = memo(function ConversationRow({ item, role }: ConversationRowProps) {
-  const title = getRowTitle(item, role);
+  const title = getRowTitle(item);
   const productImage = item.product?.images?.[0];
   const unread = (item.unreadCount || 0) > 0;
 

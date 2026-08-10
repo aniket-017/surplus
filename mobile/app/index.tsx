@@ -1,17 +1,16 @@
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
 
+import { AnimatedSplash } from '@/src/components/AnimatedSplash';
 import { useAuth } from '@/src/context/AuthContext';
-import { colors } from '@/src/constants/theme';
 
 export default function Index() {
   const { user, token, loading } = useAuth();
+  const [splashDone, setSplashDone] = useState(false);
 
-  if (loading) {
+  if (loading || !splashDone) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.accent} />
-      </View>
+      <AnimatedSplash readyToExit={!loading} onFinished={() => setSplashDone(true)} />
     );
   }
 
@@ -29,12 +28,3 @@ export default function Index() {
 
   return <Redirect href="/(seller)/(tabs)" />;
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bgSubtle,
-  },
-});

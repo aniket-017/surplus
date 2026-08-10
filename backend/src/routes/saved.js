@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
-import { formatProductListing } from "../lib/product.js";
+import { formatProductListing, isActiveListing } from "../lib/product.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -29,7 +29,7 @@ router.get("/", requireAuth, async (req, res) => {
 
     const products = await Promise.all(
       saved
-        .filter((item) => item.product)
+        .filter((item) => item.product && isActiveListing(item.product))
         .map((item) => formatProductListing(item.product, item.product.seller)),
     );
 
@@ -64,10 +64,10 @@ router.post("/:productId", requireAuth, async (req, res) => {
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { id: true },
+      select: { id: true, listingStatus: true },
     });
 
-    if (!product) {
+    if (!product || !isActiveListing(product)) {
       return res.status(404).json({ error: "Product not found" });
     }
 

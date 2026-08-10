@@ -4,6 +4,7 @@ import {
   ensureCategoryMeta,
   getAllowedCategories,
   listCategoriesWithCounts,
+  listSubCategoriesForCategory,
 } from "../lib/category.js";
 import { analyzeProductImages } from "../lib/gemini.js";
 import { optimizeProductImage } from "../lib/imageOptimize.js";
@@ -13,13 +14,17 @@ import {
 } from "../lib/s3.js";
 import { uploadProductImages } from "../lib/upload.js";
 import {
+  ACTIVE_LISTING_WHERE,
   buildBrowseOrderBy,
   buildBrowseWhere,
   formatProduct,
   formatProductListing,
   formatSellerProducts,
+  getListingStatus,
+  isActiveListing,
   parseBrowseSort,
   parseCondition,
+  parseListingStatus,
   parseProductPayload,
 } from "../lib/product.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -62,7 +67,13 @@ async function optimizeUploadedImages(req, res, next) {
   }
 }
 
-router.post("/analyze", requireSeller, handleUpload, optimizeUploadedImages, async (req, res) => {
+router.post("/analyze", requireSeller, (req, res, next) => {
+  analyzeLog.info("Analyze request hitting upload middleware", {
+    sellerId: req.sellerId,
+    contentType: req.headers["content-type"],
+  });
+  next();
+}, handleUpload, optimizeUploadedImages, async (req, res) => {
   analyzeLog.info("Analyze request received", {
     sellerId: req.sellerId,
     imageCount: req.files?.length ?? 0,
@@ -164,11 +175,12 @@ router.get("/mine", requireSeller, async (req, res) => {
       (sum, count) => sum + count,
       0,
     );
+    const activeListings = products.filter((product) => isActiveListing(product)).length;
 
     res.json({
       products: formattedProducts,
       stats: {
-        activeListings: products.length,
+        activeListings,
         totalViews,
         totalInquiries,
       },
@@ -199,6 +211,17 @@ router.get("/category-options", requireAuth, async (_req, res) => {
   }
 });
 
+router.get("/subcategories", requireAuth, async (req, res) => {
+  try {
+    const category = String(req.query.category || "").trim();
+    const subCategories = await listSubCategoriesForCategory(category);
+    res.json({ subCategories });
+  } catch (error) {
+    console.error("List subcategories failed:", error);
+    res.status(500).json({ error: "Failed to fetch subcategories" });
+  }
+});
+
 const sellerSelect = {
   id: true,
   name: true,
@@ -211,6 +234,7 @@ router.get("/browse", requireAuth, async (req, res) => {
   try {
     const search = String(req.query.search || "").trim();
     const category = String(req.query.category || "").trim();
+    const subCategory = String(req.query.subCategory || "").trim();
     const city = String(req.query.city || "").trim();
     const state = String(req.query.state || "").trim();
     const sort = parseBrowseSort(req.query.sort);
@@ -237,6 +261,7 @@ router.get("/browse", requireAuth, async (req, res) => {
     const where = buildBrowseWhere({
       search,
       category,
+      subCategory,
       city,
       state,
       minPrice: Number.isFinite(minPrice) ? minPrice : undefined,
@@ -270,8 +295,8 @@ router.get("/browse", requireAuth, async (req, res) => {
 
 router.get("/browse/:id/stats", requireAuth, async (req, res) => {
   try {
-    const product = await prisma.product.findUnique({
-      where: { id: req.params.id },
+    const product = await prisma.product.findFirst({
+      where: { id: req.params.id, ...ACTIVE_LISTING_WHERE },
       select: { id: true },
     });
 
@@ -293,8 +318,8 @@ router.get("/browse/:id/stats", requireAuth, async (req, res) => {
 
 router.get("/browse/:id/similar", requireAuth, async (req, res) => {
   try {
-    const product = await prisma.product.findUnique({
-      where: { id: req.params.id },
+    const product = await prisma.product.findFirst({
+      where: { id: req.params.id, ...ACTIVE_LISTING_WHERE },
     });
 
     if (!product) {
@@ -305,6 +330,7 @@ router.get("/browse/:id/similar", requireAuth, async (req, res) => {
 
     const similar = await prisma.product.findMany({
       where: {
+        ...ACTIVE_LISTING_WHERE,
         category: product.category,
         subCategory: product.subCategory,
         id: { not: product.id },
@@ -338,7 +364,7 @@ router.get("/browse/:id", requireAuth, async (req, res) => {
       },
     });
 
-    if (!product) {
+    if (!product || !isActiveListing(product)) {
       return res.status(404).json({ error: "Product not found" });
     }
 
@@ -374,6 +400,37 @@ router.get("/:id", requireSeller, async (req, res) => {
   }
 });
 
+router.patch("/:id/status", requireSeller, async (req, res) => {
+  try {
+    const existing = await prisma.product.findFirst({
+      where: { id: req.params.id, sellerId: req.sellerId },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    if (getListingStatus(existing) === "DELETED") {
+      return res.status(400).json({ error: "Deleted listings cannot change status" });
+    }
+
+    const listingStatus = parseListingStatus(req.body.listingStatus);
+    if (!listingStatus || listingStatus === "DELETED") {
+      return res.status(400).json({ error: "listingStatus must be active or sold" });
+    }
+
+    const updated = await prisma.product.update({
+      where: { id: existing.id },
+      data: { listingStatus },
+    });
+
+    res.json({ product: await formatProduct(updated) });
+  } catch (error) {
+    console.error("Update product status failed:", error);
+    res.status(400).json({ error: error.message || "Failed to update product status" });
+  }
+});
+
 router.patch("/:id", requireSeller, handleUpload, optimizeUploadedImages, async (req, res) => {
   try {
     const existing = await prisma.product.findFirst({
@@ -382,6 +439,10 @@ router.patch("/:id", requireSeller, handleUpload, optimizeUploadedImages, async 
 
     if (!existing) {
       return res.status(404).json({ error: "Product not found" });
+    }
+
+    if (getListingStatus(existing) === "DELETED") {
+      return res.status(400).json({ error: "Deleted listings cannot be edited" });
     }
 
     const payload = parseProductPayload({
@@ -434,11 +495,16 @@ router.delete("/:id", requireSeller, async (req, res) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    await deleteProductImagesFromS3(existing.images);
+    if (getListingStatus(existing) === "DELETED") {
+      return res.status(400).json({ error: "Product is already deleted" });
+    }
 
-    await prisma.product.delete({ where: { id: existing.id } });
+    const updated = await prisma.product.update({
+      where: { id: existing.id },
+      data: { listingStatus: "DELETED" },
+    });
 
-    res.json({ message: "Product deleted" });
+    res.json({ product: await formatProduct(updated), message: "Product deleted" });
   } catch (error) {
     console.error("Delete product failed:", error);
     res.status(500).json({ error: "Failed to delete product" });

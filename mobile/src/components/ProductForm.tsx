@@ -13,9 +13,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from '@/src/constants/theme';
 import { ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
 import { CategorySelect } from '@/src/components/CategorySelect';
+import {
+  MapAddressPickerModal,
+  type PickedAddress,
+} from '@/src/components/MapAddressPickerModal';
 import type { UserAddress } from '@/src/types/auth';
 import {
   CONDITION_OPTIONS,
+  formatAttributeKey,
   isCompleteLocation,
   PRICE_TYPE_OPTIONS,
   profileAddressToLocation,
@@ -31,6 +36,7 @@ type ProductFormProps = {
 export function ProductForm({ values, onChange, profileAddress }: ProductFormProps) {
   const hasProfileAddress = Boolean(profileAddress && isCompleteLocation(profileAddress));
   const [useProfileAddress, setUseProfileAddress] = useState(hasProfileAddress);
+  const [mapPickerVisible, setMapPickerVisible] = useState(false);
 
   useEffect(() => {
     if (hasProfileAddress) {
@@ -60,11 +66,42 @@ export function ProductForm({ values, onChange, profileAddress }: ProductFormPro
     });
   }
 
+  function applyAddressFromMap(picked: PickedAddress) {
+    setUseProfileAddress(false);
+    onChange({
+      ...values,
+      location: {
+        address: picked.address,
+        city: picked.city,
+        state: picked.state,
+        pincode: picked.pincode,
+      },
+    });
+    setMapPickerVisible(false);
+  }
+
+  const mapInitialAddress: UserAddress = {
+    address: values.location.address || '',
+    city: values.location.city,
+    state: values.location.state,
+    pincode: values.location.pincode,
+    latitude: profileAddress?.latitude ?? null,
+    longitude: profileAddress?.longitude ?? null,
+  };
+
   function updateAttribute(index: number, field: 'key' | 'value', value: string) {
     const attributes = values.attributes.map((item, i) =>
       i === index ? { ...item, [field]: value } : item,
     );
     updateField('attributes', attributes);
+  }
+
+  function handleAttributeKeyBlur(index: number) {
+    const current = values.attributes[index];
+    if (!current) return;
+    const formatted = formatAttributeKey(current.key);
+    if (formatted === current.key) return;
+    updateAttribute(index, 'key', formatted);
   }
 
   function addAttribute() {
@@ -132,31 +169,40 @@ export function ProductForm({ values, onChange, profileAddress }: ProductFormPro
         </ScrollIntoView>
       </Field>
 
-      <SectionHeader
-        title="Attributes"
-        subtitle={
-          values.attributes.length
-            ? `${values.attributes.length} ${
-                values.attributes.length === 1 ? 'property' : 'properties'
-              }`
-            : 'Optional specs from AI or added manually'
-        }
-      />
+      <View style={styles.attributesHeader}>
+        <View style={styles.attributesHeaderCopy}>
+          <Text style={styles.sectionTitle}>Attributes</Text>
+          <Text style={styles.sectionSubtitle}>
+            {values.attributes.length
+              ? `${values.attributes.length} ${
+                  values.attributes.length === 1 ? 'specification' : 'specifications'
+                }`
+              : 'Optional specs from AI or added manually'}
+          </Text>
+        </View>
+        <Pressable
+          style={({ pressed }) => [
+            styles.addAttributeButton,
+            pressed && styles.addAttributePressed,
+          ]}
+          onPress={addAttribute}
+          accessibilityRole="button"
+          accessibilityLabel="Add attribute"
+        >
+          <Ionicons name="add" size={16} color={colors.accent} />
+          <Text style={styles.addAttributeText}>Add</Text>
+        </Pressable>
+      </View>
 
       {values.attributes.length === 0 ? (
         <View style={styles.emptyAttributes}>
           <Ionicons name="list-outline" size={20} color={colors.accent} />
           <Text style={styles.emptyAttributesText}>
-            No attributes yet. Analyze images or add a property below.
+            No specifications yet. Analyze images or tap Add.
           </Text>
         </View>
       ) : (
         <View style={styles.attributesList}>
-          <View style={styles.attributesHeader}>
-            <Text style={[styles.attributesHeaderLabel, styles.attributesKeyCol]}>Property</Text>
-            <Text style={[styles.attributesHeaderLabel, styles.attributesValueCol]}>Value</Text>
-            <View style={styles.attributesActionCol} />
-          </View>
           {values.attributes.map((attribute, index) => (
             <View
               key={`attr-${index}`}
@@ -165,31 +211,44 @@ export function ProductForm({ values, onChange, profileAddress }: ProductFormPro
                 index < values.attributes.length - 1 && styles.attributeRowBorder,
               ]}
             >
-              <ScrollIntoView style={styles.attributesKeyCol}>
-                <TextInput
-                  style={styles.attributeInput}
-                  value={attribute.key}
-                  onChangeText={(text) => updateAttribute(index, 'key', text)}
-                  placeholder="Property"
-                  placeholderTextColor={colors.muted}
-                  autoCapitalize="none"
-                />
-              </ScrollIntoView>
-              <ScrollIntoView style={styles.attributesValueCol}>
-                <TextInput
-                  style={[styles.attributeInput, styles.attributeValueInput]}
-                  value={attribute.value}
-                  onChangeText={(text) => updateAttribute(index, 'value', text)}
-                  placeholder="Value"
-                  placeholderTextColor={colors.muted}
-                />
-              </ScrollIntoView>
+              <View style={styles.attributeRowBody}>
+                <ScrollIntoView>
+                  <TextInput
+                    style={styles.attributeKeyInput}
+                    value={attribute.key}
+                    onChangeText={(text) => updateAttribute(index, 'key', text)}
+                    onBlur={() => handleAttributeKeyBlur(index)}
+                    placeholder="Property name"
+                    placeholderTextColor={colors.muted}
+                    autoCapitalize="words"
+                  />
+                </ScrollIntoView>
+                <View style={styles.attributeValueRow}>
+                  <ScrollIntoView style={styles.attributeValueFlex}>
+                    <TextInput
+                      style={styles.attributeValueInput}
+                      value={attribute.value}
+                      onChangeText={(text) => updateAttribute(index, 'value', text)}
+                      placeholder="Value"
+                      placeholderTextColor={colors.muted}
+                      multiline
+                      textAlignVertical="top"
+                    />
+                  </ScrollIntoView>
+                  <Ionicons
+                    name="create-outline"
+                    size={16}
+                    color={colors.muted}
+                    style={styles.attributeEditIcon}
+                  />
+                </View>
+              </View>
               <Pressable
                 style={styles.removeAttributeBtn}
                 onPress={() => removeAttribute(index)}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel={`Remove attribute ${index + 1}`}
+                accessibilityLabel={`Remove ${attribute.key || `attribute ${index + 1}`}`}
               >
                 <Ionicons name="close" size={16} color={colors.muted} />
               </Pressable>
@@ -197,16 +256,6 @@ export function ProductForm({ values, onChange, profileAddress }: ProductFormPro
           ))}
         </View>
       )}
-
-      <Pressable
-        style={({ pressed }) => [styles.addAttributeButton, pressed && styles.addAttributePressed]}
-        onPress={addAttribute}
-        accessibilityRole="button"
-        accessibilityLabel="Add attribute"
-      >
-        <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
-        <Text style={styles.addAttributeText}>Add attribute</Text>
-      </Pressable>
 
       <SectionHeader
         title="Pricing and stock"
@@ -331,6 +380,24 @@ export function ProductForm({ values, onChange, profileAddress }: ProductFormPro
         </View>
       ) : (
         <>
+          <Pressable
+            style={({ pressed }) => [styles.mapButton, pressed && styles.mapButtonPressed]}
+            onPress={() => setMapPickerVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Pick location from map"
+          >
+            <View style={styles.mapButtonIcon}>
+              <Ionicons name="map-outline" size={16} color={colors.accent} />
+            </View>
+            <View style={styles.mapButtonTextWrap}>
+              <Text style={styles.mapButtonTitle}>Pick from map</Text>
+              <Text style={styles.mapButtonSubtitle}>
+                Search or move the map to set pickup location
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+          </Pressable>
+
           <Field label="Address">
             <ScrollIntoView>
               <TextInput
@@ -389,6 +456,13 @@ export function ProductForm({ values, onChange, profileAddress }: ProductFormPro
           </Field>
         </>
       )}
+
+      <MapAddressPickerModal
+        visible={mapPickerVisible}
+        initialAddress={mapInitialAddress}
+        onClose={() => setMapPickerVisible(false)}
+        onConfirm={applyAddressFromMap}
+      />
     </View>
   );
 }
@@ -494,58 +568,75 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
   },
+  attributesHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingTop: spacing.lg,
+    marginTop: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(15, 27, 45, 0.1)',
+  },
+  attributesHeaderCopy: {
+    flex: 1,
+    gap: 4,
+  },
   attributesList: {
     backgroundColor: colors.surfaceMuted,
     borderRadius: 14,
     overflow: 'hidden',
   },
-  attributesHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: 6,
-    gap: spacing.sm,
-  },
-  attributesHeaderLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  attributesKeyCol: {
-    flex: 0.95,
-  },
-  attributesValueCol: {
-    flex: 1.25,
-  },
-  attributesActionCol: {
-    width: 28,
-  },
   attributeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
+    alignItems: 'flex-start',
     gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
   },
   attributeRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(15, 27, 45, 0.08)',
   },
-  attributeInput: {
+  attributeRowBody: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+  attributeKeyInput: {
     width: '100%',
-    borderWidth: 0,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: colors.textStrong,
-    backgroundColor: colors.surface,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    margin: 0,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: colors.muted,
+    backgroundColor: 'transparent',
+  },
+  attributeValueRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  attributeValueFlex: {
+    flex: 1,
+    minWidth: 0,
   },
   attributeValueInput: {
-    fontWeight: '600',
+    width: '100%',
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    margin: 0,
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '700',
+    color: colors.textStrong,
+    backgroundColor: 'transparent',
+  },
+  attributeEditIcon: {
+    marginTop: 2,
   },
   removeAttributeBtn: {
     width: 28,
@@ -553,14 +644,17 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: -2,
   },
   addAttributeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 2,
+    gap: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(92, 179, 53, 0.12)',
+    marginTop: 2,
   },
   addAttributePressed: {
     opacity: 0.7,
@@ -568,7 +662,7 @@ const styles = StyleSheet.create({
   addAttributeText: {
     color: colors.accent,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
   },
   chipRow: {
     flexDirection: 'row',
@@ -637,5 +731,41 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
     fontSize: 14,
     lineHeight: 20,
+  },
+  mapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.borderAccent,
+    borderRadius: 12,
+    backgroundColor: '#F7FCF8',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  mapButtonPressed: {
+    opacity: 0.85,
+  },
+  mapButtonIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapButtonTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  mapButtonTitle: {
+    color: colors.textStrong,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  mapButtonSubtitle: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });

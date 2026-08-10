@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -14,6 +15,7 @@ import {
 } from 'react-native';
 
 import { colors, spacing } from '@/src/constants/theme';
+import { getProductSubCategories } from '@/src/lib/productsApi';
 import type {
   BrowseSort,
   ProductCategory,
@@ -23,6 +25,7 @@ import { CONDITION_OPTIONS } from '@/src/types/product';
 
 export type BrowseFilters = {
   category: string;
+  subCategory: string;
   sort: BrowseSort;
   nearMe: boolean;
   minPrice: string;
@@ -33,6 +36,7 @@ export type BrowseFilters = {
 
 export const EMPTY_BROWSE_FILTERS: BrowseFilters = {
   category: '',
+  subCategory: '',
   sort: 'recent',
   nearMe: false,
   minPrice: '',
@@ -53,12 +57,14 @@ type FilterModalProps = {
   filters: BrowseFilters;
   categories: ProductCategory[];
   nearMeCity: string;
+  token: string | null;
   onApply: (filters: BrowseFilters) => void;
 };
 
 export function countActiveFilters(filters: BrowseFilters): number {
   let count = 0;
   if (filters.category) count += 1;
+  if (filters.subCategory) count += 1;
   if (filters.sort !== 'recent') count += 1;
   if (filters.nearMe) count += 1;
   if (filters.minPrice.trim()) count += 1;
@@ -74,9 +80,12 @@ export function FilterModal({
   filters,
   categories,
   nearMeCity,
+  token,
   onApply,
 }: FilterModalProps) {
   const [draft, setDraft] = useState<BrowseFilters>(filters);
+  const [subCategories, setSubCategories] = useState<string[]>([]);
+  const [loadingSubCategories, setLoadingSubCategories] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -84,8 +93,49 @@ export function FilterModal({
     }
   }, [visible, filters]);
 
+  useEffect(() => {
+    if (!visible || !draft.category || !token) {
+      setSubCategories([]);
+      setLoadingSubCategories(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingSubCategories(true);
+
+    getProductSubCategories(token, draft.category)
+      .then((data) => {
+        if (cancelled) return;
+        setSubCategories(data.subCategories);
+        setDraft((prev) => {
+          if (!prev.subCategory) return prev;
+          if (data.subCategories.includes(prev.subCategory)) return prev;
+          return { ...prev, subCategory: '' };
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSubCategories([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSubCategories(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, draft.category, token]);
+
   function updateDraft<K extends keyof BrowseFilters>(key: K, value: BrowseFilters[K]) {
     setDraft((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleSelectCategory(category: string) {
+    setDraft((prev) => ({
+      ...prev,
+      category,
+      subCategory: category === prev.category ? prev.subCategory : '',
+    }));
   }
 
   function handleReset() {
@@ -126,18 +176,47 @@ export function FilterModal({
                   <Chip
                     label="All"
                     active={!draft.category}
-                    onPress={() => updateDraft('category', '')}
+                    onPress={() => handleSelectCategory('')}
                   />
                   {categories.map((category) => (
                     <Chip
                       key={category.name}
                       label={category.name}
                       active={draft.category === category.name}
-                      onPress={() => updateDraft('category', category.name)}
+                      onPress={() => handleSelectCategory(category.name)}
                     />
                   ))}
                 </View>
               </View>
+
+              {draft.category ? (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Subcategory</Text>
+                  {loadingSubCategories ? (
+                    <View style={styles.subCategoryLoading}>
+                      <ActivityIndicator color={colors.accent} size="small" />
+                    </View>
+                  ) : subCategories.length === 0 ? (
+                    <Text style={styles.hint}>No subcategories available for this category yet.</Text>
+                  ) : (
+                    <View style={styles.chipRow}>
+                      <Chip
+                        label="All"
+                        active={!draft.subCategory}
+                        onPress={() => updateDraft('subCategory', '')}
+                      />
+                      {subCategories.map((subCategory) => (
+                        <Chip
+                          key={subCategory}
+                          label={subCategory}
+                          active={draft.subCategory === subCategory}
+                          onPress={() => updateDraft('subCategory', subCategory)}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ) : null}
 
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Sort by</Text>
@@ -325,6 +404,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.xs,
+  },
+  subCategoryLoading: {
+    paddingVertical: spacing.sm,
+    alignItems: 'flex-start',
   },
   chip: {
     borderRadius: 999,

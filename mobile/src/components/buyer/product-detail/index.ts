@@ -4,6 +4,7 @@ export { InquiryModal } from './InquiryModal';
 export { InquiryUrgency } from './InquiryUrgency';
 export { LocationSection } from './LocationSection';
 export { MarketRateCard } from './MarketRateCard';
+export { ProductDetailSkeleton } from './ProductDetailSkeleton';
 export { ProductGallery } from './ProductGallery';
 export { ProductHero } from './ProductHero';
 export { QuickStatsRow } from './QuickStatsRow';

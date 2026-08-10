@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Text,
   View,
@@ -89,19 +89,25 @@ export default function BuyerCategoriesTab() {
             <Text style={styles.emptyText}>No categories yet. Check back when listings are available.</Text>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-            {categories.map((category) => (
+          <FlatList
+            key={categoryColumns}
+            data={categories}
+            keyExtractor={(item) => item.name}
+            numColumns={categoryColumns}
+            columnWrapperStyle={styles.columnWrapper}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
               <BuyerCategoryCard
-                key={category.name}
-                name={category.name}
-                icon={category.icon}
-                imageUrl={category.imageUrl}
-                count={category.count}
+                name={item.name}
+                icon={item.icon}
+                imageUrl={item.imageUrl}
+                count={item.count}
                 tileWidth={tileWidth}
-                onPress={() => handleSelectCategory(category.name)}
+                onPress={() => handleSelectCategory(item.name)}
               />
-            ))}
-          </ScrollView>
+            )}
+          />
         )}
       </ScreenContent>
     </SafeAreaView>
@@ -139,11 +145,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   list: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: CATEGORY_GRID_GAP,
     paddingHorizontal: CATEGORY_GRID_PADDING,
     paddingBottom: spacing.xl,
+  },
+  columnWrapper: {
+    gap: CATEGORY_GRID_GAP,
+    marginBottom: CATEGORY_GRID_GAP,
   },
   error: {
     color: colors.error,

@@ -13,7 +13,8 @@ export const CATEGORY_GRID_PADDING = HORIZONTAL_PADDING;
 
 export function getCategoryTileWidth(screenWidth: number, columns?: number) {
   const cols = columns ?? categoryGridColumns(screenWidth);
-  return (screenWidth - HORIZONTAL_PADDING * 2 - GAP * (cols - 1)) / cols;
+  // Floor so 3 tiles + gaps never exceed the row width (avoids early wrap to 2 cols).
+  return Math.floor((screenWidth - HORIZONTAL_PADDING * 2 - GAP * (cols - 1)) / cols);
 }
 
 type BuyerCategoryCardProps = {

@@ -2,14 +2,23 @@ import type { Product, ProductCondition } from '@/src/types/product';
 
 import type { SellerListingFilter } from './SellerListingStatusTabs';
 
+function getListingStatus(product: Product) {
+  return product.listingStatus ?? 'active';
+}
+
 export function getSellerListingCounts(products: Product[]) {
-  const active = products.filter((product) => product.condition !== 'surplus').length;
-  const surplus = products.filter((product) => product.condition === 'surplus').length;
+  const active = products.filter(
+    (product) => getListingStatus(product) === 'active' && product.condition !== 'surplus',
+  ).length;
+  const surplus = products.filter(
+    (product) => getListingStatus(product) === 'active' && product.condition === 'surplus',
+  ).length;
+  const sold = products.filter((product) => getListingStatus(product) === 'sold').length;
 
   return {
     all: products.length,
     active,
-    sold: 0,
+    sold,
     surplus,
   };
 }
@@ -22,11 +31,12 @@ export function filterSellerListings(
   const query = searchQuery.trim().toLowerCase();
 
   return products.filter((product) => {
+    const status = getListingStatus(product);
     const matchesFilter =
       filter === 'all' ||
-      (filter === 'active' && product.condition !== 'surplus') ||
-      (filter === 'surplus' && product.condition === 'surplus') ||
-      (filter === 'sold' && false);
+      (filter === 'active' && status === 'active' && product.condition !== 'surplus') ||
+      (filter === 'surplus' && status === 'active' && product.condition === 'surplus') ||
+      (filter === 'sold' && status === 'sold');
 
     if (!matchesFilter) {
       return false;

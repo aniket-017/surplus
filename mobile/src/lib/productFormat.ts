@@ -127,8 +127,5 @@ export function splitDescriptionBullets(text: string) {
   return sentences.length > 1 ? sentences : [trimmed];
 }
 
-export function formatAttributeKey(key: string) {
-  return key
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
+export { formatAttributeKey, humanizeAttributes } from '@/src/types/product';
+

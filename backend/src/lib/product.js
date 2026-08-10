@@ -3,6 +3,10 @@ import { parseCategory } from "./category.js";
 
 const PRICE_TYPES = ["FIXED", "NEGOTIABLE", "PER_KG", "PER_UNIT", "PER_LOT"];
 const CONDITIONS = ["NEW", "USED", "SURPLUS", "REFURBISHED"];
+const LISTING_STATUSES = ["ACTIVE", "SOLD", "DELETED"];
+const ACTIVE_LISTING_WHERE = {
+  listingStatus: "ACTIVE",
+};
 
 export function parsePriceType(value) {
   const normalized = String(value || "")
@@ -22,6 +26,19 @@ export function parseCondition(value) {
   // Legacy client/DB value
   if (normalized === "SCRAP") return "SURPLUS";
   return CONDITIONS.includes(normalized) ? normalized : null;
+}
+
+export function parseListingStatus(value) {
+  const normalized = String(value || "").trim().toUpperCase();
+  return LISTING_STATUSES.includes(normalized) ? normalized : null;
+}
+
+export function getListingStatus(product) {
+  return product?.listingStatus || "ACTIVE";
+}
+
+export function isActiveListing(product) {
+  return getListingStatus(product) === "ACTIVE";
 }
 
 export function parseAttributes(raw) {
@@ -136,6 +153,7 @@ export async function formatProduct(product) {
       String(product.condition).toUpperCase() === "SCRAP"
         ? "surplus"
         : product.condition.toLowerCase(),
+    listingStatus: getListingStatus(product).toLowerCase(),
     images,
     attributes: product.attributes,
     location: product.location,
@@ -201,6 +219,7 @@ export function buildBrowseOrderBy(sort) {
 export function buildBrowseWhere({
   search,
   category,
+  subCategory,
   city,
   state,
   minPrice,
@@ -208,10 +227,16 @@ export function buildBrowseWhere({
   condition,
   negotiable,
 }) {
-  const where = {};
+  const where = {
+    ...ACTIVE_LISTING_WHERE,
+  };
 
   if (category) {
     where.category = category;
+  }
+
+  if (subCategory) {
+    where.subCategory = subCategory;
   }
 
   if (city) {
@@ -255,4 +280,4 @@ export function buildBrowseWhere({
   return where;
 }
 
-export { PRICE_TYPES, CONDITIONS };
+export { PRICE_TYPES, CONDITIONS, LISTING_STATUSES, ACTIVE_LISTING_WHERE };

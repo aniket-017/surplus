@@ -5,29 +5,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { chatTheme } from '@/src/constants/chatTheme';
 import { colors, spacing } from '@/src/constants/theme';
 import { getImageUrl } from '@/src/lib/productsApi';
-import type { UserRole } from '@/src/types/auth';
 
 type ChatHeaderProps = {
-  role: UserRole | undefined;
   otherParty: { name: string; avatarUrl: string | null } | null;
   product: { id: string; title: string; images: string[] } | null;
   onBack: () => void;
   onProductPress?: () => void;
 };
 
-function buildTitle(role: UserRole | undefined, otherParty: ChatHeaderProps['otherParty'], product: ChatHeaderProps['product']) {
-  const productTitle = product?.title || 'Listing';
-
-  if (role === 'seller') {
-    const buyerName = otherParty?.name || 'User';
-    return `${buyerName} - ${productTitle}`;
-  }
-
-  return productTitle;
-}
-
-export function ChatHeader({ role, otherParty, product, onBack, onProductPress }: ChatHeaderProps) {
-  const title = buildTitle(role, otherParty, product);
+export function ChatHeader({ otherParty, product, onBack, onProductPress }: ChatHeaderProps) {
+  const title = otherParty?.name || 'User';
   const productImage = product?.images?.[0];
 
   return (

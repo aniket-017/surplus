@@ -45,7 +45,7 @@ export function ProductImageSourceSheet({
     const picked = await pickImagesFromLibrary({
       allowsMultipleSelection: true,
       selectionLimit: remainingSlots,
-      quality: 0.85,
+      quality: 0.7,
       permissionMessage: 'Allow photo library access to upload product images.',
     });
     if (!picked?.length) return;

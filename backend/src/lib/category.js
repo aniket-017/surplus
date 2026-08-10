@@ -233,6 +233,9 @@ async function getOrCreateCategoryMeta(name, icon) {
 export async function listCategoriesWithCounts() {
   const grouped = await prisma.product.groupBy({
     by: ["category"],
+    where: {
+      listingStatus: "ACTIVE",
+    },
     _count: { category: true },
   });
 
@@ -251,6 +254,31 @@ export async function listCategoriesWithCounts() {
   );
 
   return categories;
+}
+
+export async function listSubCategoriesForCategory(category) {
+  const normalized = parseCategory(category);
+  if (!normalized) {
+    return [];
+  }
+
+  const grouped = await prisma.product.groupBy({
+    by: ["subCategory"],
+    where: {
+      listingStatus: "ACTIVE",
+      category: normalized,
+    },
+    _count: { subCategory: true },
+    orderBy: {
+      _count: {
+        subCategory: "desc",
+      },
+    },
+  });
+
+  return grouped
+    .map((item) => String(item.subCategory || "").trim())
+    .filter(Boolean);
 }
 
 export async function backfillCategoryMeta() {

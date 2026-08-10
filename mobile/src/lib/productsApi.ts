@@ -8,8 +8,12 @@ import type {
   ProductListing,
 } from '@/src/types/product';
 import { API_BASE } from '@/src/lib/apiBase';
+import { prepareImageForUpload } from '@/src/lib/prepareImageForUpload';
 
 type ApiError = { error?: string };
+
+const MULTIPART_TIMEOUT_MS = 120_000;
+const ANALYZE_TIMEOUT_MS = 180_000;
 
 async function parseResponse<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as T & ApiError;
@@ -19,12 +23,13 @@ async function parseResponse<T>(res: Response): Promise<T> {
   return data;
 }
 
-function appendImages(formData: FormData, images: LocalImage[]) {
+async function appendImages(formData: FormData, images: LocalImage[]) {
   for (const image of images) {
+    const prepared = await prepareImageForUpload(image);
     formData.append('images', {
-      uri: image.uri,
-      name: image.name,
-      type: image.type,
+      uri: prepared.uri,
+      name: prepared.name,
+      type: prepared.type || 'image/jpeg',
     } as unknown as Blob);
   }
 }
@@ -43,19 +48,80 @@ function appendProductFields(formData: FormData, values: ProductFormValues) {
   formData.append('location', JSON.stringify(values.location));
 }
 
+/** Android-friendly multipart request (fetch FormData uploads often hang on content:// URIs). */
+function sendFormData<T>(
+  method: 'POST' | 'PATCH',
+  path: string,
+  token: string,
+  formData: FormData,
+  timeoutMs = MULTIPART_TIMEOUT_MS,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    let settled = false;
+
+    function fail(message: string) {
+      if (settled) return;
+      settled = true;
+      reject(new Error(message));
+    }
+
+    function succeed(data: T) {
+      if (settled) return;
+      settled = true;
+      resolve(data);
+    }
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== XMLHttpRequest.DONE) return;
+
+      let data: T & ApiError = {} as T & ApiError;
+      try {
+        data = JSON.parse(xhr.responseText || '{}') as T & ApiError;
+      } catch {
+        // keep empty object
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        succeed(data);
+        return;
+      }
+
+      if (!xhr.status) {
+        fail(
+          'Connection lost while analyzing. Check Wi‑Fi, stay on this screen, and try again.',
+        );
+        return;
+      }
+
+      fail(data.error || `Request failed (${xhr.status})`);
+    };
+
+    xhr.onerror = () => {
+      fail(`Network error: cannot reach server at ${API_BASE}`);
+    };
+
+    xhr.ontimeout = () => {
+      fail('Request timed out. Please try again with fewer or clearer photos.');
+    };
+
+    xhr.open(method, `${API_BASE}${path}`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.timeout = timeoutMs;
+    xhr.send(formData);
+  });
+}
+
 export async function analyzeProductImages(token: string, images: LocalImage[]) {
   const formData = new FormData();
-  appendImages(formData, images);
-
-  const res = await fetch(`${API_BASE}/api/products/analyze`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
-
-  return parseResponse<{ analysis: ProductAnalysis }>(res);
+  await appendImages(formData, images);
+  return sendFormData<{ analysis: ProductAnalysis }>(
+    'POST',
+    '/api/products/analyze',
+    token,
+    formData,
+    ANALYZE_TIMEOUT_MS,
+  );
 }
 
 export async function createProduct(
@@ -64,18 +130,9 @@ export async function createProduct(
   values: ProductFormValues,
 ) {
   const formData = new FormData();
-  appendImages(formData, images);
+  await appendImages(formData, images);
   appendProductFields(formData, values);
-
-  const res = await fetch(`${API_BASE}/api/products`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
-
-  return parseResponse<{ product: Product }>(res);
+  return sendFormData<{ product: Product }>('POST', '/api/products', token, formData);
 }
 
 export type SellerDashboardStats = {
@@ -112,19 +169,34 @@ export async function updateProduct(
 ) {
   const formData = new FormData();
   if (images?.length) {
-    appendImages(formData, images);
+    await appendImages(formData, images);
   }
   appendProductFields(formData, values);
+  return sendFormData<{ product: Product }>('PATCH', `/api/products/${id}`, token, formData);
+}
 
-  const res = await fetch(`${API_BASE}/api/products/${id}`, {
+export async function markProductSold(token: string, id: string) {
+  const res = await fetch(`${API_BASE}/api/products/${id}/status`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
-    body: formData,
+    body: JSON.stringify({ listingStatus: 'sold' }),
   });
 
   return parseResponse<{ product: Product }>(res);
+}
+
+export async function deleteProduct(token: string, id: string) {
+  const res = await fetch(`${API_BASE}/api/products/${id}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return parseResponse<{ product: Product; message: string }>(res);
 }
 
 function buildBrowseQuery(params: BrowseProductsParams = {}) {
@@ -132,6 +204,7 @@ function buildBrowseQuery(params: BrowseProductsParams = {}) {
 
   if (params.search) query.set('search', params.search);
   if (params.category) query.set('category', params.category);
+  if (params.subCategory) query.set('subCategory', params.subCategory);
   if (params.sort) query.set('sort', params.sort);
   if (params.city) query.set('city', params.city);
   if (params.state) query.set('state', params.state);
@@ -174,6 +247,17 @@ export async function getProductCategories(token: string) {
   });
 
   return parseResponse<{ categories: ProductCategory[] }>(res);
+}
+
+export async function getProductSubCategories(token: string, category: string) {
+  const query = new URLSearchParams({ category });
+  const res = await fetch(`${API_BASE}/api/products/subcategories?${query}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return parseResponse<{ subCategories: string[] }>(res);
 }
 
 export function getImageUrl(path: string) {

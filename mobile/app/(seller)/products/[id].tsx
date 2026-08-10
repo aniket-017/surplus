@@ -21,6 +21,7 @@ import { getImageUrl, getProduct } from '@/src/lib/productsApi';
 import {
   CONDITION_OPTIONS,
   PRICE_TYPE_OPTIONS,
+  formatAttributeKey,
   type Product,
   type ProductCondition,
   type PriceType,
@@ -43,12 +44,6 @@ function getPriceTypeLabel(priceType: PriceType) {
 
 function getConditionLabel(condition: ProductCondition) {
   return CONDITION_OPTIONS.find((option) => option.value === condition)?.label ?? formatLabel(condition);
-}
-
-function formatAttributeKey(key: string) {
-  return key
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export default function ProductDetailScreen() {

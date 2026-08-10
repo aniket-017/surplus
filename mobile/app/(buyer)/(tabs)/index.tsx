@@ -79,7 +79,7 @@ export default function BuyerHomeTab() {
 
   useEffect(() => {
     if (typeof categoryParam === 'string' && categoryParam.length > 0) {
-      setFilters((prev) => ({ ...prev, category: categoryParam }));
+      setFilters((prev) => ({ ...prev, category: categoryParam, subCategory: '' }));
     }
   }, [categoryParam]);
 
@@ -113,6 +113,7 @@ export default function BuyerHomeTab() {
           browseProducts(token, {
             search: debouncedSearch || undefined,
             category: filters.category || undefined,
+            subCategory: filters.subCategory || undefined,
             sort: filters.sort,
             city: filters.nearMe && nearMeCity ? nearMeCity : undefined,
             minPrice: parseOptionalPrice(filters.minPrice),
@@ -193,7 +194,11 @@ export default function BuyerHomeTab() {
   );
 
   function handleCategorySelect(category: string) {
-    setFilters((prev) => ({ ...prev, category }));
+    setFilters((prev) => ({
+      ...prev,
+      category,
+      subCategory: category === prev.category ? prev.subCategory : '',
+    }));
   }
 
   function handleFilterChange(filterId: string, nextSort: BrowseSort) {
@@ -300,6 +305,7 @@ export default function BuyerHomeTab() {
         filters={filters}
         categories={categories}
         nearMeCity={nearMeCity}
+        token={token}
         onApply={handleApplyFilters}
       />
     </SafeAreaView>

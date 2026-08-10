@@ -40,6 +40,41 @@ export function formatListingPrice(product: Pick<ProductListing, 'price' | 'pric
   return amount;
 }
 
+const WEB_BASE =
+  (process.env.EXPO_PUBLIC_WEB_URL || 'https://surplustovalue.com').replace(/\/$/, '');
+
+const PLAY_STORE_URL =
+  process.env.EXPO_PUBLIC_PLAY_STORE_URL ||
+  'https://play.google.com/store/apps/details?id=com.surplus.surplus';
+
+/** Website + Play Store links for sharing a product listing. */
+export function getProductShareLinks(productId: string) {
+  return {
+    websiteUrl: `${WEB_BASE}/buyer/products/${productId}`,
+    appUrl: PLAY_STORE_URL,
+  };
+}
+
+export function buildProductShareMessage(
+  product: Pick<ProductListing, 'id' | 'title' | 'price' | 'priceType' | 'quantity' | 'quantityUnit'>,
+) {
+  const { websiteUrl, appUrl } = getProductShareLinks(product.id);
+
+  return [
+    'Check out this deal on Surplus!',
+    '',
+    product.title,
+    `Price: ${formatListingPrice(product)}`,
+    `${product.quantity} ${product.quantityUnit || 'unit'} available`,
+    '',
+    'View on website:',
+    websiteUrl,
+    '',
+    'Get the Surplus app:',
+    appUrl,
+  ].join('\n');
+}
+
 export function formatLocationShort(location: ProductListing['location']) {
   return `${location.city}, ${location.state}`;
 }

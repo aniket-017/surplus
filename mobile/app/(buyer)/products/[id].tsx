@@ -39,7 +39,7 @@ import {
   startInquiry,
   toggleSavedListing,
 } from '@/src/lib/conversationsApi';
-import { formatListingPrice } from '@/src/lib/productFormat';
+import { buildProductShareMessage } from '@/src/lib/productFormat';
 import { browseProducts, getBrowseProduct } from '@/src/lib/productsApi';
 import { reportListing } from '@/src/lib/reportsApi';
 import type { ProductListing } from '@/src/types/product';
@@ -209,7 +209,7 @@ export default function BuyerProductDetailScreen() {
     );
   }
 
-  const shareMessage = `${product.title}\n${formatListingPrice(product)}\n${product.quantity} ${product.quantityUnit} available`;
+  const shareMessage = buildProductShareMessage(product);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>

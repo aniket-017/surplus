@@ -1,17 +1,8 @@
-import { useEffect } from 'react';
-import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, {
-  Easing,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenContent } from '@/src/components/ScreenContent';
+import { SkeletonBone } from '@/src/components/SkeletonBone';
 import { colors, spacing } from '@/src/constants/theme';
 import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 
@@ -19,48 +10,6 @@ const THUMB_SIZE = 56;
 const STICKY_BAR_HEIGHT = 88;
 const BONE = '#E6EBF1';
 const BONE_SOFT = '#EDF1F5';
-
-type BoneProps = {
-  width?: number | `${number}%`;
-  height: number;
-  radius?: number;
-  delay?: number;
-  style?: StyleProp<ViewStyle>;
-};
-
-function SkeletonBone({ width = '100%', height, radius = 8, delay = 0, style }: BoneProps) {
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    progress.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
-        -1,
-        true
-      )
-    );
-  }, [delay, progress]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 1], [0.55, 1]),
-  }));
-
-  return (
-    <Animated.View
-      style={[
-        {
-          width,
-          height,
-          borderRadius: radius,
-          backgroundColor: BONE,
-        },
-        style,
-        animatedStyle,
-      ]}
-    />
-  );
-}
 
 export function ProductDetailSkeleton() {
   const { width: imageWidth } = useBreakpoint();

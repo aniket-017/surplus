@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { CategoryImage } from '@/src/components/CategoryImage';
+import { SkeletonBone } from '@/src/components/SkeletonBone';
 import { colors, spacing } from '@/src/constants/theme';
 import type { ProductCategory } from '@/src/types/product';
 
@@ -8,23 +9,27 @@ import type { ProductCategory } from '@/src/types/product';
 const VISIBLE_CARDS = 4.2;
 const CARD_GAP = spacing.xs;
 const SCREEN_PADDING = spacing.lg;
+const SKELETON_COUNT = 5;
 
 type CategoryCarouselProps = {
   categories: ProductCategory[];
   activeCategory: string;
   onSelectCategory: (category: string) => void;
+  loading?: boolean;
 };
 
 export function CategoryCarousel({
   categories,
   activeCategory,
   onSelectCategory,
+  loading = false,
 }: CategoryCarouselProps) {
   const { width: screenWidth } = useWindowDimensions();
   const contentWidth = screenWidth - SCREEN_PADDING * 2;
   const cardWidth =
     (contentWidth - CARD_GAP * Math.floor(VISIBLE_CARDS)) / VISIBLE_CARDS;
   const iconSize = Math.round(cardWidth * 0.68);
+  const showSkeleton = loading && categories.length === 0;
 
   return (
     <View style={styles.section}>
@@ -36,34 +41,46 @@ export function CategoryCarousel({
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-        {categories.map((category) => {
-          const active = activeCategory === category.name;
-
-          return (
-            <Pressable
-              key={category.name}
-              style={[styles.card, { width: cardWidth }, active && styles.cardActive]}
-              onPress={() => onSelectCategory(active ? '' : category.name)}
-            >
-              <View
-                style={[
-                  styles.iconWrap,
-                  { width: iconSize, height: iconSize },
-                  active && styles.iconWrapActive,
-                ]}
-              >
-                <CategoryImage
-                  name={category.name}
-                  imageUrl={category.imageUrl}
-                  style={styles.image}
+        {showSkeleton
+          ? Array.from({ length: SKELETON_COUNT }, (_, i) => (
+              <View key={`cat-skel-${i}`} style={[styles.card, { width: cardWidth }]}>
+                <SkeletonBone
+                  width={iconSize}
+                  height={iconSize}
+                  radius={10}
+                  delay={i * 60}
                 />
+                <SkeletonBone width="70%" height={11} radius={6} delay={i * 60 + 40} />
               </View>
-              <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
-                {category.name}
-              </Text>
-            </Pressable>
-          );
-        })}
+            ))
+          : categories.map((category) => {
+              const active = activeCategory === category.name;
+
+              return (
+                <Pressable
+                  key={category.name}
+                  style={[styles.card, { width: cardWidth }, active && styles.cardActive]}
+                  onPress={() => onSelectCategory(active ? '' : category.name)}
+                >
+                  <View
+                    style={[
+                      styles.iconWrap,
+                      { width: iconSize, height: iconSize },
+                      active && styles.iconWrapActive,
+                    ]}
+                  >
+                    <CategoryImage
+                      name={category.name}
+                      imageUrl={category.imageUrl}
+                      style={styles.image}
+                    />
+                  </View>
+                  <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
+                    {category.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
       </ScrollView>
     </View>
   );

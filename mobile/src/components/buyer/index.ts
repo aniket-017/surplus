@@ -3,6 +3,7 @@ export { BuyerHomeHeader } from './BuyerHomeHeader';
 export { BuyerPlaceholderTab } from './BuyerPlaceholderTab';
 export { BuyerSearchBar } from './BuyerSearchBar';
 export { CategoryCarousel } from './CategoryCarousel';
+export { HomeListingsSkeleton } from './HomeListingsSkeleton';
 export { ListingFilterChips } from './ListingFilterChips';
 export { ProductListingCard } from './ProductListingCard';
 export { SellSurplusCta } from './SellSurplusCta';

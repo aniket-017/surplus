@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   RefreshControl,
@@ -21,6 +20,7 @@ import {
   FilterModal,
   type BrowseFilters,
 } from '@/src/components/buyer/FilterModal';
+import { HomeListingsSkeleton } from '@/src/components/buyer/HomeListingsSkeleton';
 import { ListingFilterChips } from '@/src/components/buyer/ListingFilterChips';
 import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
 import { SellSurplusCta } from '@/src/components/buyer/SellSurplusCta';
@@ -240,12 +240,23 @@ export default function BuyerHomeTab() {
           categories={categories}
           activeCategory={activeCategory}
           onSelectCategory={handleCategorySelect}
+          loading={loading}
         />
         <ListingFilterChips activeFilter={activeFilter} onChangeFilter={handleFilterChange} />
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
     ),
-    [search, categories, activeCategory, activeFilter, activeFilterCount, error, switchingToSell, roleSwitching],
+    [
+      search,
+      categories,
+      activeCategory,
+      activeFilter,
+      activeFilterCount,
+      error,
+      switchingToSell,
+      roleSwitching,
+      loading,
+    ],
   );
 
   return (
@@ -275,9 +286,7 @@ export default function BuyerHomeTab() {
           )}
           ListEmptyComponent={
             loading ? (
-              <View style={styles.emptyState}>
-                <ActivityIndicator color={colors.accent} size="large" />
-              </View>
+              <HomeListingsSkeleton columns={columns} cardWidth={cardWidth} />
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyTitle}>No listings found</Text>

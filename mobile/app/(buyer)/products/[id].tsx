@@ -101,7 +101,7 @@ export default function BuyerProductDetailScreen() {
   }, [loadProduct]);
 
   async function handleToggleSave() {
-    if (!token || !product) return;
+    if (!token || !product || saving) return;
 
     setSaving(true);
     try {
@@ -208,10 +208,7 @@ export default function BuyerProductDetailScreen() {
 
       <StickyActionBar
         product={product}
-        saved={saved}
-        saving={saving}
         submitting={submitting}
-        onSave={handleToggleSave}
         onInquiry={() => openInquiryModal()}
       />
 

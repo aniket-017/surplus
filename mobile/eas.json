@@ -9,7 +9,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://surplustovalue.com"
+        "EXPO_PUBLIC_API_URL": "https://surplustovalue.com",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyAkf5uDkf_3brY9GlSCOUgdXwiFF4qyrdc"
       }
     },
     "preview": {
@@ -18,7 +19,8 @@
         "gradleCommand": ":app:assembleRelease --no-configure-on-demand"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://surplustovalue.com"
+        "EXPO_PUBLIC_API_URL": "https://surplustovalue.com",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyAkf5uDkf_3brY9GlSCOUgdXwiFF4qyrdc"
       }
     }
   }

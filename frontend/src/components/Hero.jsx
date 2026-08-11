@@ -1,7 +1,12 @@
+import { Link } from 'react-router-dom'
 import { heroListings, chartBars } from '../data/landingData'
 import { PLAY_STORE_URL } from '../constants/links'
+import { useAuth } from '../context/AuthContext'
+import { getPostAuthPath } from '../lib/authRedirect'
 
 export default function Hero() {
+  const { user } = useAuth()
+
   return (
     <section className="hero">
       <div className="hero-bg" />
@@ -21,16 +26,22 @@ export default function Hero() {
             chemicals, metals, and more. Stop losing money on idle inventory.
           </p>
           <div className="hero-actions">
+            {user ? (
+              <Link to={getPostAuthPath(user)} className="btn btn-primary">
+                Go to Dashboard
+              </Link>
+            ) : (
+              <Link to="/signin" className="btn btn-primary">
+                Sign in
+              </Link>
+            )}
             <a
               href={PLAY_STORE_URL}
-              className="btn btn-primary"
+              className="btn btn-ghost"
               target="_blank"
               rel="noopener noreferrer"
             >
               Download App →
-            </a>
-            <a href="#how" className="btn btn-ghost">
-              See How It Works
             </a>
           </div>
         </div>

@@ -71,7 +71,7 @@ export default function Navbar() {
             </>
           ) : (
             <Link to="/signin" className="btn btn-primary">
-              Continue with mobile
+              Sign in
             </Link>
           )}
           <a
@@ -136,7 +136,7 @@ export default function Navbar() {
               </>
             ) : (
               <Link to="/signin" className="btn btn-primary btn-block" onClick={closeMenu}>
-                Continue with mobile
+                Sign in
               </Link>
             )}
             <a

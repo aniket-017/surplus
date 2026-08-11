@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.surplus.surplus",
-      "versionCode": 3,
+      "versionCode": 4,
       "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
       "edgeToEdgeEnabled": true,

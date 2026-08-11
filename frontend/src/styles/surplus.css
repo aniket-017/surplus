@@ -1369,6 +1369,11 @@ footer {
 }
 
 @media (max-width: 1024px) {
+  .hero {
+    min-height: auto;
+    align-items: flex-start;
+    padding: 100px 5% 48px;
+  }
   .hero-inner { grid-template-columns: 1fr; gap: 60px; }
   .hero-visual { display: none; }
   .cat-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1377,6 +1382,15 @@ footer {
 }
 
 @media (max-width: 768px) {
+  .hero {
+    padding: 88px 5% 36px;
+  }
+  .hero-badge { margin-bottom: 16px; }
+  .hero-title { margin-bottom: 18px; }
+  .hero-sub {
+    font-size: 15px;
+    margin-bottom: 28px;
+  }
   .nav-links, .nav-cta { display: none; }
   .hamburger { display: inline-flex; align-items: center; justify-content: center; }
   .landing-mobile-menu { display: block; }

@@ -46,7 +46,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:android": "eas build -p android --profile production",
-    "build:android:preview": "eas build -p android --profile preview"
+    "build:android:preview": "eas build -p android --profile preview",
+    "build:apk:local": "powershell -ExecutionPolicy Bypass -File ./scripts/build-release-apk.ps1"
   },
   "private": true
 }

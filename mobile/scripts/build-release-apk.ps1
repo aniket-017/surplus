@@ -20,14 +20,20 @@ if (-not (Test-Path "$shortRoot\android\gradlew.bat")) {
 
 Set-Location "$shortRoot\android"
 
+# Force production JS bundle embedding (avoids DEV/Metro startup crashes)
+$env:NODE_ENV = "production"
+
 if (Test-Path "app\.cxx") {
   Write-Host "Removing app\.cxx ..."
   cmd /c "rd /s /q app\.cxx"
 }
 
-# arm64-v8a covers modern phones; fewer ABIs = shorter/faster Windows builds
-Write-Host "Building assembleRelease (arm64-v8a) ..."
-& .\gradlew.bat assembleRelease "-PreactNativeArchitectures=arm64-v8a"
+Write-Host "Cleaning previous Android outputs ..."
+& .\gradlew.bat clean
+
+# Phone + common emulator ABIs
+Write-Host "Building assembleRelease (armeabi-v7a,arm64-v8a,x86_64) ..."
+& .\gradlew.bat assembleRelease "-PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64"
 $exit = $LASTEXITCODE
 
 $apk = Join-Path $mobileDir "android\app\build\outputs\apk\release\app-release.apk"

@@ -4,6 +4,7 @@ backend/.env
 backend/uploads
 
 mobile/node_modules
+mobile/android/build/
 
 mobile/.env
 mobile/.expo-test-bundle

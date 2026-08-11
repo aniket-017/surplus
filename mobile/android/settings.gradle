@@ -1,3 +1,11 @@
+// Force-delete the autolinking cache so it always regenerates with correct
+// paths on the build machine. Prevents Windows-path cache from reaching EAS
+// Linux builder via EAS's own cache restoration mechanism.
+def autolinkingCacheDir = new File(rootDir, "build/generated/autolinking")
+if (!System.getProperty("os.name").toLowerCase().contains("windows")) {
+  autolinkingCacheDir.deleteDir()
+}
+
 pluginManagement {
   def reactNativeGradlePlugin = new File(
     providers.exec {

@@ -4,15 +4,19 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
+import { AppUpdateModal } from '@/src/components/AppUpdateModal';
 import { AuthProvider } from '@/src/context/AuthContext';
 import { AdminNotificationsProvider } from '@/src/context/AdminNotificationsContext';
 import { LocationProvider } from '@/src/context/LocationContext';
 import { RoleSwitchProvider } from '@/src/context/RoleSwitchContext';
 import { UnreadMessagesProvider } from '@/src/context/UnreadMessagesContext';
+import { useInAppUpdates } from '@/src/hooks/useInAppUpdates';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const { required, starting, onUpdateNow } = useInAppUpdates();
+
   return (
     <SafeAreaProvider>
       {/* App screens are light-themed; keep system icons dark for contrast. */}
@@ -34,6 +38,11 @@ export default function RootLayout() {
           </UnreadMessagesProvider>
         </RoleSwitchProvider>
       </AuthProvider>
+      <AppUpdateModal
+        visible={required}
+        starting={starting}
+        onUpdateNow={onUpdateNow}
+      />
     </SafeAreaProvider>
   );
 }

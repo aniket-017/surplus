@@ -6,6 +6,7 @@ import {
   unbanSuperadminUser,
 } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
+import { formatPhoneForDisplay } from '../../lib/phone'
 
 function formatDate(value) {
   if (!value) return '—'
@@ -93,7 +94,7 @@ export default function UsersPage() {
         <input
           className="auth-input"
           type="search"
-          placeholder="Search by email or name"
+          placeholder="Search by email, name, or mobile"
           value={q}
           onChange={(event) => setQ(event.target.value)}
         />
@@ -115,6 +116,7 @@ export default function UsersPage() {
               <thead>
                 <tr>
                   <th>User</th>
+                  <th>Mobile</th>
                   <th>Role</th>
                   <th>Listings</th>
                   <th>Status</th>
@@ -136,6 +138,7 @@ export default function UsersPage() {
                           <span>{user.email}</span>
                         </div>
                       </td>
+                      <td>{formatPhoneForDisplay(user.phone) || '—'}</td>
                       <td>{user.role || '—'}</td>
                       <td>{user.productCount}</td>
                       <td>

@@ -7,7 +7,8 @@ mobile/node_modules
 mobile/android/build/
 mobile/credentials.json
 mobile/credentials/
+*.jks
 
-# mobile/.env
+mobile/.env
 mobile/.expo-test-bundle
 mobile/.expo-test-bundle2

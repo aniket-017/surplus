@@ -807,6 +807,68 @@ router.delete("/products/:id", async (req, res) => {
   }
 });
 
+function serializeListingReport(report, reporter, product) {
+  return {
+    id: report.id,
+    reason: report.reason,
+    details: report.details,
+    status: report.status,
+    createdAt: report.createdAt,
+    updatedAt: report.updatedAt,
+    reporter: reporter || null,
+    product: product || null,
+  };
+}
+
+async function hydrateListingReports(reports) {
+  const productIds = [...new Set(reports.map((report) => report.productId).filter(Boolean))];
+  const reporterIds = [...new Set(reports.map((report) => report.reporterId).filter(Boolean))];
+
+  const products = productIds.length
+    ? await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          listingStatus: true,
+          sellerId: true,
+        },
+      })
+    : [];
+
+  const sellerIds = [...new Set(products.map((product) => product.sellerId).filter(Boolean))];
+  const userIds = [...new Set([...reporterIds, ...sellerIds])];
+  const users = userIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, email: true, name: true, phone: true },
+      })
+    : [];
+
+  const usersById = new Map(users.map((user) => [user.id, user]));
+  const productsById = new Map(
+    products.map((product) => [
+      product.id,
+      {
+        id: product.id,
+        title: product.title,
+        category: product.category,
+        listingStatus: product.listingStatus,
+        seller: usersById.get(product.sellerId) || null,
+      },
+    ]),
+  );
+
+  return reports.map((report) =>
+    serializeListingReport(
+      report,
+      usersById.get(report.reporterId) || null,
+      productsById.get(report.productId) || null,
+    ),
+  );
+}
+
 router.get("/reports", async (req, res) => {
   try {
     const { page, limit, skip } = parsePagination(req.query);
@@ -841,22 +903,6 @@ router.get("/reports", async (req, res) => {
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
-        include: {
-          reporter: {
-            select: { id: true, email: true, name: true },
-          },
-          product: {
-            select: {
-              id: true,
-              title: true,
-              category: true,
-              listingStatus: true,
-              seller: {
-                select: { id: true, email: true, name: true },
-              },
-            },
-          },
-        },
       }),
     ]);
 
@@ -864,16 +910,7 @@ router.get("/reports", async (req, res) => {
       page,
       limit,
       total,
-      reports: reports.map((report) => ({
-        id: report.id,
-        reason: report.reason,
-        details: report.details,
-        status: report.status,
-        createdAt: report.createdAt,
-        updatedAt: report.updatedAt,
-        reporter: report.reporter,
-        product: report.product,
-      })),
+      reports: await hydrateListingReports(reports),
     });
   } catch (error) {
     console.error("Superadmin list reports failed:", error);
@@ -893,7 +930,6 @@ router.patch("/reports/:id", async (req, res) => {
 
     const existing = await prisma.listingReport.findUnique({
       where: { id: req.params.id },
-      select: { id: true },
     });
 
     if (!existing) {
@@ -903,36 +939,11 @@ router.patch("/reports/:id", async (req, res) => {
     const report = await prisma.listingReport.update({
       where: { id: existing.id },
       data: { status },
-      include: {
-        reporter: {
-          select: { id: true, email: true, name: true },
-        },
-        product: {
-          select: {
-            id: true,
-            title: true,
-            category: true,
-            listingStatus: true,
-            seller: {
-              select: { id: true, email: true, name: true },
-            },
-          },
-        },
-      },
     });
 
-    res.json({
-      report: {
-        id: report.id,
-        reason: report.reason,
-        details: report.details,
-        status: report.status,
-        createdAt: report.createdAt,
-        updatedAt: report.updatedAt,
-        reporter: report.reporter,
-        product: report.product,
-      },
-    });
+    const [hydrated] = await hydrateListingReports([report]);
+
+    res.json({ report: hydrated });
   } catch (error) {
     console.error("Superadmin update report failed:", error);
     res.status(500).json({ error: "Failed to update report" });

@@ -151,7 +151,7 @@ export default function ReportsPage() {
         <div className="empty-state">
           <div className="app-spinner" aria-label="Loading" />
         </div>
-      ) : reports.length === 0 ? (
+      ) : error ? null : reports.length === 0 ? (
         <div className="empty-state">
           <p>No reports found.</p>
         </div>

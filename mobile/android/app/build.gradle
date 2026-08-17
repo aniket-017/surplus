@@ -92,8 +92,8 @@ android {
         applicationId 'com.surplus.surplus'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
-        versionName "1.0.5"
+        versionCode 6
+        versionName "1.0.6"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
 
@@ -114,6 +114,19 @@ android {
         }
         manifestPlaceholders = [GOOGLE_MAPS_API_KEY: mapsApiKey]
     }
+    def credsFile = new File(rootDir.parentFile, "credentials.json")
+    def uploadKeystore = null
+    if (credsFile.exists()) {
+        def creds = new groovy.json.JsonSlurper().parseText(credsFile.getText("UTF-8"))
+        def ks = creds.android.keystore
+        uploadKeystore = [
+            storeFile: new File(rootDir.parentFile, ks.keystorePath as String),
+            storePassword: ks.keystorePassword as String,
+            keyAlias: ks.keyAlias as String,
+            keyPassword: ks.keyPassword as String,
+        ]
+    }
+
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -121,15 +134,22 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (uploadKeystore == null) {
+                throw new GradleException("Play signing requires mobile/credentials.json (EAS upload keystore).")
+            }
+            storeFile uploadKeystore.storeFile
+            storePassword uploadKeystore.storePassword
+            keyAlias uploadKeystore.keyAlias
+            keyPassword uploadKeystore.keyPassword
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

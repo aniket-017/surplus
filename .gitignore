@@ -5,7 +5,9 @@ backend/uploads
 
 mobile/node_modules
 mobile/android/build/
+mobile/credentials.json
+mobile/credentials/
 
-mobile/.env
+# mobile/.env
 mobile/.expo-test-bundle
 mobile/.expo-test-bundle2

@@ -8,6 +8,11 @@ import {
 } from "../lib/auth.js";
 import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
+import {
+  getFirebaseAuth,
+  getFirebaseErrorCode,
+  isFirebaseAuthConfigured,
+} from "../lib/firebaseAdmin.js";
 import { deleteProductImages as deleteProductImagesFromS3 } from "../lib/s3.js";
 import { formatMessage } from "../lib/conversations.js";
 import { notifyAdminAnnouncement } from "../lib/pushNotifications.js";
@@ -80,6 +85,67 @@ async function deleteProductWithRelations(productId) {
   await prisma.product.delete({ where: { id: productId } });
 
   return product;
+}
+
+async function deleteFirebaseUserIfPresent(firebaseUid) {
+  if (!firebaseUid || !isFirebaseAuthConfigured()) {
+    return;
+  }
+
+  try {
+    await getFirebaseAuth().deleteUser(firebaseUid);
+  } catch (error) {
+    if (getFirebaseErrorCode(error) !== "auth/user-not-found") {
+      console.error("Failed to delete Firebase user:", error);
+    }
+  }
+}
+
+async function deleteUserCompletely(user) {
+  const products = await prisma.product.findMany({
+    where: { sellerId: user.id },
+    select: { id: true },
+  });
+
+  for (const product of products) {
+    await deleteProductWithRelations(product.id);
+  }
+
+  const remainingConversations = await prisma.conversation.findMany({
+    where: {
+      OR: [{ buyerId: user.id }, { sellerId: user.id }],
+    },
+    select: { id: true },
+  });
+  await deleteConversationsByIds(remainingConversations.map((c) => c.id));
+
+  const createdNotifications = await prisma.notification.findMany({
+    where: { createdById: user.id },
+    select: { id: true },
+  });
+  const createdNotificationIds = createdNotifications.map((n) => n.id);
+
+  if (createdNotificationIds.length) {
+    await prisma.userNotification.deleteMany({
+      where: { notificationId: { in: createdNotificationIds } },
+    });
+    await prisma.notification.deleteMany({
+      where: { id: { in: createdNotificationIds } },
+    });
+  }
+
+  await prisma.message.deleteMany({ where: { senderId: user.id } });
+  await prisma.savedListing.deleteMany({ where: { userId: user.id } });
+  await prisma.listingReport.deleteMany({ where: { reporterId: user.id } });
+  await prisma.pushToken.deleteMany({ where: { userId: user.id } });
+  await prisma.userNotification.deleteMany({ where: { userId: user.id } });
+
+  if (user.email) {
+    await prisma.otp.deleteMany({ where: { email: user.email } });
+  }
+
+  await prisma.user.delete({ where: { id: user.id } });
+  await deleteFirebaseUserIfPresent(user.firebaseUid);
 }
 
 if (isOtpAuthEnabled()) {
@@ -409,6 +475,41 @@ router.post("/users/:id/unban", async (req, res) => {
   } catch (error) {
     console.error("Superadmin unban user failed:", error);
     res.status(500).json({ error: "Failed to unban user" });
+  }
+});
+
+router.delete("/users/:id", async (req, res) => {
+  try {
+    const target = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        email: true,
+        firebaseUid: true,
+        isSuperAdmin: true,
+      },
+    });
+
+    if (!target) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (target.id === req.user.id) {
+      return res.status(400).json({ error: "You cannot delete yourself" });
+    }
+
+    if (target.isSuperAdmin) {
+      return res.status(400).json({
+        error: "Cannot delete a superadmin. Revoke superadmin access first.",
+      });
+    }
+
+    await deleteUserCompletely(target);
+
+    res.json({ message: "User deleted" });
+  } catch (error) {
+    console.error("Superadmin delete user failed:", error);
+    res.status(500).json({ error: "Failed to delete user" });
   }
 });
 

@@ -111,6 +111,12 @@ export function unbanSuperadminUser(id) {
   })
 }
 
+export function deleteSuperadminUser(id) {
+  return apiFetch(`/api/superadmin/users/${id}`, {
+    method: 'DELETE',
+  })
+}
+
 export function getSuperadminUserConversations(userId, { page = 1, limit = 20, q = '' } = {}) {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   if (q) params.set('q', q)

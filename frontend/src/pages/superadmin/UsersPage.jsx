@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   banSuperadminUser,
+  deleteSuperadminUser,
   getSuperadminUsers,
   unbanSuperadminUser,
 } from '../../lib/api'
@@ -73,6 +74,37 @@ export default function UsersPage() {
     }
   }
 
+  function userLabel(user) {
+    return user.name || user.email || formatPhoneForDisplay(user.phone) || 'this user'
+  }
+
+  async function handleDelete(user) {
+    const label = userLabel(user)
+    const listingNote =
+      user.productCount === 1
+        ? '1 listing'
+        : `${user.productCount || 0} listings`
+
+    if (
+      !window.confirm(
+        `Delete ${label} permanently? This removes the account, ${listingNote}, chats, saved items, and related data. This cannot be undone.`,
+      )
+    ) {
+      return
+    }
+
+    setBusyId(user.id)
+    setError('')
+    try {
+      await deleteSuperadminUser(user.id)
+      await loadUsers()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / 20))
 
   return (
@@ -80,7 +112,7 @@ export default function UsersPage() {
       <div className="dash-hero">
         <span className="dash-role-badge">SUPERADMIN</span>
         <h1>Users</h1>
-        <p>Search accounts and ban or restore access.</p>
+        <p>Search accounts, ban or restore access, or delete a user completely.</p>
       </div>
 
       <form
@@ -129,6 +161,7 @@ export default function UsersPage() {
                   const isSelf = user.id === currentUser?.id
                   const canBan = !user.isSuperAdmin && !user.isBanned && !isSelf
                   const canUnban = user.isBanned
+                  const canDelete = !user.isSuperAdmin && !isSelf
 
                   return (
                     <tr key={user.id}>
@@ -179,6 +212,16 @@ export default function UsersPage() {
                               onClick={() => handleUnban(user)}
                             >
                               Unban
+                            </button>
+                          ) : null}
+                          {canDelete ? (
+                            <button
+                              type="button"
+                              className="btn btn-outline sa-action-btn sa-danger-btn"
+                              disabled={busyId === user.id}
+                              onClick={() => handleDelete(user)}
+                            >
+                              Delete
                             </button>
                           ) : null}
                         </div>

@@ -50,5 +50,9 @@
     "build:android:preview": "eas build -p android --profile preview",
     "build:apk:local": "powershell -ExecutionPolicy Bypass -File ./scripts/build-release-apk.ps1"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  }
 }

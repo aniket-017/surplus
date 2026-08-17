@@ -1,7 +1,6 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { AppUpdateModal } from '@/src/components/AppUpdateModal';
@@ -15,12 +14,20 @@ import { useInAppUpdates } from '@/src/hooks/useInAppUpdates';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  return (
+    <>
+      {/* App screens are light-themed; keep system icons dark for contrast. */}
+      <StatusBar style="dark" />
+      <AppShell />
+    </>
+  );
+}
+
+function AppShell() {
   const { required, starting, onUpdateNow } = useInAppUpdates();
 
   return (
-    <SafeAreaProvider>
-      {/* App screens are light-themed; keep system icons dark for contrast. */}
-      <StatusBar style="dark" />
+    <>
       <AuthProvider>
         <RoleSwitchProvider>
           <UnreadMessagesProvider>
@@ -43,6 +50,6 @@ export default function RootLayout() {
         starting={starting}
         onUpdateNow={onUpdateNow}
       />
-    </SafeAreaProvider>
+    </>
   );
 }

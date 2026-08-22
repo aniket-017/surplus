@@ -174,7 +174,7 @@ export const footerLinks = {
   Support: [
     { label: 'Help Center', href: '/support' },
     { label: 'Contact Us', href: '/support' },
-    { label: 'Privacy Policy', href: '#' },
+    { label: 'Privacy Policy', href: '/privacy' },
     { label: 'Terms of Use', href: '#' },
   ],
 }

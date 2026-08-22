@@ -9,6 +9,7 @@ import AuthCallbackPage from './pages/AuthCallbackPage'
 import AuthPage from './pages/AuthPage'
 import LandingPage from './pages/LandingPage'
 import SupportPage from './pages/SupportPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import ProfilePage from './pages/ProfilePage'
 import RoleSelectPage from './pages/RoleSelectPage'
 import OnboardingProfilePage from './pages/OnboardingProfilePage'
@@ -49,6 +50,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/support" element={<SupportPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/signin" element={<AuthPage />} />
           <Route path="/signup" element={<AuthPage />} />
           <Route path="/superlogin" element={<SuperLoginPage />} />

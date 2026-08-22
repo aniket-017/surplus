@@ -1536,6 +1536,54 @@ footer {
   text-decoration: underline;
 }
 
+.support-updated {
+  font-size: 13px;
+  color: var(--muted);
+  margin: -12px 0 28px;
+}
+
+.support-prose h3 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-strong);
+  margin: 24px 0 10px;
+}
+
+.support-prose h3:first-child {
+  margin-top: 0;
+}
+
+.support-prose a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.support-prose a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+.support-prose p:last-child,
+.support-prose ul:last-child,
+.support-prose .support-address:last-child {
+  margin-bottom: 0;
+}
+
+.support-prose .support-list {
+  margin-bottom: 16px;
+}
+
+.support-prose .support-address {
+  margin: 8px 0 16px;
+  font-weight: 600;
+  color: var(--text-strong);
+  line-height: 1.6;
+}
+
 @media (max-width: 1024px) {
   .hero {
     min-height: auto;

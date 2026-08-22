@@ -15,7 +15,7 @@ import { Logo } from '@/src/components/Logo';
 import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
-import { formatPhoneForDisplay, toE164Phone } from '@/src/lib/phone';
+import { formatPhoneForDisplay, toE164Phone, toIndianLocalDigits } from '@/src/lib/phone';
 import { requestPhoneNumberHintLocal } from '@/src/lib/phoneHint';
 import { isExpoGo } from '@/src/lib/notifications';
 import { cardShadow, colors, radius, spacing } from '@/src/constants/theme';
@@ -359,13 +359,16 @@ export default function SignInScreen() {
                     <TextInput
                       style={styles.phoneInput}
                       value={phoneInput}
-                      onChangeText={(value) => setPhoneInput(value.replace(/\D/g, '').slice(0, 10))}
+                      onChangeText={(value) => {
+                        const autofilled = toIndianLocalDigits(value);
+                        setPhoneInput(autofilled ?? value.replace(/\D/g, '').slice(0, 10));
+                      }}
                       placeholder="98765 43210"
                       placeholderTextColor={colors.muted}
                       keyboardType="phone-pad"
                       autoComplete="tel"
                       textContentType="telephoneNumber"
-                      maxLength={10}
+                      importantForAutofill="yes"
                     />
                   </View>
                 </ScrollIntoView>

@@ -12,6 +12,12 @@ config.resolver.extraNodeModules = {
   react: reactRoot,
 };
 
+const nativeOnlyModules = [
+  'react-native-maps',
+  '@react-native-firebase/app',
+  '@react-native-firebase/auth',
+];
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   // C:\surplus junction: Expo passes a relative path like
   // ./../../Users/<user>/Desktop/Projects/surplus/mobile/node_modules/...
@@ -24,6 +30,14 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     if (fs.existsSync(absolute)) {
       return { filePath: absolute, type: 'sourceFile' };
     }
+  }
+
+  const isNative = platform === 'ios' || platform === 'android';
+  if (
+    !isNative &&
+    nativeOnlyModules.some((name) => moduleName === name || moduleName.startsWith(`${name}/`))
+  ) {
+    return { type: 'empty' };
   }
 
   if (defaultResolveRequest) {

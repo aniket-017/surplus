@@ -13,7 +13,9 @@
       "translucent": true
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jasdigital.surplus",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "package": "com.surplus.surplus",
@@ -35,7 +37,7 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -80,7 +82,17 @@
         }
       ],
       "@react-native-firebase/app",
-      "@react-native-firebase/auth"
+      "@react-native-firebase/auth",
+      "./plugins/withMapsNonModularHeaders",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "forceStaticLinking": ["RNFBApp", "RNFBAuth"]
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

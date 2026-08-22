@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, spacing } from '@/src/constants/theme';
@@ -19,13 +19,18 @@ export function BuyerSearchBar({
   return (
     <View style={styles.container}>
       <View style={styles.searchWrap}>
-        <Ionicons name="search-outline" size={16} color={colors.muted} />
+        <Ionicons name="search-outline" size={18} color={colors.muted} />
         <TextInput
           style={styles.input}
           value={value}
           onChangeText={onChangeText}
-          placeholder="Search products, materials, brands..."
+          placeholder="Search products"
           placeholderTextColor={colors.muted}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+          underlineColorAndroid="transparent"
         />
       </View>
       <Pressable style={styles.filterButton} onPress={onFilterPress}>
@@ -49,21 +54,34 @@ const styles = StyleSheet.create({
   },
   searchWrap: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
-    paddingHorizontal: spacing.sm,
-    minHeight: 40,
+    paddingLeft: 12,
+    paddingRight: 8,
+    minHeight: 42,
   },
   input: {
     flex: 1,
-    fontSize: 14,
+    minWidth: 0,
+    marginLeft: 8,
+    fontSize: 15,
+    fontWeight: '400',
+    lineHeight: 20,
+    letterSpacing: 0,
     color: colors.textStrong,
-    paddingVertical: 6,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    ...Platform.select({
+      android: {
+        includeFontPadding: false,
+        textAlignVertical: 'center',
+      },
+    }),
   },
   filterButton: {
     flexDirection: 'row',
@@ -74,7 +92,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
-    minHeight: 40,
+    minHeight: 42,
   },
   filterText: {
     color: colors.textStrong,

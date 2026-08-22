@@ -9,8 +9,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import ImageView from 'react-native-image-viewing';
 
+import { ChatImageViewer } from '@/src/components/messages/ChatImageViewer';
 import { colors, spacing } from '@/src/constants/theme';
 import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 import { getImageUrl } from '@/src/lib/productsApi';
@@ -48,7 +48,10 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
     );
   }
 
-  const viewerImages = images.map((uri) => ({ uri: getImageUrl(uri) }));
+  const viewerImages = images.map((uri, index) => ({
+    id: `${uri}-${index}`,
+    uri: getImageUrl(uri),
+  }));
 
   return (
     <>
@@ -102,14 +105,12 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
         ) : null}
       </View>
 
-      {/* @ts-expect-error react-native-image-viewing types vs React 19 */}
-      <ImageView
+      <ChatImageViewer
         images={viewerImages}
-        imageIndex={activeImage}
+        initialIndex={activeImage}
         visible={viewerVisible}
-        onRequestClose={() => setViewerVisible(false)}
-        onImageIndexChange={setActiveImage}
-        presentationStyle="overFullScreen"
+        onClose={() => setViewerVisible(false)}
+        onIndexChange={setActiveImage}
       />
     </>
   );

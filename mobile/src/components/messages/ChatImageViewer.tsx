@@ -24,6 +24,7 @@ type ChatImageViewerProps = {
   initialIndex: number;
   visible: boolean;
   onClose: () => void;
+  onIndexChange?: (index: number) => void;
 };
 
 export function ChatImageViewer({
@@ -31,6 +32,7 @@ export function ChatImageViewer({
   initialIndex,
   visible,
   onClose,
+  onIndexChange,
 }: ChatImageViewerProps) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -52,12 +54,17 @@ export function ChatImageViewer({
   function goToImage(index: number) {
     if (index < 0 || index >= images.length) return;
     setCurrentIndex(index);
+    onIndexChange?.(index);
     listRef.current?.scrollToIndex({ index, animated: true });
   }
 
   function handleScrollEnd(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const index = Math.round(event.nativeEvent.contentOffset.x / width);
-    setCurrentIndex(Math.max(0, Math.min(index, images.length - 1)));
+    const index = Math.max(
+      0,
+      Math.min(Math.round(event.nativeEvent.contentOffset.x / width), images.length - 1),
+    );
+    setCurrentIndex(index);
+    onIndexChange?.(index);
   }
 
   return (

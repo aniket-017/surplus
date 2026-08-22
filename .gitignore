@@ -1,3 +1,5 @@
+.DS_Store
+
 frontend/node_modules
 backend/node_modules
 backend/.env
@@ -10,5 +12,7 @@ mobile/credentials/
 *.jks
 
 mobile/.env
+mobile/.expo/
 mobile/.expo-test-bundle
 mobile/.expo-test-bundle2
+mobile/ios/

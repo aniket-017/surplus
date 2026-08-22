@@ -13,11 +13,17 @@ import {
   UIManager,
   View,
 } from 'react-native';
-import type { Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, spacing } from '@/src/constants/theme';
 import type { UserAddress } from '@/src/types/auth';
+
+type Region = {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
+};
 
 const FALLBACK_REGION: Region = {
   latitude: 20.5937,

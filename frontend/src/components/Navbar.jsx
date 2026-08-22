@@ -6,10 +6,10 @@ import { getPostAuthPath } from '../lib/authRedirect'
 import { PLAY_STORE_URL } from '../constants/links'
 
 const NAV_LINKS = [
-  { href: '#problem', label: 'Problem' },
-  { href: '#how', label: 'How it Works' },
-  { href: '#categories', label: 'Categories' },
-  { href: '#why', label: 'Why Surplus' },
+  { href: '/#problem', label: 'Problem' },
+  { href: '/#how', label: 'How it Works' },
+  { href: '/#categories', label: 'Categories' },
+  { href: '/#why', label: 'Why Surplus' },
 ]
 
 export default function Navbar() {

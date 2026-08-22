@@ -1,4 +1,17 @@
+import { Link } from 'react-router-dom'
+import { COMPANY_NAME } from '../constants/links'
 import { footerLinks } from '../data/landingData'
+
+function FooterLink({ link }) {
+  const label = typeof link === 'string' ? link : link.label
+  const href = typeof link === 'string' ? '#' : link.href
+
+  if (href?.startsWith('/')) {
+    return <Link to={href}>{label}</Link>
+  }
+
+  return <a href={href || '#'}>{label}</a>
+}
 
 export default function Footer() {
   return (
@@ -18,8 +31,8 @@ export default function Footer() {
             <div className="footer-col-title">{title}</div>
             <ul className="footer-links">
               {links.map((link) => (
-                <li key={link}>
-                  <a href="#">{link}</a>
+                <li key={typeof link === 'string' ? link : link.label}>
+                  <FooterLink link={link} />
                 </li>
               ))}
             </ul>
@@ -28,7 +41,7 @@ export default function Footer() {
       </div>
       <div className="footer-bottom">
         <span className="footer-copy">
-          © 2025 Surplus Technologies Pvt. Ltd. All rights reserved.
+          © {new Date().getFullYear()} {COMPANY_NAME}. All rights reserved.
         </span>
         <span className="footer-made">
           Made with <span>♥</span> in India 🇮🇳

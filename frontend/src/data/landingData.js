@@ -159,7 +159,22 @@ export const testimonials = [
 ]
 
 export const footerLinks = {
-  Platform: ['Browse Listings', 'Sell Surplus', 'Pricing', 'For Enterprise'],
-  Company: ['About Us', 'Careers', 'Blog', 'Press'],
-  Support: ['Help Center', 'Contact Us', 'Privacy Policy', 'Terms of Use'],
+  Platform: [
+    { label: 'Browse Listings', href: '#' },
+    { label: 'Sell Surplus', href: '#' },
+    { label: 'Pricing', href: '#' },
+    { label: 'For Enterprise', href: '#' },
+  ],
+  Company: [
+    { label: 'About Us', href: '#' },
+    { label: 'Careers', href: '#' },
+    { label: 'Blog', href: '#' },
+    { label: 'Press', href: '#' },
+  ],
+  Support: [
+    { label: 'Help Center', href: '/support' },
+    { label: 'Contact Us', href: '/support' },
+    { label: 'Privacy Policy', href: '#' },
+    { label: 'Terms of Use', href: '#' },
+  ],
 }

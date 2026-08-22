@@ -8,6 +8,7 @@ import { MessageNotificationsProvider } from './context/MessageNotificationsCont
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import AuthPage from './pages/AuthPage'
 import LandingPage from './pages/LandingPage'
+import SupportPage from './pages/SupportPage'
 import ProfilePage from './pages/ProfilePage'
 import RoleSelectPage from './pages/RoleSelectPage'
 import OnboardingProfilePage from './pages/OnboardingProfilePage'
@@ -47,6 +48,7 @@ export default function App() {
         <MessageNotificationsProvider>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/support" element={<SupportPage />} />
           <Route path="/signin" element={<AuthPage />} />
           <Route path="/signup" element={<AuthPage />} />
           <Route path="/superlogin" element={<SuperLoginPage />} />

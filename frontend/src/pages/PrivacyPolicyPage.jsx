@@ -75,20 +75,14 @@ export default function PrivacyPolicyPage() {
               incorrectly categorised.
             </p>
 
-            <h3>Messages</h3>
-            <p>
-              If you chat with another user about a listing, we store the conversation,
-              including message text and any photos or files you send.
-            </p>
-
             <h3>Device permissions</h3>
             <p>
               With your permission, the app may access:
             </p>
             <ul className="support-list">
-              <li>Camera and photo library, to add listing or chat images</li>
+              <li>Camera and photo library, to add listing images</li>
               <li>Location, to show nearby listings and help you set an address</li>
-              <li>Notifications, to alert you about messages and account updates</li>
+              <li>Notifications, to alert you about account updates</li>
             </ul>
             <p>You can turn these permissions off in your device settings.</p>
 
@@ -106,7 +100,6 @@ export default function PrivacyPolicyPage() {
             <ul className="support-list">
               <li>Create and manage your account, and keep you signed in</li>
               <li>Publish listings and help buyers and sellers find each other</li>
-              <li>Enable in-app messaging about listings</li>
               <li>
                 Analyse listing photos with Google Gemini so we can suggest product
                 details when a seller uploads images
@@ -125,8 +118,7 @@ export default function PrivacyPolicyPage() {
             <p>
               Listings you publish, including photos and location details you include,
               are visible to other signed-in users. Your name (and profile photo, if you
-              add one) may be shown in conversations. Messages and attachments are shared
-              with the other person in that chat.
+              add one) may be shown to other users on the marketplace.
             </p>
 
             <h3>Service providers</h3>
@@ -134,7 +126,7 @@ export default function PrivacyPolicyPage() {
             <ul className="support-list">
               <li>Google Firebase, for phone authentication</li>
               <li>Google, for optional website sign-in, Maps, and listing-photo analysis</li>
-              <li>Amazon Web Services, to store listing and chat files</li>
+              <li>Amazon Web Services, to store listing files</li>
               <li>Expo, to deliver push notifications on mobile</li>
             </ul>
             <p>
@@ -147,7 +139,7 @@ export default function PrivacyPolicyPage() {
           <section className="support-card support-prose">
             <h2 className="support-card-title">Retention</h2>
             <p>
-              We keep account, listing, message, and report data for as long as needed to
+              We keep account, listing, and report data for as long as needed to
               provide the marketplace, handle disputes, and meet legal obligations. If
               you ask us to delete your account, we will delete or de-identify personal
               data we no longer need to retain.

@@ -21,6 +21,7 @@ export async function requireAuth(req, res, next) {
         phone: true,
         name: true,
         role: true,
+        isDeleted: true,
         isSuperAdmin: true,
         isBanned: true,
       },
@@ -29,6 +30,11 @@ export async function requireAuth(req, res, next) {
     if (!user) {
       clearAuthCookie(res);
       return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    if (user.isDeleted) {
+      clearAuthCookie(res);
+      return res.status(410).json({ error: "This account has been permanently deleted" });
     }
 
     if (user.isBanned) {

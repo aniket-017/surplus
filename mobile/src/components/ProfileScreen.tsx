@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -50,7 +51,7 @@ type ProfileScreenProps = {
 };
 
 export function ProfileScreen({ role }: ProfileScreenProps) {
-  const { user, signOut, updateProfile } = useAuth();
+  const { user, signOut, deleteAccount, updateProfile } = useAuth();
   const { switchRole, switching: roleSwitching } = useRoleSwitch();
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -59,6 +60,8 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
   const [editingAddress, setEditingAddress] = useState(!isAddressComplete(user));
   const [saving, setSaving] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [mapPickerVisible, setMapPickerVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -191,6 +194,22 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
   async function handleSignOut() {
     await signOut();
     router.replace('/(auth)/sign-in');
+  }
+
+  async function handleDeleteAccount() {
+    setDeletingAccount(true);
+    setError('');
+    setMessage('');
+
+    try {
+      await deleteAccount();
+      setDeleteConfirmVisible(false);
+      router.replace('/(auth)/sign-in');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete account');
+    } finally {
+      setDeletingAccount(false);
+    }
   }
 
   function updateAddressField(field: keyof UserAddress, value: string) {
@@ -503,6 +522,16 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
         <View style={styles.actionDivider} />
 
         <ActionRow
+          icon="trash-outline"
+          iconTone="danger"
+          title="Delete Account"
+          subtitle="Permanently delete your account"
+          onPress={() => setDeleteConfirmVisible(true)}
+        />
+
+        <View style={styles.actionDivider} />
+
+        <ActionRow
           icon="log-out-outline"
           iconTone="danger"
           title="Sign Out"
@@ -510,6 +539,49 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
           onPress={handleSignOut}
         />
       </View>
+
+      <Modal
+        visible={deleteConfirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deletingAccount && setDeleteConfirmVisible(false)}
+      >
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmModal}>
+            <View style={styles.confirmIconWrap}>
+              <Ionicons name="warning-outline" size={28} color={colors.error} />
+            </View>
+            <Text style={styles.confirmTitle}>Delete account?</Text>
+            <Text style={styles.confirmText}>
+              This will permanently remove your active account access. You can create a new
+              account later if needed.
+            </Text>
+
+            <View style={styles.confirmActions}>
+              <Pressable
+                style={styles.confirmCancelButton}
+                onPress={() => setDeleteConfirmVisible(false)}
+                disabled={deletingAccount}
+              >
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.confirmDeleteButton, deletingAccount && styles.buttonDisabled]}
+                onPress={handleDeleteAccount}
+                disabled={deletingAccount}
+              >
+                {deletingAccount ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text style={styles.confirmDeleteText}>Delete</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <MapAddressPickerModal
         visible={mapPickerVisible}
         initialAddress={address}
@@ -1066,5 +1138,76 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginVertical: 2,
+  },
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 27, 45, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  confirmModal: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  confirmIconWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'rgba(192, 57, 43, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  confirmTitle: {
+    color: colors.textStrong,
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  confirmText: {
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  confirmCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.bgSubtle,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmCancelText: {
+    color: colors.textStrong,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  confirmDeleteButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmDeleteText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

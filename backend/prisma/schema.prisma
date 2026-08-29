@@ -85,6 +85,9 @@ model User {
   avatarUrl   String?   @map("avatar_url")
   role        UserRole?
   address     UserAddress?
+  isDeleted   Boolean   @default(false) @map("is_deleted")
+  deletedAt   DateTime? @map("deleted_at")
+  deletedReason String? @map("deleted_reason")
   isSuperAdmin Boolean   @default(false) @map("is_super_admin")
   isBanned     Boolean   @default(false) @map("is_banned")
   bannedAt     DateTime? @map("banned_at")
@@ -108,6 +111,7 @@ model User {
   @@index([phone])
   @@index([firebaseUid])
   @@index([googleId])
+  @@index([isDeleted])
   @@index([isSuperAdmin])
   @@index([referralCodeId])
   @@map("users")

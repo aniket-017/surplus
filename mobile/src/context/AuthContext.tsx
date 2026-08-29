@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import {
+  deleteAccountRequest,
   getCurrentUser,
   logoutRequest,
   updateProfile as updateProfileRequest,
@@ -28,6 +29,7 @@ type AuthContextValue = {
   loading: boolean;
   signInWithPhone: (idToken: string) => Promise<User>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   setRole: (role: UserRole) => Promise<User>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<User>;
   refreshUser: () => Promise<void>;
@@ -129,6 +131,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, [token]);
 
+  const deleteAccount = useCallback(async () => {
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      await deleteAccountRequest(token);
+    } catch (error) {
+      throw error;
+    }
+
+    try {
+      const pushToken = await loadStoredPushToken();
+      if (pushToken) {
+        await unregisterPushToken(token, pushToken);
+      }
+    } catch {
+      // Ignore push unregister failures during account deletion.
+    }
+
+    try {
+      const { signOutFirebaseAuth } = await import('@/src/lib/firebaseAuth');
+      await signOutFirebaseAuth();
+    } catch {
+      // Ignore Firebase sign-out errors (including missing native modules).
+    }
+
+    await clearStoredPushToken();
+    await clearToken();
+    setToken(null);
+    setUser(null);
+  }, [token]);
+
   const setRole = useCallback(
     async (role: UserRole) => {
       if (!token) {
@@ -162,11 +197,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signInWithPhone,
       signOut,
+      deleteAccount,
       setRole,
       updateProfile,
       refreshUser,
     }),
-    [user, token, loading, signInWithPhone, signOut, setRole, updateProfile, refreshUser],
+    [user, token, loading, signInWithPhone, signOut, deleteAccount, setRole, updateProfile, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

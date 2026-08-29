@@ -43,7 +43,12 @@ function parseAuthIntent(raw) {
 async function findUserByPhoneOrFirebaseUid(phone, firebaseUid) {
   return prisma.user.findFirst({
     where: {
-      OR: [{ phone }, { firebaseUid }],
+      AND: [
+        {
+          OR: [{ phone }, { firebaseUid }],
+        },
+        { isDeleted: false },
+      ],
     },
     select: userSelect,
   });
@@ -111,6 +116,10 @@ router.post("/firebase/phone", async (req, res) => {
     }
 
     const existingUser = await findUserByPhoneOrFirebaseUid(phone, firebaseUid);
+
+    if (existingUser?.isDeleted) {
+      return res.status(410).json({ error: "This account has been permanently deleted" });
+    }
 
     if (existingUser?.isBanned) {
       return res.status(403).json({ error: "This account has been banned" });
@@ -197,7 +206,7 @@ if (isOtpAuthEnabled()) {
 
     try {
       const existingUser = await prisma.user.findFirst({
-        where: { email },
+        where: { email, isDeleted: false },
         select: { id: true, isBanned: true },
       });
 
@@ -264,7 +273,7 @@ if (isOtpAuthEnabled()) {
 
     try {
       const existingUser = await prisma.user.findFirst({
-        where: { email },
+        where: { email, isDeleted: false },
         select: userSelect,
       });
 
@@ -347,6 +356,11 @@ router.get("/me", requireAuth, async (req, res) => {
 
   if (!user) {
     return res.status(404).json({ error: "User not found" });
+  }
+
+  if (user.isDeleted) {
+    clearAuthCookie(res);
+    return res.status(410).json({ error: "This account has been permanently deleted" });
   }
 
   if (user.isBanned) {
@@ -470,6 +484,50 @@ router.patch("/role", requireAuth, async (req, res) => {
   } catch (error) {
     console.error("Role update failed:", error);
     res.status(500).json({ error: "Failed to update role" });
+  }
+});
+
+router.post("/delete-account", requireAuth, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        ...userSelect,
+        isDeleted: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (user.isDeleted) {
+      return res.status(409).json({ error: "This account has already been deleted" });
+    }
+
+    const deletedReason = String(req.body.reason || "").trim() || "User requested account deletion";
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedReason,
+        phone: null,
+        firebaseUid: null,
+      },
+      select: userSelect,
+    });
+
+    clearAuthCookie(res);
+
+    res.json({
+      message: "Account deleted successfully",
+      user: formatUser(updatedUser),
+    });
+  } catch (error) {
+    console.error("Account deletion failed:", error);
+    res.status(500).json({ error: "Failed to delete account" });
   }
 });
 

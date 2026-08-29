@@ -71,6 +71,10 @@ export default function OverviewPage() {
           <div className="dash-stat-label">Banned</div>
         </div>
         <div className="dash-stat">
+          <div className="dash-stat-value">{stats.deleted ?? 0}</div>
+          <div className="dash-stat-label">Deleted</div>
+        </div>
+        <div className="dash-stat">
           <div className="dash-stat-value">{stats.products ?? 0}</div>
           <div className="dash-stat-label">Products</div>
         </div>
@@ -112,8 +116,15 @@ export default function OverviewPage() {
                   <tr key={user.id}>
                     <td>
                       {user.email}
-                      {user.isBanned ? <span className="sa-badge sa-badge-danger">Banned</span> : null}
+                      {user.isDeleted ? (
+                        <span className="sa-badge sa-badge-danger">Deleted</span>
+                      ) : user.isBanned ? (
+                        <span className="sa-badge sa-badge-danger">Banned</span>
+                      ) : null}
                       {user.isSuperAdmin ? <span className="sa-badge">Admin</span> : null}
+                      {user.isDeleted && user.deletedReason ? (
+                        <div className="sa-muted">{user.deletedReason}</div>
+                      ) : null}
                     </td>
                     <td>{user.role || '—'}</td>
                     <td>{formatDate(user.createdAt)}</td>

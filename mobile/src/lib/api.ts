@@ -62,3 +62,11 @@ export function logoutRequest(token: string) {
     token,
   });
 }
+
+export function deleteAccountRequest(token: string) {
+  return apiFetch<{ message: string; user: User }>('/api/auth/delete-account', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ reason: 'User requested account deletion' }),
+  });
+}

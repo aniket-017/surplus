@@ -159,9 +159,9 @@ export default function UsersPage() {
               <tbody>
                 {users.map((user) => {
                   const isSelf = user.id === currentUser?.id
-                  const canBan = !user.isSuperAdmin && !user.isBanned && !isSelf
-                  const canUnban = user.isBanned
-                  const canDelete = !user.isSuperAdmin && !isSelf
+                  const canBan = !user.isSuperAdmin && !user.isBanned && !user.isDeleted && !isSelf
+                  const canUnban = user.isBanned && !user.isDeleted
+                  const canDelete = !user.isSuperAdmin && !user.isDeleted && !isSelf
 
                   return (
                     <tr key={user.id}>
@@ -176,11 +176,16 @@ export default function UsersPage() {
                       <td>{user.productCount}</td>
                       <td>
                         {user.isSuperAdmin ? <span className="sa-badge">Admin</span> : null}
-                        {user.isBanned ? (
+                        {user.isDeleted ? (
+                          <span className="sa-badge sa-badge-danger">Deleted</span>
+                        ) : user.isBanned ? (
                           <span className="sa-badge sa-badge-danger">Banned</span>
                         ) : (
                           <span className="sa-badge sa-badge-ok">Active</span>
                         )}
+                        {user.isDeleted && user.deletedReason ? (
+                          <div className="sa-muted">{user.deletedReason}</div>
+                        ) : null}
                         {user.bannedReason ? (
                           <div className="sa-muted">{user.bannedReason}</div>
                         ) : null}

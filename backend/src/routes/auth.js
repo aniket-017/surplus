@@ -7,9 +7,11 @@ import { setAuthCookie, clearAuthCookie, formatUser, parseUserAddress, userSelec
 import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
 import { getFirebaseErrorCode, isFirebaseAuthConfigured, verifyFirebaseIdToken } from "../lib/firebaseAdmin.js";
+import { createLogger } from "../lib/logger.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
+const authLogger = createLogger("auth");
 
 // Test account for Play Store app review: no email is sent, a fixed OTP is accepted.
 const TEST_ACCOUNT_EMAIL = "aniketkhillare17@gmail.com";
@@ -493,6 +495,17 @@ router.post("/delete-account", requireAuth, async (req, res) => {
     }
 
     const deletedReason = String(req.body.reason || "").trim() || "User requested account deletion";
+    const deletionContext = {
+      userId: user.id,
+      email: user.email ?? null,
+      phone: user.phone ?? null,
+      role: user.role ?? null,
+      reason: deletedReason,
+      ip: req.ip,
+      userAgent: req.get("user-agent") || null,
+    };
+
+    authLogger.info("Account deletion requested", deletionContext);
 
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
@@ -506,6 +519,11 @@ router.post("/delete-account", requireAuth, async (req, res) => {
       select: userSelect,
     });
 
+    authLogger.info("Account deleted", {
+      ...deletionContext,
+      deletedAt: updatedUser.deletedAt,
+    });
+
     clearAuthCookie(res);
 
     res.json({
@@ -513,7 +531,7 @@ router.post("/delete-account", requireAuth, async (req, res) => {
       user: formatUser(updatedUser),
     });
   } catch (error) {
-    console.error("Account deletion failed:", error);
+    authLogger.error("Account deletion failed", error);
     res.status(500).json({ error: "Failed to delete account" });
   }
 });

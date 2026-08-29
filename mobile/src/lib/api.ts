@@ -4,10 +4,20 @@ import { API_BASE } from '@/src/lib/apiBase';
 type ApiError = { error?: string };
 
 async function parseResponse<T>(res: Response): Promise<T> {
-  const data = (await res.json().catch(() => ({}))) as T & ApiError;
-  if (!res.ok) {
-    throw new Error(data.error || 'Something went wrong');
+  const rawText = await res.text();
+  let data = {} as T & ApiError;
+
+  try {
+    data = rawText ? (JSON.parse(rawText) as T & ApiError) : ({} as T & ApiError);
+  } catch {
+    data = {} as T & ApiError;
   }
+
+  if (!res.ok) {
+    const message = data.error || rawText || 'Something went wrong';
+    throw new Error(message);
+  }
+
   return data;
 }
 

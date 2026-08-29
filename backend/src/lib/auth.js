@@ -1,5 +1,30 @@
 import jwt from "jsonwebtoken";
 
+function getJwtSecrets() {
+  const secrets = [
+    process.env.JWT_SECRET,
+    process.env.JWT_LEGACY_SECRET,
+    "change-me-to-a-long-random-string",
+  ].filter(Boolean);
+
+  return [...new Set(secrets)];
+}
+
+export function verifyToken(token) {
+  const secrets = getJwtSecrets();
+
+  let lastError = null;
+  for (const secret of secrets) {
+    try {
+      return jwt.verify(token, secret);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Invalid or expired token");
+}
+
 const userSelect = {
   id: true,
   email: true,
@@ -96,6 +121,8 @@ export function parseUserAddress(raw) {
 }
 
 export function signToken(user) {
+  const [primarySecret] = getJwtSecrets();
+
   return jwt.sign(
     {
       id: user.id,
@@ -105,7 +132,7 @@ export function signToken(user) {
       role: user.role ? user.role.toLowerCase() : null,
       isSuperAdmin: Boolean(user.isSuperAdmin),
     },
-    process.env.JWT_SECRET,
+    primarySecret,
     { expiresIn: "7d" },
   );
 }

@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma.js";
-import { clearAuthCookie } from "../lib/auth.js";
+import { clearAuthCookie, verifyToken } from "../lib/auth.js";
 
 export async function requireAuth(req, res, next) {
   const token = req.cookies?.token ?? req.headers.authorization?.replace("Bearer ", "");
@@ -10,7 +10,7 @@ export async function requireAuth(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = verifyToken(token);
     const user = await prisma.user.findUnique({
       where: { id: payload.id },
       select: {

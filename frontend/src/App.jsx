@@ -33,6 +33,7 @@ import NotificationsPage from './pages/superadmin/NotificationsPage'
 import AdminsPage from './pages/superadmin/AdminsPage'
 import ReferralCodesPage from './pages/superadmin/ReferralCodesPage'
 
+// test
 function BuyerProfilePage() {
   return <ProfilePage role="buyer" />
 }

@@ -1,111 +1,103 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import {
-  banSuperadminUser,
-  deleteSuperadminUser,
-  getSuperadminUsers,
-  unbanSuperadminUser,
-} from '../../lib/api'
-import { useAuth } from '../../context/AuthContext'
-import { formatPhoneForDisplay } from '../../lib/phone'
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { banSuperadminUser, deleteSuperadminUser, getSuperadminUsers, unbanSuperadminUser } from "../../lib/api";
+import { useAuth } from "../../context/AuthContext";
+import { formatPhoneForDisplay } from "../../lib/phone";
 
 function formatDate(value) {
-  if (!value) return '—'
-  return new Date(value).toLocaleString()
+  if (!value) return "—";
+  return new Date(value).toLocaleString();
 }
 
 export default function UsersPage() {
-  const { user: currentUser } = useAuth()
-  const [users, setUsers] = useState([])
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [q, setQ] = useState('')
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [busyId, setBusyId] = useState(null)
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState(null);
 
   const loadUsers = useCallback(async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError("");
     try {
-      const data = await getSuperadminUsers({ page, q: search })
-      setUsers(data.users)
-      setTotal(data.total)
+      const data = await getSuperadminUsers({ page, q: search });
+      setUsers(data.users);
+      setTotal(data.total);
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [page, search])
+  }, [page, search]);
 
   useEffect(() => {
-    loadUsers()
-  }, [loadUsers])
+    loadUsers();
+  }, [loadUsers]);
 
   async function handleBan(user) {
-    const reason = window.prompt(`Ban reason for ${user.email} (optional):`, '')
-    if (reason === null) return
+    const reason = window.prompt(`Ban reason for ${user.email} (optional):`, "");
+    if (reason === null) return;
 
-    setBusyId(user.id)
-    setError('')
+    setBusyId(user.id);
+    setError("");
     try {
-      await banSuperadminUser(user.id, reason.trim())
-      await loadUsers()
+      await banSuperadminUser(user.id, reason.trim());
+      await loadUsers();
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setBusyId(null)
+      setBusyId(null);
     }
   }
 
   async function handleUnban(user) {
-    if (!window.confirm(`Unban ${user.email}?`)) return
+    if (!window.confirm(`Unban ${user.email}?`)) return;
 
-    setBusyId(user.id)
-    setError('')
+    setBusyId(user.id);
+    setError("");
     try {
-      await unbanSuperadminUser(user.id)
-      await loadUsers()
+      await unbanSuperadminUser(user.id);
+      await loadUsers();
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setBusyId(null)
+      setBusyId(null);
     }
   }
 
   function userLabel(user) {
-    return user.name || user.email || formatPhoneForDisplay(user.phone) || 'this user'
+    return user.name || user.email || formatPhoneForDisplay(user.phone) || "this user";
   }
 
   async function handleDelete(user) {
-    const label = userLabel(user)
-    const listingNote =
-      user.productCount === 1
-        ? '1 listing'
-        : `${user.productCount || 0} listings`
+    const label = userLabel(user);
+    const listingNote = user.productCount === 1 ? "1 listing" : `${user.productCount || 0} listings`;
 
     if (
       !window.confirm(
         `Delete ${label} permanently? This removes the account, ${listingNote}, chats, saved items, and related data. This cannot be undone.`,
       )
     ) {
-      return
+      return;
     }
 
-    setBusyId(user.id)
-    setError('')
+    setBusyId(user.id);
+    setError("");
     try {
-      await deleteSuperadminUser(user.id)
-      await loadUsers()
+      await deleteSuperadminUser(user.id);
+      await loadUsers();
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setBusyId(null)
+      setBusyId(null);
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / 20))
+  const totalPages = Math.max(1, Math.ceil(total / 20));
 
   return (
     <div className="sa-page">
@@ -118,9 +110,9 @@ export default function UsersPage() {
       <form
         className="sa-toolbar"
         onSubmit={(event) => {
-          event.preventDefault()
-          setPage(1)
-          setSearch(q.trim())
+          event.preventDefault();
+          setPage(1);
+          setSearch(q.trim());
         }}
       >
         <input
@@ -158,21 +150,21 @@ export default function UsersPage() {
               </thead>
               <tbody>
                 {users.map((user) => {
-                  const isSelf = user.id === currentUser?.id
-                  const canBan = !user.isSuperAdmin && !user.isBanned && !user.isDeleted && !isSelf
-                  const canUnban = user.isBanned && !user.isDeleted
-                  const canDelete = !user.isSuperAdmin && !user.isDeleted && !isSelf
+                  const isSelf = user.id === currentUser?.id;
+                  const canBan = !user.isSuperAdmin && !user.isBanned && !user.isDeleted && !isSelf;
+                  const canUnban = user.isBanned && !user.isDeleted;
+                  const canDelete = !user.isSuperAdmin && !user.isDeleted && !isSelf;
 
                   return (
                     <tr key={user.id}>
                       <td>
                         <div className="sa-cell-stack">
-                          <strong>{user.name || '—'}</strong>
+                          <strong>{user.name || "—"}</strong>
                           <span>{user.email}</span>
                         </div>
                       </td>
-                      <td>{formatPhoneForDisplay(user.phone) || '—'}</td>
-                      <td>{user.role || '—'}</td>
+                      <td>{formatPhoneForDisplay(user.phone) || "—"}</td>
+                      <td>{user.role || "—"}</td>
                       <td>{user.productCount}</td>
                       <td>
                         {user.isSuperAdmin ? <span className="sa-badge">Admin</span> : null}
@@ -186,17 +178,12 @@ export default function UsersPage() {
                         {user.isDeleted && user.deletedReason ? (
                           <div className="sa-muted">{user.deletedReason}</div>
                         ) : null}
-                        {user.bannedReason ? (
-                          <div className="sa-muted">{user.bannedReason}</div>
-                        ) : null}
+                        {user.bannedReason ? <div className="sa-muted">{user.bannedReason}</div> : null}
                       </td>
                       <td>{formatDate(user.createdAt)}</td>
                       <td>
                         <div className="sa-actions-stack">
-                          <Link
-                            to={`/superadmin/users/${user.id}/chats`}
-                            className="btn btn-outline sa-action-btn"
-                          >
+                          <Link to={`/superadmin/users/${user.id}/chats`} className="btn btn-outline sa-action-btn">
                             Chats
                           </Link>
                           {canBan ? (
@@ -232,7 +219,7 @@ export default function UsersPage() {
                         </div>
                       </td>
                     </tr>
-                  )
+                  );
                 })}
               </tbody>
             </table>
@@ -262,5 +249,5 @@ export default function UsersPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

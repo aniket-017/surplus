@@ -1,49 +1,49 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { getSuperadminOverview } from '../../lib/api'
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { getSuperadminOverview } from "../../lib/api";
 
 function formatDate(value) {
-  if (!value) return '—'
-  return new Date(value).toLocaleString()
+  if (!value) return "—";
+  return new Date(value).toLocaleString();
 }
 
 export default function OverviewPage() {
-  const [data, setData] = useState(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     getSuperadminOverview()
       .then((result) => {
-        if (!cancelled) setData(result)
+        if (!cancelled) setData(result);
       })
       .catch((err) => {
-        if (!cancelled) setError(err.message)
+        if (!cancelled) setError(err.message);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   if (loading) {
     return (
       <div className="empty-state">
         <div className="app-spinner" aria-label="Loading" />
       </div>
-    )
+    );
   }
 
   if (error) {
-    return <p className="auth-error">{error}</p>
+    return <p className="auth-error">{error}</p>;
   }
 
-  const stats = data?.stats ?? {}
+  const stats = data?.stats ?? {};
 
   return (
     <div className="sa-page">
@@ -126,7 +126,7 @@ export default function OverviewPage() {
                         <div className="sa-muted">{user.deletedReason}</div>
                       ) : null}
                     </td>
-                    <td>{user.role || '—'}</td>
+                    <td>{user.role || "—"}</td>
                     <td>{formatDate(user.createdAt)}</td>
                   </tr>
                 ))}
@@ -153,7 +153,7 @@ export default function OverviewPage() {
                 {(data?.recentProducts ?? []).map((product) => (
                   <tr key={product.id}>
                     <td>{product.title}</td>
-                    <td>{product.seller?.email || '—'}</td>
+                    <td>{product.seller?.email || "—"}</td>
                     <td>{formatDate(product.createdAt)}</td>
                   </tr>
                 ))}
@@ -163,5 +163,5 @@ export default function OverviewPage() {
         </section>
       </div>
     </div>
-  )
+  );
 }

@@ -3,20 +3,10 @@ import passport from "../config/passport.js";
 import { isGoogleAuthEnabled, isOtpAuthEnabled, getAuthMethods, getFirebaseWebConfig } from "../config/auth.js";
 import { prisma } from "../lib/prisma.js";
 import { withPrismaRetry } from "../lib/prismaRetry.js";
-import {
-  setAuthCookie,
-  clearAuthCookie,
-  formatUser,
-  parseUserAddress,
-  userSelect,
-} from "../lib/auth.js";
+import { setAuthCookie, clearAuthCookie, formatUser, parseUserAddress, userSelect } from "../lib/auth.js";
 import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
-import {
-  getFirebaseErrorCode,
-  isFirebaseAuthConfigured,
-  verifyFirebaseIdToken,
-} from "../lib/firebaseAdmin.js";
+import { getFirebaseErrorCode, isFirebaseAuthConfigured, verifyFirebaseIdToken } from "../lib/firebaseAdmin.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -70,10 +60,7 @@ router.get("/firebase-config", (_req, res) => {
 });
 
 if (isGoogleAuthEnabled()) {
-  router.get(
-    "/google",
-    passport.authenticate("google", { scope: ["profile", "email"], session: false })
-  );
+  router.get("/google", passport.authenticate("google", { scope: ["profile", "email"], session: false }));
 
   router.get(
     "/google/callback",
@@ -87,7 +74,7 @@ if (isGoogleAuthEnabled()) {
       }
       setAuthCookie(res, req.user);
       res.redirect(`${process.env.FRONTEND_URL}/auth/callback?success=true`);
-    }
+    },
   );
 }
 
@@ -135,10 +122,7 @@ router.post("/firebase/phone", async (req, res) => {
         },
         select: userSelect,
       });
-    } else if (
-      existingUser.phone !== phone ||
-      existingUser.firebaseUid !== firebaseUid
-    ) {
+    } else if (existingUser.phone !== phone || existingUser.firebaseUid !== firebaseUid) {
       user = await prisma.user.update({
         where: { id: existingUser.id },
         data: {
@@ -182,8 +166,7 @@ router.post("/firebase/phone", async (req, res) => {
       firebaseCode === "app/invalid-credential"
     ) {
       return res.status(503).json({
-        error:
-          "Phone authentication is misconfigured on the server. Check FIREBASE_PRIVATE_KEY in backend/.env.",
+        error: "Phone authentication is misconfigured on the server. Check FIREBASE_PRIVATE_KEY in backend/.env.",
       });
     }
 
@@ -385,7 +368,9 @@ router.patch("/profile", requireAuth, async (req, res) => {
     }
 
     if (req.body.email !== undefined) {
-      const emailRaw = String(req.body.email || "").trim().toLowerCase();
+      const emailRaw = String(req.body.email || "")
+        .trim()
+        .toLowerCase();
 
       // Blank email means "leave unchanged". Do not write null — MongoDB
       // unique indexes (even sparse ones) treat null as a real value, so
@@ -412,7 +397,9 @@ router.patch("/profile", requireAuth, async (req, res) => {
 
     const referralCodeRaw =
       req.body.referralCode !== undefined
-        ? String(req.body.referralCode || "").trim().toUpperCase()
+        ? String(req.body.referralCode || "")
+            .trim()
+            .toUpperCase()
         : "";
 
     if (referralCodeRaw) {
@@ -447,7 +434,7 @@ router.patch("/profile", requireAuth, async (req, res) => {
         where: { id: req.user.id },
         data: updateData,
         select: userSelect,
-      })
+      }),
     );
 
     res.json({ user: formatUser(user) });
@@ -477,7 +464,7 @@ router.patch("/role", requireAuth, async (req, res) => {
         where: { id: req.user.id },
         data: { role },
         select: userSelect,
-      })
+      }),
     );
 
     res.json({ user: formatUser(user) });

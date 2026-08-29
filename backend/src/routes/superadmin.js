@@ -1,18 +1,10 @@
 import { Router } from "express";
 import { isOtpAuthEnabled } from "../config/auth.js";
 import { prisma } from "../lib/prisma.js";
-import {
-  setAuthCookie,
-  formatUser,
-  userSelect,
-} from "../lib/auth.js";
+import { setAuthCookie, formatUser, userSelect } from "../lib/auth.js";
 import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
-import {
-  getFirebaseAuth,
-  getFirebaseErrorCode,
-  isFirebaseAuthConfigured,
-} from "../lib/firebaseAdmin.js";
+import { getFirebaseAuth, getFirebaseErrorCode, isFirebaseAuthConfigured } from "../lib/firebaseAdmin.js";
 import { deleteProductImages as deleteProductImagesFromS3 } from "../lib/s3.js";
 import { formatMessage } from "../lib/conversations.js";
 import { notifyAdminAnnouncement } from "../lib/pushNotifications.js";
@@ -30,10 +22,7 @@ const MONGO_OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
 function parsePagination(query) {
   const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
-  const limit = Math.min(
-    PAGE_SIZE_MAX,
-    Math.max(1, Number.parseInt(query.limit, 10) || PAGE_SIZE_DEFAULT),
-  );
+  const limit = Math.min(PAGE_SIZE_MAX, Math.max(1, Number.parseInt(query.limit, 10) || PAGE_SIZE_DEFAULT));
   return { page, limit, skip: (page - 1) * limit };
 }
 
@@ -354,11 +343,7 @@ router.get("/users", async (req, res) => {
 
     const where = q
       ? {
-          OR: [
-            { email: { contains: q } },
-            { name: { contains: q } },
-            { phone: { contains: q } },
-          ],
+          OR: [{ email: { contains: q } }, { name: { contains: q } }, { phone: { contains: q } }],
         }
       : {};
 
@@ -764,11 +749,7 @@ router.get("/products", async (req, res) => {
 
     const where = q
       ? {
-          OR: [
-            { title: { contains: q } },
-            { category: { contains: q } },
-            { seller: { email: { contains: q } } },
-          ],
+          OR: [{ title: { contains: q } }, { category: { contains: q } }, { seller: { email: { contains: q } } }],
         }
       : {};
 
@@ -885,12 +866,11 @@ router.get("/reports", async (req, res) => {
   try {
     const { page, limit, skip } = parsePagination(req.query);
     const q = String(req.query.q || "").trim();
-    const status = String(req.query.status || "").trim().toUpperCase();
+    const status = String(req.query.status || "")
+      .trim()
+      .toUpperCase();
 
-    const statusFilter =
-      status && ["OPEN", "REVIEWED", "DISMISSED"].includes(status)
-        ? { status }
-        : {};
+    const statusFilter = status && ["OPEN", "REVIEWED", "DISMISSED"].includes(status) ? { status } : {};
 
     const where = {
       ...statusFilter,
@@ -1100,14 +1080,12 @@ router.get("/referral-codes", async (_req, res) => {
 
 router.post("/referral-codes", async (req, res) => {
   const code = normalizeReferralCode(req.body.code);
-  const labelRaw =
-    req.body.label !== undefined ? String(req.body.label || "").trim() : "";
+  const labelRaw = req.body.label !== undefined ? String(req.body.label || "").trim() : "";
   const label = labelRaw || null;
 
   if (!REFERRAL_CODE_RE.test(code)) {
     return res.status(400).json({
-      error:
-        "Referral code must be 3–32 characters (letters, numbers, underscore, or hyphen)",
+      error: "Referral code must be 3–32 characters (letters, numbers, underscore, or hyphen)",
     });
   }
 
@@ -1378,7 +1356,9 @@ router.post("/notifications", async (req, res) => {
   try {
     const title = String(req.body.title || "").trim();
     const body = String(req.body.body || "").trim();
-    const audience = String(req.body.audience || "").trim().toUpperCase();
+    const audience = String(req.body.audience || "")
+      .trim()
+      .toUpperCase();
     const targetUserIds = Array.isArray(req.body.targetUserIds) ? req.body.targetUserIds : [];
 
     if (!title) {

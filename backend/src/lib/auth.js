@@ -106,7 +106,7 @@ export function signToken(user) {
       isSuperAdmin: Boolean(user.isSuperAdmin),
     },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    { expiresIn: "7d" },
   );
 }
 

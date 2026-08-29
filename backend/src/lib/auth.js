@@ -1,11 +1,9 @@
 import jwt from "jsonwebtoken";
 
 function getJwtSecrets() {
-  const secrets = [
-    process.env.JWT_SECRET,
-    process.env.JWT_LEGACY_SECRET,
-    "change-me-to-a-long-random-string",
-  ].filter(Boolean);
+  const secrets = [process.env.JWT_SECRET, process.env.JWT_LEGACY_SECRET, "change-me-to-a-long-random-string"].filter(
+    Boolean,
+  );
 
   return [...new Set(secrets)];
 }

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   Platform,
   Pressable,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { IndustrialMosaic } from '@/src/components/IndustrialMosaic';
 import { Logo } from '@/src/components/Logo';
 import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
 import { ScreenContent } from '@/src/components/ScreenContent';
@@ -18,7 +20,11 @@ import { useAuth } from '@/src/context/AuthContext';
 import { formatPhoneForDisplay, toE164Phone, toIndianLocalDigits } from '@/src/lib/phone';
 import { requestPhoneNumberHintLocal } from '@/src/lib/phoneHint';
 import { isExpoGo } from '@/src/lib/notifications';
-import { cardShadow, colors, radius, spacing } from '@/src/constants/theme';
+import { colors, radius, spacing } from '@/src/constants/theme';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+/** Four icon rows; white form sits lower to use empty bottom space. */
+const MOSAIC_HEIGHT = Math.min(580, Math.max(480, SCREEN_HEIGHT * 0.58));
 
 type Step = 'phone' | 'otp';
 
@@ -327,31 +333,33 @@ export default function SignInScreen() {
   const phoneReady = Boolean(toE164Phone(phoneInput));
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <KeyboardAwareScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <ScreenContent style={styles.screenContent}>
-          <View style={styles.brand}>
-            <Logo size="lg" />
-          </View>
+        <IndustrialMosaic height={MOSAIC_HEIGHT} width={SCREEN_WIDTH} />
 
-          <View style={styles.card}>
-            <View style={styles.header}>
-              <Text style={styles.title}>
-                {step === 'phone' ? 'Welcome to Surplus' : 'Enter verification code'}
-              </Text>
-              <Text style={styles.subtitle}>
-                {step === 'phone'
-                  ? 'Enter your mobile number to continue. We’ll send a one-time code to verify it’s you.'
-                  : `Code sent to ${formatPhoneForDisplay(e164Phone)}`}
-              </Text>
+        <View style={styles.sheet}>
+          <ScreenContent style={styles.screenContent}>
+            <View style={styles.sheetSpacer} />
+
+            <View style={styles.brand}>
+              <Logo size="lg" />
+              <Text style={styles.tagline}>India’s B2B marketplace</Text>
+              {step === 'otp' ? (
+                <View style={styles.header}>
+                  <Text style={styles.title}>Enter verification code</Text>
+                  <Text style={styles.subtitle}>
+                    {`Code sent to ${formatPhoneForDisplay(e164Phone)}`}
+                  </Text>
+                </View>
+              ) : null}
             </View>
 
             {step === 'phone' ? (
               <View style={styles.form}>
-                <Text style={styles.label}>Mobile number</Text>
                 <ScrollIntoView>
                   <View style={styles.phoneField}>
                     <Text style={styles.countryCodeText}>+91</Text>
@@ -363,7 +371,7 @@ export default function SignInScreen() {
                         const autofilled = toIndianLocalDigits(value);
                         setPhoneInput(autofilled ?? value.replace(/\D/g, '').slice(0, 10));
                       }}
-                      placeholder="98765 43210"
+                      placeholder="Enter mobile number"
                       placeholderTextColor={colors.muted}
                       keyboardType="phone-pad"
                       autoComplete="tel"
@@ -402,13 +410,12 @@ export default function SignInScreen() {
                   {loading ? (
                     <ActivityIndicator color={colors.white} />
                   ) : (
-                    <Text style={styles.buttonText}>Send verification code</Text>
+                    <Text style={styles.buttonText}>Continue</Text>
                   )}
                 </Pressable>
               </View>
             ) : (
               <View style={styles.form}>
-                <Text style={styles.label}>Verification code</Text>
                 <ScrollIntoView>
                   <TextInput
                     style={styles.otpInput}
@@ -455,8 +462,12 @@ export default function SignInScreen() {
                 </Pressable>
               </View>
             )}
-          </View>
-        </ScreenContent>
+
+            <Text style={styles.legal}>
+              By continuing, you agree to our Terms of service & Privacy policy
+            </Text>
+          </ScreenContent>
+        </View>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -465,63 +476,75 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.bgSubtle,
+    backgroundColor: colors.surface,
+  },
+  scroll: {
+    flex: 1,
   },
   container: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+    minHeight: SCREEN_HEIGHT,
+    backgroundColor: colors.surface,
+  },
+  sheet: {
+    flex: 1,
+    // Transparent so the mosaic fade shows through — no hard white cut line.
+    backgroundColor: 'transparent',
+    marginTop: -100,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
   },
   screenContent: {
-    gap: spacing.xl,
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   brand: {
     alignItems: 'center',
-    paddingTop: spacing.sm,
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
   },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.lg,
-    ...cardShadow,
+  tagline: {
+    color: colors.muted,
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.1,
+    textAlign: 'center',
+  },
+  sheetSpacer: {
+    flexGrow: 1,
+    minHeight: spacing.md,
   },
   header: {
-    gap: spacing.xs,
+    gap: 4,
+    alignItems: 'center',
+    marginTop: spacing.xs,
   },
   title: {
     color: colors.textStrong,
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    textAlign: 'center',
   },
   subtitle: {
     color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   form: {
     gap: spacing.sm,
   },
-  label: {
-    color: colors.muted,
-    fontWeight: '600',
-    fontSize: 12,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
   phoneField: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
     backgroundColor: colors.bg,
     paddingHorizontal: spacing.sm,
-    minHeight: 52,
+    minHeight: 54,
   },
   countryCodeText: {
     color: colors.textStrong,
@@ -530,8 +553,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   phoneDivider: {
-    width: 1,
-    height: 24,
+    width: StyleSheet.hairlineWidth,
+    height: 22,
     backgroundColor: colors.border,
     marginHorizontal: spacing.xs,
   },
@@ -539,12 +562,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: colors.textStrong,
-    letterSpacing: 1,
+    letterSpacing: 0.3,
     paddingVertical: 14,
     paddingHorizontal: spacing.xs,
   },
   otpInput: {
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
     backgroundColor: colors.bg,
@@ -587,7 +610,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentHover,
   },
   buttonDisabled: {
-    opacity: 0.55,
+    opacity: 0.5,
   },
   buttonText: {
     color: colors.white,
@@ -599,5 +622,14 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontWeight: '600',
     fontSize: 14,
+  },
+  legal: {
+    color: colors.muted,
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
   },
 });

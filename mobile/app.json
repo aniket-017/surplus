@@ -74,6 +74,7 @@
         }
       ],
       "expo-document-picker",
+      "expo-video",
       [
         "expo-notifications",
         {

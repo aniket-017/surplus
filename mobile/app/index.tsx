@@ -1,16 +1,24 @@
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { AnimatedSplash } from '@/src/components/AnimatedSplash';
+import { IntroVideo } from '@/src/components/IntroVideo';
+import { colors } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/AuthContext';
 
 export default function Index() {
   const { user, token, loading } = useAuth();
-  const [splashDone, setSplashDone] = useState(false);
+  const [introDone, setIntroDone] = useState(false);
 
-  if (loading || !splashDone) {
+  if (!introDone) {
+    return <IntroVideo onFinished={() => setIntroDone(true)} />;
+  }
+
+  if (loading) {
     return (
-      <AnimatedSplash readyToExit={!loading} onFinished={() => setSplashDone(true)} />
+      <View style={styles.loading}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
     );
   }
 
@@ -28,3 +36,12 @@ export default function Index() {
 
   return <Redirect href="/(seller)/(tabs)" />;
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

@@ -1,13 +1,14 @@
 import { Image, StyleSheet } from 'react-native';
 
 type LogoProps = {
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 };
 
 const sizes = {
   sm: 40,
   md: 56,
   lg: 72,
+  xl: 100,
 } as const;
 
 export function Logo({ size = 'md' }: LogoProps) {

@@ -7,11 +7,26 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  FadeInRight,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+  ZoomIn,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { OtpBoxes } from '@/src/components/auth/OtpBoxes';
+import { PhoneField } from '@/src/components/auth/PhoneField';
+import { PrimaryButton } from '@/src/components/auth/PrimaryButton';
+import { PulseDot } from '@/src/components/auth/PulseDot';
+import { Shake } from '@/src/components/auth/Shake';
 import { IndustrialMosaic } from '@/src/components/IndustrialMosaic';
 import { Logo } from '@/src/components/Logo';
 import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
@@ -23,8 +38,8 @@ import { isExpoGo } from '@/src/lib/notifications';
 import { colors, radius, spacing } from '@/src/constants/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-/** Four icon rows; white form sits lower to use empty bottom space. */
-const MOSAIC_HEIGHT = Math.min(580, Math.max(480, SCREEN_HEIGHT * 0.58));
+/** Leaves room below for the logo, headline and form without scrolling. */
+const MOSAIC_HEIGHT = Math.min(520, Math.max(400, SCREEN_HEIGHT * 0.5));
 
 type Step = 'phone' | 'otp';
 
@@ -98,6 +113,7 @@ export default function SignInScreen() {
   const confirmationRef = useRef<PhoneConfirmation | null>(null);
   const hintAttemptedRef = useRef(false);
   const completingRef = useRef(false);
+  const introDoneRef = useRef(false);
 
   useEffect(() => {
     if (token && user) {
@@ -331,6 +347,28 @@ export default function SignInScreen() {
   }
 
   const phoneReady = Boolean(toE164Phone(phoneInput));
+  if (step === 'otp') {
+    introDoneRef.current = true;
+  }
+  const introDone = introDoneRef.current;
+
+  const messages = (
+    <>
+      {error ? (
+        <Shake trigger={error}>
+          <Animated.View entering={FadeIn.duration(200)} style={[styles.notice, styles.noticeError]}>
+            <Text style={styles.noticeErrorText}>{error}</Text>
+          </Animated.View>
+        </Shake>
+      ) : null}
+      {info ? (
+        <Animated.View entering={FadeIn.duration(200)} style={[styles.notice, styles.noticeInfo]}>
+          <PulseDot />
+          <Text style={styles.noticeInfoText}>{info}</Text>
+        </Animated.View>
+      ) : null}
+    </>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -346,130 +384,143 @@ export default function SignInScreen() {
             <View style={styles.sheetSpacer} />
 
             <View style={styles.brand}>
-              <Logo size="lg" />
-              <Text style={styles.tagline}>India’s B2B marketplace</Text>
-              {step === 'otp' ? (
-                <View style={styles.header}>
-                  <Text style={styles.title}>Enter verification code</Text>
-                  <Text style={styles.subtitle}>
-                    {`Code sent to ${formatPhoneForDisplay(e164Phone)}`}
-                  </Text>
-                </View>
-              ) : null}
+              <Animated.View
+                entering={ZoomIn.delay(250).springify().damping(14)}
+                style={styles.logoWrap}
+              >
+                <BreathingGlow />
+                <Logo size="xl" />
+              </Animated.View>
             </View>
 
             {step === 'phone' ? (
-              <View style={styles.form}>
-                <ScrollIntoView>
-                  <View style={styles.phoneField}>
-                    <Text style={styles.countryCodeText}>+91</Text>
-                    <View style={styles.phoneDivider} />
-                    <TextInput
-                      style={styles.phoneInput}
+              <View key="phone">
+                <Animated.View
+                  entering={FadeInDown.delay(introDone ? 0 : 520).duration(500)}
+                  style={styles.header}
+                >
+                  <Text style={styles.title}>
+                    Industrial surplus,{'\n'}
+                    <Text style={styles.titleAccent}>traded smarter.</Text>
+                  </Text>
+                </Animated.View>
+
+                <Animated.View
+                  entering={FadeInDown.delay(introDone ? 80 : 640).duration(500)}
+                  style={styles.form}
+                >
+                  <ScrollIntoView>
+                    <PhoneField
                       value={phoneInput}
+                      valid={phoneReady}
                       onChangeText={(value) => {
                         const autofilled = toIndianLocalDigits(value);
                         setPhoneInput(autofilled ?? value.replace(/\D/g, '').slice(0, 10));
                       }}
-                      placeholder="Enter mobile number"
-                      placeholderTextColor={colors.muted}
-                      keyboardType="phone-pad"
-                      autoComplete="tel"
-                      textContentType="telephoneNumber"
-                      importantForAutofill="yes"
                     />
-                  </View>
-                </ScrollIntoView>
+                  </ScrollIntoView>
 
-                {hintAvailable ? (
-                  <Pressable
-                    onPress={handleUseMyNumber}
-                    disabled={hintLoading || loading}
-                    style={styles.hintLinkWrap}
-                  >
-                    {hintLoading ? (
-                      <ActivityIndicator color={colors.accent} size="small" />
-                    ) : (
-                      <Text style={styles.link}>Use my number</Text>
-                    )}
-                  </Pressable>
-                ) : null}
+                  {hintAvailable ? (
+                    <Pressable
+                      onPress={handleUseMyNumber}
+                      disabled={hintLoading || loading}
+                      style={styles.hintLinkWrap}
+                    >
+                      {hintLoading ? (
+                        <ActivityIndicator color={colors.accent} size="small" />
+                      ) : (
+                        <Text style={styles.link}>Use my number</Text>
+                      )}
+                    </Pressable>
+                  ) : null}
 
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-                {info ? <Text style={styles.info}>{info}</Text> : null}
+                  {messages}
 
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.button,
-                    pressed && styles.buttonPressed,
-                    (loading || !phoneReady) && styles.buttonDisabled,
-                  ]}
-                  onPress={handleSendOtp}
-                  disabled={loading || !phoneReady}
-                >
-                  {loading ? (
-                    <ActivityIndicator color={colors.white} />
-                  ) : (
-                    <Text style={styles.buttonText}>Continue</Text>
-                  )}
-                </Pressable>
+                  <PrimaryButton
+                    label="Continue"
+                    onPress={handleSendOtp}
+                    disabled={!phoneReady}
+                    loading={loading}
+                  />
+                </Animated.View>
               </View>
             ) : (
-              <View style={styles.form}>
-                <ScrollIntoView>
-                  <TextInput
-                    style={styles.otpInput}
-                    value={otp}
-                    onChangeText={(value) => {
-                      const digits = value.replace(/\D/g, '').slice(0, 6);
-                      setOtp(digits);
-                      if (digits.length === 6 && !loading && !completingRef.current) {
-                        void handleVerifyOtp(digits);
-                      }
-                    }}
-                    placeholder="000000"
-                    placeholderTextColor={colors.muted}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    autoComplete="sms-otp"
-                    textContentType="oneTimeCode"
-                    importantForAutofill="yes"
-                    autoFocus
+              <Animated.View key="otp" entering={FadeInRight.duration(400)}>
+                <View style={styles.header}>
+                  <Text style={styles.title}>Verify your number</Text>
+                  <View style={styles.subtitleRow}>
+                    <Text style={styles.subtitle}>Code sent to </Text>
+                    <Text style={styles.subtitleStrong}>{formatPhoneForDisplay(e164Phone)}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.form}>
+                  <ScrollIntoView>
+                    <OtpBoxes
+                      value={otp}
+                      onChangeText={(value) => {
+                        const digits = value.replace(/\D/g, '').slice(0, 6);
+                        setOtp(digits);
+                        if (digits.length === 6 && !loading && !completingRef.current) {
+                          void handleVerifyOtp(digits);
+                        }
+                      }}
+                    />
+                  </ScrollIntoView>
+
+                  {messages}
+
+                  <PrimaryButton
+                    label="Verify & continue"
+                    onPress={() => void handleVerifyOtp()}
+                    disabled={otp.length !== 6}
+                    loading={loading}
                   />
-                </ScrollIntoView>
 
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-                {info ? <Text style={styles.info}>{info}</Text> : null}
-
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.button,
-                    pressed && styles.buttonPressed,
-                    (loading || otp.length !== 6) && styles.buttonDisabled,
-                  ]}
-                  onPress={() => void handleVerifyOtp()}
-                  disabled={loading || otp.length !== 6}
-                >
-                  {loading ? (
-                    <ActivityIndicator color={colors.white} />
-                  ) : (
-                    <Text style={styles.buttonText}>Continue</Text>
-                  )}
-                </Pressable>
-
-                <Pressable onPress={resetToPhoneStep} style={styles.secondaryLinkWrap}>
-                  <Text style={styles.link}>Use a different number</Text>
-                </Pressable>
-              </View>
+                  <Pressable onPress={resetToPhoneStep} style={styles.secondaryLinkWrap}>
+                    <Text style={styles.secondaryLink}>← Use a different number</Text>
+                  </Pressable>
+                </View>
+              </Animated.View>
             )}
 
-            <Text style={styles.legal}>
-              By continuing, you agree to our Terms of service & Privacy policy
-            </Text>
+            <Animated.Text entering={FadeIn.delay(800).duration(500)} style={styles.legal}>
+              By continuing, you agree to our{' '}
+              <Text style={styles.legalStrong}>Terms of Service</Text> &{' '}
+              <Text style={styles.legalStrong}>Privacy Policy</Text>
+            </Animated.Text>
           </ScreenContent>
         </View>
       </KeyboardAwareScrollView>
     </SafeAreaView>
+  );
+}
+
+function BreathingGlow() {
+  const t = useSharedValue(0);
+
+  useEffect(() => {
+    t.value = withRepeat(
+      withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [t]);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: 0.35 + t.value * 0.4,
+    transform: [{ scale: 0.92 + t.value * 0.12 }],
+  }));
+
+  return (
+    <Animated.View pointerEvents="none" style={[styles.logoGlow, style]}>
+      {[1, 0.8, 0.6, 0.4].map((scale) => (
+        <View
+          key={scale}
+          style={[styles.logoGlowLayer, { width: 360 * scale, height: 170 * scale }]}
+        />
+      ))}
+    </Animated.View>
   );
 }
 
@@ -501,83 +552,62 @@ const styles = StyleSheet.create({
   },
   brand: {
     alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  tagline: {
-    color: colors.muted,
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 0.1,
-    textAlign: 'center',
+  logoWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoGlow: {
+    position: 'absolute',
+    width: 360,
+    height: 170,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoGlowLayer: {
+    position: 'absolute',
+    borderRadius: 999,
+    backgroundColor: 'rgba(92, 179, 53, 0.05)',
   },
   sheetSpacer: {
     flexGrow: 1,
     minHeight: spacing.md,
   },
   header: {
-    gap: 4,
+    gap: 6,
     alignItems: 'center',
-    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
   },
   title: {
     color: colors.textStrong,
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: -0.2,
+    fontSize: 21,
+    lineHeight: 27,
+    fontWeight: '800',
+    letterSpacing: -0.4,
     textAlign: 'center',
+  },
+  titleAccent: {
+    color: colors.accent,
+  },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   subtitle: {
     color: colors.muted,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 20,
-    textAlign: 'center',
+  },
+  subtitleStrong: {
+    color: colors.textStrong,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '700',
   },
   form: {
     gap: spacing.sm,
-  },
-  phoneField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.bg,
-    paddingHorizontal: spacing.sm,
-    minHeight: 54,
-  },
-  countryCodeText: {
-    color: colors.textStrong,
-    fontWeight: '700',
-    fontSize: 16,
-    paddingHorizontal: spacing.xs,
-  },
-  phoneDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 22,
-    backgroundColor: colors.border,
-    marginHorizontal: spacing.xs,
-  },
-  phoneInput: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.textStrong,
-    letterSpacing: 0.3,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.xs,
-  },
-  otpInput: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.bg,
-    textAlign: 'center',
-    letterSpacing: 10,
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.textStrong,
-    paddingVertical: 16,
-    minHeight: 56,
   },
   hintLinkWrap: {
     alignSelf: 'flex-start',
@@ -589,47 +619,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.xs,
   },
-  error: {
-    color: colors.error,
+  secondaryLink: {
+    color: colors.muted,
+    fontWeight: '600',
     fontSize: 14,
-    lineHeight: 20,
   },
-  info: {
-    color: colors.accentHover,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  button: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.md,
-    paddingVertical: 16,
+  notice: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.xs,
+    gap: 10,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10,
+    borderRadius: radius.sm,
+    borderWidth: 1,
   },
-  buttonPressed: {
-    backgroundColor: colors.accentHover,
+  noticeError: {
+    backgroundColor: '#FDF1EF',
+    borderColor: 'rgba(192, 57, 43, 0.2)',
   },
-  buttonDisabled: {
-    opacity: 0.5,
+  noticeErrorText: {
+    flex: 1,
+    color: colors.error,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
   },
-  buttonText: {
-    color: colors.white,
-    fontWeight: '700',
-    fontSize: 16,
-    letterSpacing: 0.2,
+  noticeInfo: {
+    backgroundColor: '#F1F8EC',
+    borderColor: colors.borderAccent,
+  },
+  noticeInfoText: {
+    flex: 1,
+    color: colors.accentHover,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
   },
   link: {
     color: colors.accent,
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 14,
   },
   legal: {
     color: colors.muted,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 12,
+    lineHeight: 18,
     textAlign: 'center',
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
     paddingBottom: spacing.xs,
+  },
+  legalStrong: {
+    color: colors.textStrong,
+    fontWeight: '700',
   },
 });

@@ -1,6 +1,10 @@
 import { StyleSheet, View } from 'react-native';
 
-import { CATEGORY_GRID_GAP, CATEGORY_GRID_PADDING } from '@/src/components/buyer/BuyerCategoryCard';
+import {
+  CATEGORY_CARD_RADIUS,
+  CATEGORY_GRID_GAP,
+  CATEGORY_GRID_PADDING,
+} from '@/src/components/buyer/BuyerCategoryCard';
 import { SkeletonBone } from '@/src/components/SkeletonBone';
 import { spacing } from '@/src/constants/theme';
 
@@ -27,20 +31,13 @@ export function CategoriesGridSkeleton({
       {rows.map((row, rowIndex) => (
         <View key={`row-${rowIndex}`} style={styles.row}>
           {row.map((index) => (
-            <View key={index} style={[styles.card, { width: tileWidth }]}>
-              <SkeletonBone
-                width={tileWidth}
-                height={tileWidth}
-                radius={14}
-                delay={index * 40}
-              />
-              <SkeletonBone
-                width={Math.round(tileWidth * 0.55)}
-                height={12}
-                radius={6}
-                delay={index * 40 + 50}
-              />
-            </View>
+            <SkeletonBone
+              key={index}
+              width={tileWidth}
+              height={tileWidth}
+              radius={CATEGORY_CARD_RADIUS}
+              delay={index * 40}
+            />
           ))}
         </View>
       ))}
@@ -57,9 +54,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: CATEGORY_GRID_GAP,
     marginBottom: CATEGORY_GRID_GAP,
-  },
-  card: {
-    alignItems: 'center',
-    gap: 8,
   },
 });

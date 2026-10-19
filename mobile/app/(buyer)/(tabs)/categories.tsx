@@ -18,7 +18,7 @@ import {
 import { CategoriesGridSkeleton } from '@/src/components/buyer/CategoriesGridSkeleton';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
-import { colors, spacing } from '@/src/constants/theme';
+import { colors, fonts, spacing } from '@/src/constants/theme';
 import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 import { getProductCategories } from '@/src/lib/productsApi';
 import type { ProductCategory } from '@/src/types/product';
@@ -121,19 +121,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: CATEGORY_GRID_PADDING,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
     gap: 4,
   },
   title: {
     color: colors.textStrong,
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 26,
+    lineHeight: 32,
+    fontFamily: fonts.extrabold,
+    letterSpacing: -0.5,
   },
   subtitle: {
     color: colors.muted,
     fontSize: 14,
+    lineHeight: 20,
+    fontFamily: fonts.regular,
   },
   centered: {
     flex: 1,
@@ -144,7 +148,8 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: CATEGORY_GRID_PADDING,
-    paddingBottom: spacing.xl,
+    paddingTop: 2,
+    paddingBottom: spacing.xl + spacing.md,
   },
   columnWrapper: {
     gap: CATEGORY_GRID_GAP,

@@ -1,3 +1,4 @@
+import { prisma } from "./prisma.js";
 import { resolveProductImageUrls } from "./s3.js";
 import { parseCategory } from "./category.js";
 
@@ -74,10 +75,66 @@ export function parseLocation(raw) {
     city: String(parsed.city || "").trim(),
     state: String(parsed.state || "").trim(),
     pincode: String(parsed.pincode || "").trim(),
+    ...parseCoordinates(parsed.latitude, parsed.longitude),
   };
 
   if (!location.city || !location.state || !location.pincode) {
     throw new Error("City, state, and pincode are required");
+  }
+
+  return location;
+}
+
+function parseCoordinates(latitudeRaw, longitudeRaw) {
+  if (
+    latitudeRaw === undefined ||
+    latitudeRaw === null ||
+    latitudeRaw === "" ||
+    longitudeRaw === undefined ||
+    longitudeRaw === null ||
+    longitudeRaw === ""
+  ) {
+    return { latitude: null, longitude: null };
+  }
+
+  const latitude = Number(latitudeRaw);
+  const longitude = Number(longitudeRaw);
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return { latitude: null, longitude: null };
+  }
+
+  return { latitude, longitude };
+}
+
+export function hasCoordinates(location) {
+  return (
+    typeof location?.latitude === "number" &&
+    typeof location?.longitude === "number"
+  );
+}
+
+export async function withSellerCoordinates(location, sellerId) {
+  if (hasCoordinates(location)) return location;
+
+  const seller = await prisma.user.findUnique({
+    where: { id: sellerId },
+    select: { address: true },
+  });
+  const address = seller?.address;
+
+  if (
+    hasCoordinates(address) &&
+    String(address.pincode || "").trim() === location.pincode
+  ) {
+    return { ...location, latitude: address.latitude, longitude: address.longitude };
   }
 
   return location;

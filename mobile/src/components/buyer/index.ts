@@ -9,5 +9,6 @@ export { CategoriesGridSkeleton } from './CategoriesGridSkeleton';
 export { CategoryCarousel } from './CategoryCarousel';
 export { HomeListingsSkeleton } from './HomeListingsSkeleton';
 export { ListingFilterChips } from './ListingFilterChips';
+export { ListingsMapView } from './ListingsMapView';
 export { ProductListingCard } from './ProductListingCard';
 export { SellSurplusCta } from './SellSurplusCta';

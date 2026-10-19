@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -23,7 +22,6 @@ import {
   formatAttributeKey,
   isCompleteLocation,
   PRICE_TYPE_OPTIONS,
-  profileAddressToLocation,
   type ProductFormValues,
 } from '@/src/types/product';
 
@@ -34,40 +32,13 @@ type ProductFormProps = {
 };
 
 export function ProductForm({ values, onChange, profileAddress }: ProductFormProps) {
-  const hasProfileAddress = Boolean(profileAddress && isCompleteLocation(profileAddress));
-  const [useProfileAddress, setUseProfileAddress] = useState(hasProfileAddress);
   const [mapPickerVisible, setMapPickerVisible] = useState(false);
-
-  useEffect(() => {
-    if (hasProfileAddress) {
-      setUseProfileAddress(true);
-    }
-  }, [hasProfileAddress]);
-
-  function handleUseProfileAddressToggle(enabled: boolean) {
-    setUseProfileAddress(enabled);
-
-    if (enabled && profileAddress && isCompleteLocation(profileAddress)) {
-      onChange({
-        ...values,
-        location: profileAddressToLocation(profileAddress),
-      });
-    }
-  }
 
   function updateField<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) {
     onChange({ ...values, [key]: value });
   }
 
-  function updateLocation(field: keyof ProductFormValues['location'], value: string) {
-    onChange({
-      ...values,
-      location: { ...values.location, [field]: value },
-    });
-  }
-
   function applyAddressFromMap(picked: PickedAddress) {
-    setUseProfileAddress(false);
     onChange({
       ...values,
       location: {
@@ -75,6 +46,8 @@ export function ProductForm({ values, onChange, profileAddress }: ProductFormPro
         city: picked.city,
         state: picked.state,
         pincode: picked.pincode,
+        latitude: picked.latitude,
+        longitude: picked.longitude,
       },
     });
     setMapPickerVisible(false);
@@ -85,8 +58,8 @@ export function ProductForm({ values, onChange, profileAddress }: ProductFormPro
     city: values.location.city,
     state: values.location.state,
     pincode: values.location.pincode,
-    latitude: profileAddress?.latitude ?? null,
-    longitude: profileAddress?.longitude ?? null,
+    latitude: values.location.latitude ?? profileAddress?.latitude ?? null,
+    longitude: values.location.longitude ?? profileAddress?.longitude ?? null,
   };
 
   function updateAttribute(index: number, field: 'key' | 'value', value: string) {
@@ -346,115 +319,48 @@ export function ProductForm({ values, onChange, profileAddress }: ProductFormPro
 
       <SectionHeader title="Location" subtitle="Pickup location for this listing" />
 
-      {hasProfileAddress ? (
-        <View style={styles.profileToggleRow}>
-          <View style={styles.profileToggleCopy}>
-            <Text style={styles.profileToggleLabel}>Use my profile address</Text>
-            <Text style={styles.profileToggleHint}>Reuse your saved seller address</Text>
+      {isCompleteLocation(values.location) ? (
+        <View style={styles.locationCard}>
+          <View style={styles.locationIcon}>
+            <Ionicons name="location" size={18} color={colors.accent} />
           </View>
-          <Switch
-            value={useProfileAddress}
-            onValueChange={handleUseProfileAddressToggle}
-            trackColor={{ false: 'rgba(15, 27, 45, 0.12)', true: 'rgba(92, 179, 53, 0.4)' }}
-            thumbColor={useProfileAddress ? colors.accent : colors.white}
-          />
-        </View>
-      ) : (
-        <Text style={styles.profileHintText}>
-          Add an address in your profile to reuse it here, or enter a pickup location below.
-        </Text>
-      )}
-
-      {useProfileAddress && hasProfileAddress && profileAddress ? (
-        <View style={styles.profileAddressCard}>
-          <Ionicons name="location-outline" size={18} color={colors.accent} />
-          <View style={styles.profileAddressCopy}>
-            {profileAddress.address?.trim() ? (
-              <Text style={styles.profileAddressLine}>{profileAddress.address.trim()}</Text>
-            ) : null}
-            <Text style={styles.profileAddressLine}>
-              {[profileAddress.city, profileAddress.state].filter(Boolean).join(', ')}
-              {profileAddress.pincode ? ` · ${profileAddress.pincode}` : ''}
+          <View style={styles.locationTextWrap}>
+            <Text style={styles.locationTitle} numberOfLines={2}>
+              {values.location.address?.trim() || values.location.city}
+            </Text>
+            <Text style={styles.locationSubtitle} numberOfLines={2}>
+              {[values.location.city, values.location.state].filter(Boolean).join(', ')}
+              {values.location.pincode ? ` - ${values.location.pincode}` : ''}
             </Text>
           </View>
+          <Pressable
+            style={styles.changeLocationButton}
+            onPress={() => setMapPickerVisible(true)}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="Change pickup location on map"
+          >
+            <Text style={styles.changeLocationText}>Change</Text>
+          </Pressable>
         </View>
       ) : (
-        <>
-          <Pressable
-            style={({ pressed }) => [styles.mapButton, pressed && styles.mapButtonPressed]}
-            onPress={() => setMapPickerVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Pick location from map"
-          >
-            <View style={styles.mapButtonIcon}>
-              <Ionicons name="map-outline" size={16} color={colors.accent} />
-            </View>
-            <View style={styles.mapButtonTextWrap}>
-              <Text style={styles.mapButtonTitle}>Pick from map</Text>
-              <Text style={styles.mapButtonSubtitle}>
-                Search or move the map to set pickup location
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.muted} />
-          </Pressable>
-
-          <Field label="Address">
-            <ScrollIntoView>
-              <TextInput
-                style={styles.input}
-                value={values.location.address || ''}
-                onChangeText={(text) => updateLocation('address', text)}
-                placeholder="Street address (optional)"
-                placeholderTextColor={colors.muted}
-              />
-            </ScrollIntoView>
-          </Field>
-
-          <View style={styles.row}>
-            <View style={styles.rowItem}>
-              <Field label="City">
-                <ScrollIntoView>
-                  <TextInput
-                    style={styles.input}
-                    value={values.location.city}
-                    onChangeText={(text) => updateLocation('city', text)}
-                    placeholder="City"
-                    placeholderTextColor={colors.muted}
-                  />
-                </ScrollIntoView>
-              </Field>
-            </View>
-            <View style={styles.rowItem}>
-              <Field label="State">
-                <ScrollIntoView>
-                  <TextInput
-                    style={styles.input}
-                    value={values.location.state}
-                    onChangeText={(text) => updateLocation('state', text)}
-                    placeholder="State"
-                    placeholderTextColor={colors.muted}
-                  />
-                </ScrollIntoView>
-              </Field>
-            </View>
+        <Pressable
+          style={({ pressed }) => [styles.mapButton, pressed && styles.mapButtonPressed]}
+          onPress={() => setMapPickerVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Pick location from map"
+        >
+          <View style={styles.mapButtonIcon}>
+            <Ionicons name="map-outline" size={20} color={colors.accent} />
           </View>
-
-          <Field label="Pincode">
-            <ScrollIntoView>
-              <TextInput
-                style={[styles.input, styles.pincodeInput]}
-                value={values.location.pincode}
-                onChangeText={(text) =>
-                  updateLocation('pincode', text.replace(/\D/g, '').slice(0, 6))
-                }
-                placeholder="6-digit pincode"
-                placeholderTextColor={colors.muted}
-                keyboardType="number-pad"
-                maxLength={6}
-              />
-            </ScrollIntoView>
-          </Field>
-        </>
+          <View style={styles.mapButtonTextWrap}>
+            <Text style={styles.mapButtonTitle}>Pick from map</Text>
+            <Text style={styles.mapButtonSubtitle}>
+              Search or drag the pin to set the pickup location
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.accent} />
+        </Pressable>
       )}
 
       <MapAddressPickerModal
@@ -541,9 +447,6 @@ const styles = StyleSheet.create({
     minHeight: 110,
     textAlignVertical: 'top',
     lineHeight: 22,
-  },
-  pincodeInput: {
-    maxWidth: 160,
   },
   row: {
     flexDirection: 'row',
@@ -687,69 +590,69 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '700',
   },
-  profileToggleRow: {
+  locationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.sm,
     backgroundColor: colors.surfaceMuted,
     borderRadius: 14,
     padding: spacing.md,
   },
-  profileToggleCopy: {
-    flex: 1,
-    gap: 3,
+  locationIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(92, 179, 53, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  profileToggleLabel: {
+  locationTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  locationTitle: {
     color: colors.textStrong,
     fontSize: 15,
     fontWeight: '700',
+    lineHeight: 20,
   },
-  profileToggleHint: {
+  locationSubtitle: {
     color: colors.muted,
     fontSize: 13,
     lineHeight: 18,
   },
-  profileHintText: {
-    color: colors.muted,
+  changeLocationButton: {
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: colors.white,
+  },
+  changeLocationText: {
+    color: colors.accent,
     fontSize: 13,
-    lineHeight: 19,
-  },
-  profileAddressCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: 'rgba(92, 179, 53, 0.08)',
-    borderRadius: 14,
-    padding: spacing.md,
-  },
-  profileAddressCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  profileAddressLine: {
-    color: colors.textStrong,
-    fontSize: 14,
-    lineHeight: 20,
+    fontWeight: '700',
   },
   mapButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: colors.borderAccent,
-    borderRadius: 12,
+    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.accent,
+    borderRadius: 14,
     backgroundColor: '#F7FCF8',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 14,
   },
   mapButtonPressed: {
     opacity: 0.85,
   },
   mapButtonIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -760,7 +663,7 @@ const styles = StyleSheet.create({
   },
   mapButtonTitle: {
     color: colors.textStrong,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
   },
   mapButtonSubtitle: {

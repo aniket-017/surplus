@@ -20,12 +20,16 @@ const FILTERS: FilterOption[] = [
 type ListingFilterChipsProps = {
   activeFilter: string;
   onChangeFilter: (filterId: string, sort: BrowseSort) => void;
+  mapActive?: boolean;
+  onToggleMap?: () => void;
   onSeeAll?: () => void;
 };
 
 export function ListingFilterChips({
   activeFilter,
   onChangeFilter,
+  mapActive = false,
+  onToggleMap,
   onSeeAll,
 }: ListingFilterChipsProps) {
   return (
@@ -44,7 +48,7 @@ export function ListingFilterChips({
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {FILTERS.map((filter) => {
-          const active = activeFilter === filter.id;
+          const active = !mapActive && activeFilter === filter.id;
 
           return (
             <Pressable
@@ -61,6 +65,17 @@ export function ListingFilterChips({
             </Pressable>
           );
         })}
+        {onToggleMap ? (
+          <Pressable
+            style={[styles.chip, mapActive && styles.chipActive]}
+            onPress={onToggleMap}
+            accessibilityRole="button"
+            accessibilityState={{ selected: mapActive }}
+          >
+            <Ionicons name="map-outline" size={14} color={mapActive ? colors.white : colors.muted} />
+            <Text style={[styles.chipText, mapActive && styles.chipTextActive]}>Map</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
     </View>
   );

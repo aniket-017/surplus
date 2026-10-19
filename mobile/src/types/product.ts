@@ -31,6 +31,8 @@ export type ProductLocation = {
   city: string;
   state: string;
   pincode: string;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type PriceType = 'fixed' | 'negotiable' | 'per_kg' | 'per_unit' | 'per_lot';
@@ -200,6 +202,8 @@ export function profileAddressToLocation(address: UserAddress): ProductLocation 
     city: address.city.trim(),
     state: address.state.trim(),
     pincode: address.pincode.trim(),
+    latitude: address.latitude ?? null,
+    longitude: address.longitude ?? null,
   };
 }
 
@@ -220,6 +224,8 @@ export function productToFormValues(product: Product): ProductFormValues {
       city: product.location.city,
       state: product.location.state,
       pincode: product.location.pincode,
+      latitude: product.location.latitude ?? null,
+      longitude: product.location.longitude ?? null,
     },
   };
 }

@@ -11,6 +11,7 @@
     "db:indexes": "node scripts/ensureSparseUserIndexes.js",
     "db:backfill-user-deletion-status": "node scripts/backfillUserDeletionStatus.js",
     "db:migrate-scrap": "node scripts/migrateScrapToSurplus.js",
+    "db:backfill-product-coords": "node scripts/backfillProductCoords.js",
     "db:studio": "prisma studio"
   },
   "dependencies": {

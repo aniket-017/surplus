@@ -64,6 +64,8 @@ type ProductLocation {
   city    String
   state   String
   pincode String
+  latitude Float?
+  longitude Float?
 }
 
 type UserAddress {

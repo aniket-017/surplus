@@ -26,6 +26,7 @@ import {
   parseCondition,
   parseListingStatus,
   parseProductPayload,
+  withSellerCoordinates,
 } from "../lib/product.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireSeller } from "../middleware/requireSeller.js";
@@ -109,6 +110,7 @@ router.post("/", requireSeller, handleUpload, optimizeUploadedImages, async (req
 
   try {
     const payload = parseProductPayload(req.body);
+    payload.location = await withSellerCoordinates(payload.location, req.sellerId);
 
     await ensureCategoryMeta(payload.category);
 
@@ -458,6 +460,7 @@ router.patch("/:id", requireSeller, handleUpload, optimizeUploadedImages, async 
       attributes: req.body.attributes ?? existing.attributes,
       location: req.body.location ?? existing.location,
     });
+    payload.location = await withSellerCoordinates(payload.location, req.sellerId);
 
     await ensureCategoryMeta(payload.category);
 

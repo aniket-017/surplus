@@ -23,6 +23,7 @@ import {
 } from '@/src/components/buyer/FilterModal';
 import { HomeListingsSkeleton } from '@/src/components/buyer/HomeListingsSkeleton';
 import { ListingFilterChips } from '@/src/components/buyer/ListingFilterChips';
+import { ListingsMapView } from '@/src/components/buyer/ListingsMapView';
 import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
@@ -68,6 +69,7 @@ export default function BuyerHomeTab() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
 
   const activeFilter = chipIdFromFilters(filters);
   const activeFilterCount = countActiveFilters(filters);
@@ -193,6 +195,7 @@ export default function BuyerHomeTab() {
   }
 
   function handleFilterChange(filterId: string, nextSort: BrowseSort) {
+    setViewMode('grid');
     setFilters((prev) => ({
       ...prev,
       sort: nextSort,
@@ -207,6 +210,19 @@ export default function BuyerHomeTab() {
   function openExplore() {
     router.push('/(buyer)/(tabs)/categories');
   }
+
+  function openProduct(productId: string) {
+    router.push({
+      pathname: '/products/[id]',
+      params: { id: productId },
+    });
+  }
+
+  const mapFallbackCenter =
+    typeof user?.address?.latitude === 'number' && typeof user?.address?.longitude === 'number'
+      ? { latitude: user.address.latitude, longitude: user.address.longitude }
+      : null;
+  const isMapView = viewMode === 'map';
 
   const listHeader = useMemo(
     () => (
@@ -229,6 +245,8 @@ export default function BuyerHomeTab() {
           <ListingFilterChips
             activeFilter={activeFilter}
             onChangeFilter={handleFilterChange}
+            mapActive={isMapView}
+            onToggleMap={() => setViewMode((mode) => (mode === 'map' ? 'grid' : 'map'))}
             onSeeAll={openExplore}
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -240,6 +258,7 @@ export default function BuyerHomeTab() {
       search,
       categories,
       activeFilter,
+      isMapView,
       activeFilterCount,
       error,
       loading,
@@ -252,7 +271,7 @@ export default function BuyerHomeTab() {
       <ScreenContent style={styles.screenContent}>
         <FlatList
           key={columns}
-          data={products}
+          data={isMapView ? [] : products}
           keyExtractor={(item) => item.id}
           numColumns={columns}
           columnWrapperStyle={styles.columnWrapper}
@@ -265,12 +284,7 @@ export default function BuyerHomeTab() {
                 width={cardWidth}
                 saved={savedIds.has(item.id)}
                 onToggleSave={() => void handleToggleSave(item.id)}
-                onPress={() =>
-                  router.push({
-                    pathname: '/products/[id]',
-                    params: { id: item.id },
-                  })
-                }
+                onPress={() => openProduct(item.id)}
               />
             );
 
@@ -282,7 +296,14 @@ export default function BuyerHomeTab() {
           }}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              {loading ? (
+              {isMapView ? (
+                <ListingsMapView
+                  products={products}
+                  loading={loading}
+                  fallbackCenter={mapFallbackCenter}
+                  onOpenProduct={openProduct}
+                />
+              ) : loading ? (
                 <HomeListingsSkeleton columns={columns} cardWidth={cardWidth} />
               ) : (
                 <View style={styles.emptyState}>

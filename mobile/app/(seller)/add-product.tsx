@@ -153,7 +153,7 @@ export default function AddProductScreen() {
     }
 
     if (!isCompleteLocation(form.location)) {
-      setError('City, state, and pincode are required for the pickup location.');
+      setError('Please pick the pickup location on the map.');
       return;
     }
 

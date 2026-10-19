@@ -46,6 +46,16 @@ function isProfileComplete(user: User | null) {
   return isPersonalComplete(user) && isAddressComplete(user);
 }
 
+function hasLocation(address: UserAddress) {
+  return Boolean(address.city?.trim() && address.state?.trim() && address.pincode?.trim());
+}
+
+function formatLocalityLine(address: UserAddress) {
+  const cityState = [address.city?.trim(), address.state?.trim()].filter(Boolean).join(', ');
+  const pincode = address.pincode?.trim();
+  return pincode ? `${cityState} - ${pincode}` : cityState;
+}
+
 type ProfileScreenProps = {
   role: UserRole;
 };
@@ -66,7 +76,6 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const nameInputRef = useRef<TextInput>(null);
-  const streetInputRef = useRef<TextInput>(null);
 
   const isEditing = editingPersonal || editingAddress;
   const profileComplete = isProfileComplete(user);
@@ -101,7 +110,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
 
   function enterAddressEdit() {
     setEditingAddress(true);
-    setTimeout(() => streetInputRef.current?.focus(), 100);
+    setMapPickerVisible(true);
   }
 
   function cancelPersonalEdit() {
@@ -149,7 +158,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
         address.address?.trim()
       ) {
         if (!address.city.trim() || !address.state.trim() || !address.pincode.trim()) {
-          throw new Error('City, state, and pincode are required when saving an address');
+          throw new Error('Please select your location on the map');
         }
 
         payload.address = {
@@ -212,10 +221,6 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
     }
   }
 
-  function updateAddressField(field: keyof UserAddress, value: string) {
-    setAddress((current) => ({ ...current, [field]: value }));
-  }
-
   function applyAddressFromMap(picked: PickedAddress) {
     setAddress((current) => ({
       ...current,
@@ -226,7 +231,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
       latitude: picked.latitude,
       longitude: picked.longitude,
     }));
-    setMessage('Address selected from map. Review and save your profile.');
+    setMessage('Location selected. Tap Save Profile to confirm.');
     setError('');
   }
 
@@ -353,98 +358,26 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
         onCancel={cancelAddressEdit}
       >
         {editingAddress ? (
-          <>
-            <Pressable style={styles.mapButton} onPress={() => setMapPickerVisible(true)}>
-              <View style={styles.mapButtonIcon}>
-                <Ionicons name="map-outline" size={16} color={colors.accent} />
+          hasLocation(address) ? (
+            <AddressSummary address={address} onChange={() => setMapPickerVisible(true)} />
+          ) : (
+            <Pressable style={styles.selectLocationButton} onPress={() => setMapPickerVisible(true)}>
+              <View style={styles.selectLocationIcon}>
+                <Ionicons name="map-outline" size={20} color={colors.accent} />
               </View>
-              <View style={styles.mapButtonTextWrap}>
-                <Text style={styles.mapButtonTitle}>Pick on map</Text>
-                <Text style={styles.mapButtonSubtitle}>
-                  Search or move the map to set location
+              <View style={styles.selectLocationTextWrap}>
+                <Text style={styles.selectLocationTitle}>Select location on map</Text>
+                <Text style={styles.selectLocationSubtitle}>
+                  Search or drag the pin to set your pickup location
                 </Text>
               </View>
-              {typeof address.latitude === 'number' && typeof address.longitude === 'number' ? (
-                <Ionicons name="checkmark-circle" size={18} color={colors.accent} />
-              ) : (
-                <Ionicons name="chevron-forward" size={16} color={colors.muted} />
-              )}
+              <Ionicons name="chevron-forward" size={18} color={colors.accent} />
             </Pressable>
-
-            <Field label="Street Address">
-              <ScrollIntoView>
-                <TextInput
-                  ref={streetInputRef}
-                  style={styles.input}
-                  value={address.address || ''}
-                  onChangeText={(text) => updateAddressField('address', text)}
-                  placeholder="Street / area (optional)"
-                  placeholderTextColor={colors.muted}
-                />
-              </ScrollIntoView>
-            </Field>
-
-            <View style={styles.row}>
-              <View style={styles.rowItem}>
-                <Field label="City">
-                  <ScrollIntoView>
-                    <TextInput
-                      style={styles.input}
-                      value={address.city}
-                      onChangeText={(text) => updateAddressField('city', text)}
-                      placeholder="City"
-                      placeholderTextColor={colors.muted}
-                    />
-                  </ScrollIntoView>
-                </Field>
-              </View>
-              <View style={styles.rowItem}>
-                <Field label="State">
-                  <ScrollIntoView>
-                    <TextInput
-                      style={styles.input}
-                      value={address.state}
-                      onChangeText={(text) => updateAddressField('state', text)}
-                      placeholder="State"
-                      placeholderTextColor={colors.muted}
-                    />
-                  </ScrollIntoView>
-                </Field>
-              </View>
-            </View>
-
-            <Field label="Pincode">
-              <ScrollIntoView>
-                <TextInput
-                  style={[styles.input, styles.pincodeInput]}
-                  value={address.pincode}
-                  onChangeText={(text) =>
-                    updateAddressField('pincode', text.replace(/\D/g, '').slice(0, 6))
-                  }
-                  placeholder="6-digit pincode"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                />
-              </ScrollIntoView>
-            </Field>
-          </>
+          )
+        ) : hasLocation(address) ? (
+          <AddressSummary address={address} />
         ) : (
-          <View style={styles.detailList}>
-            <DetailRow
-              label="Street"
-              value={address.address?.trim() || 'Not provided'}
-              muted={!address.address?.trim()}
-            />
-            <DetailRow label="City" value={address.city || '—'} muted={!address.city} />
-            <DetailRow label="State" value={address.state || '—'} muted={!address.state} />
-            <DetailRow
-              label="Pincode"
-              value={address.pincode || '—'}
-              muted={!address.pincode}
-              isLast
-            />
-          </View>
+          <Text style={styles.addressEmptyText}>No location added yet</Text>
         )}
       </SectionCard>
 
@@ -660,6 +593,45 @@ function DetailRow({
       >
         {value}
       </Text>
+    </View>
+  );
+}
+
+function AddressSummary({
+  address,
+  onChange,
+}: {
+  address: UserAddress;
+  onChange?: () => void;
+}) {
+  const street = address.address?.trim();
+  const localityLine = formatLocalityLine(address);
+  const pinned = typeof address.latitude === 'number' && typeof address.longitude === 'number';
+
+  return (
+    <View style={styles.addressSummary}>
+      <View style={styles.addressSummaryIcon}>
+        <Ionicons name="location" size={18} color={colors.accent} />
+      </View>
+      <View style={styles.addressSummaryText}>
+        <Text style={styles.addressSummaryTitle} numberOfLines={2}>
+          {street || address.city}
+        </Text>
+        <Text style={styles.addressSummarySubtitle} numberOfLines={2}>
+          {localityLine}
+        </Text>
+        {pinned ? (
+          <View style={styles.pinnedBadge}>
+            <Ionicons name="checkmark-circle" size={12} color={colors.accent} />
+            <Text style={styles.pinnedBadgeText}>Pinned on map</Text>
+          </View>
+        ) : null}
+      </View>
+      {onChange ? (
+        <Pressable style={styles.changeLocationButton} onPress={onChange} hitSlop={6}>
+          <Text style={styles.changeLocationText}>Change</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -986,48 +958,102 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
     backgroundColor: colors.surface,
   },
-  pincodeInput: {
-    maxWidth: '42%',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  rowItem: {
-    flex: 1,
-  },
-  mapButton: {
+  selectLocationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: colors.borderAccent,
-    borderRadius: 10,
+    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.accent,
+    borderRadius: 14,
     backgroundColor: '#F7FCF8',
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 14,
   },
-  mapButtonIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+  selectLocationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mapButtonTextWrap: {
+  selectLocationTextWrap: {
     flex: 1,
-    gap: 1,
+    gap: 2,
   },
-  mapButtonTitle: {
+  selectLocationTitle: {
     color: colors.textStrong,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  selectLocationSubtitle: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  addressSummary: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    backgroundColor: colors.bgSubtle,
+    padding: spacing.sm,
+  },
+  addressSummaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: LIGHT_GREEN,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addressSummaryText: {
+    flex: 1,
+    gap: 2,
+  },
+  addressSummaryTitle: {
+    color: colors.textStrong,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 20,
+  },
+  addressSummarySubtitle: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  pinnedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  pinnedBadgeText: {
+    color: colors.accent,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  changeLocationButton: {
+    alignSelf: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: colors.white,
+  },
+  changeLocationText: {
+    color: colors.accent,
     fontSize: 13,
     fontWeight: '700',
   },
-  mapButtonSubtitle: {
+  addressEmptyText: {
     color: colors.muted,
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 14,
+    fontStyle: 'italic',
   },
   success: {
     color: colors.accent,

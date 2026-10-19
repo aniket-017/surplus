@@ -25,12 +25,13 @@ type Region = {
   longitudeDelta: number;
 };
 
-const FALLBACK_REGION: Region = {
-  latitude: 20.5937,
-  longitude: 78.9629,
-  latitudeDelta: 0.2,
-  longitudeDelta: 0.2,
+const DEFAULT_REGION: Region = {
+  latitude: 18.5204,
+  longitude: 73.8567,
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
 };
+const SEARCH_BIAS_RADIUS_METERS = 50_000;
 
 const DETAIL_DELTA = 0.008;
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
@@ -79,7 +80,7 @@ function buildRegionFromAddress(address?: UserAddress | null): Region {
       longitudeDelta: DETAIL_DELTA,
     };
   }
-  return FALLBACK_REGION;
+  return DEFAULT_REGION;
 }
 
 function parseAddressComponents(components: Array<{ long_name?: string; types?: string[] }>) {
@@ -211,6 +212,8 @@ export function MapAddressPickerModal({
           `input=${encodeURIComponent(trimmed)}` +
           '&components=country:in' +
           '&types=geocode' +
+          `&location=${DEFAULT_REGION.latitude},${DEFAULT_REGION.longitude}` +
+          `&radius=${SEARCH_BIAS_RADIUS_METERS}` +
           `&key=${GOOGLE_MAPS_API_KEY}`;
         const res = await fetch(url);
         const data = (await res.json()) as {

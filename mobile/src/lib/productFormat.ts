@@ -9,6 +9,18 @@ export function formatPrice(value: number) {
   return `₹${value.toLocaleString('en-IN')}`;
 }
 
+/** Indian compact format: ₹950, ₹12.5K, ₹1.24L, ₹3.1Cr. */
+export function formatCompactPrice(value: number, { withSymbol = true } = {}) {
+  const symbol = withSymbol ? '₹' : '';
+  const compact = (divisor: number, suffix: string) =>
+    `${symbol}${parseFloat((value / divisor).toFixed(2))}${suffix}`;
+
+  if (value >= 1_00_00_000) return compact(1_00_00_000, 'Cr');
+  if (value >= 1_00_000) return compact(1_00_000, 'L');
+  if (value >= 1_000) return compact(1_000, 'K');
+  return `${symbol}${value.toLocaleString('en-IN')}`;
+}
+
 export function getProductTotalValue(
   product: Pick<ProductListing, 'price' | 'priceType' | 'quantity'>,
 ) {

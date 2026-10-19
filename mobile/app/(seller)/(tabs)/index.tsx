@@ -1,16 +1,16 @@
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DashboardScreen } from '@/src/components/DashboardShell';
-import { Logo } from '@/src/components/Logo';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import {
-  SellerAddProductCard,
-  SellerDashboardStats,
-  SellerSwitchToBuyerCard,
-  SellerWelcomeBanner,
+  SellerActivityCard,
+  SellerBuyBanner,
+  SellerHomeHero,
+  SellerMyListingsRail,
+  SellerSearchBar,
+  SellerSellBanner,
 } from '@/src/components/seller';
 import { useAdminNotificationUnreadCount } from '@/src/context/AdminNotificationsContext';
 import { useAuth } from '@/src/context/AuthContext';
@@ -19,15 +19,28 @@ import { useMyProducts } from '@/src/hooks/useMyProducts';
 import { colors, spacing } from '@/src/constants/theme';
 import { getSellerEstimatedValue } from '@/src/lib/productFormat';
 
+const HORIZONTAL_PADDING = 20;
+
 export default function SellerDashboardTab() {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { switchRole, switching: roleSwitching } = useRoleSwitch();
-  const { products, stats } = useMyProducts();
+  const { products, stats, loading, reload } = useMyProducts();
   const unreadCount = useAdminNotificationUnreadCount();
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   const estimatedValue = useMemo(() => getSellerEstimatedValue(products), [products]);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await reload();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   async function handleSwitchToBuyer() {
     if (switching || roleSwitching) return;
@@ -44,122 +57,86 @@ export default function SellerDashboardTab() {
     }
   }
 
+  function openListings() {
+    router.push('/(seller)/(tabs)/listings');
+  }
+
+  function openAddProduct() {
+    router.push('/(seller)/add-product');
+  }
+
   return (
-    <DashboardScreen>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <ScreenContent style={styles.screenContent}>
-          <View style={styles.header}>
-            <Logo size="sm" />
-            <Pressable
-              style={styles.bellButton}
-              onPress={() => router.push('/(seller)/notifications')}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Notifications"
-            >
-              <Ionicons name="notifications-outline" size={20} color={colors.textStrong} />
-              {unreadCount > 0 ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {unreadCount > 99 ? '99+' : String(unreadCount)}
-                  </Text>
-                </View>
-              ) : null}
-            </Pressable>
-          </View>
-
-          <SellerWelcomeBanner name={user?.name} />
-
-          <SellerDashboardStats
+    <View style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+            progressViewOffset={insets.top}
+          />
+        }
+      >
+        <ScreenContent>
+          <SellerHomeHero
+            name={user?.name}
+            city={user?.address?.city}
             activeListings={stats.activeListings}
-            views={stats.totalViews}
-            inquiries={stats.totalInquiries}
-            estimatedValue={estimatedValue}
+            unreadCount={unreadCount}
+            topInset={insets.top}
+            horizontalPadding={HORIZONTAL_PADDING}
           />
 
-          <View style={styles.actions}>
-            <SellerAddProductCard onPress={() => router.push('/(seller)/add-product')} />
+          <View style={styles.body}>
+            <SellerSearchBar />
 
-            <Pressable
-              style={styles.secondaryAction}
-              onPress={() => router.push('/(seller)/(tabs)/listings')}
-            >
-              <Ionicons name="list" size={20} color={colors.accent} />
-              <Text style={styles.secondaryActionText}>View All Listings</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-            </Pressable>
+            <SellerSellBanner onPress={openAddProduct} />
+
+            <SellerBuyBanner
+              onPress={() => void handleSwitchToBuyer()}
+              loading={switching || roleSwitching}
+            />
+            {switchError ? <Text style={styles.switchError}>{switchError}</Text> : null}
+
+            <SellerActivityCard
+              activeListings={stats.activeListings}
+              views={stats.totalViews}
+              inquiries={stats.totalInquiries}
+              estimatedValue={estimatedValue}
+              onViewStats={openListings}
+            />
+
+            <SellerMyListingsRail
+              products={products}
+              loading={loading}
+              onSeeAll={openListings}
+              onAddProduct={openAddProduct}
+              onOpenProduct={(id) =>
+                router.push({ pathname: '/(seller)/products/[id]', params: { id } })
+              }
+            />
           </View>
-
-          {switchError ? <Text style={styles.switchError}>{switchError}</Text> : null}
-
-          <SellerSwitchToBuyerCard onPress={handleSwitchToBuyer} loading={switching || roleSwitching} />
         </ScreenContent>
       </ScrollView>
-    </DashboardScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.bgSubtle,
+  },
   container: {
-    padding: spacing.lg,
     paddingBottom: spacing.xl,
   },
-  screenContent: {
-    gap: spacing.lg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  bellButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: colors.bg,
-  },
-  badgeText: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  actions: {
-    gap: spacing.sm,
-  },
-  secondaryAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  secondaryActionText: {
-    flex: 1,
-    color: colors.textStrong,
-    fontWeight: '700',
-    fontSize: 15,
+  body: {
+    paddingHorizontal: HORIZONTAL_PADDING,
+    gap: spacing.md,
   },
   switchError: {
     color: colors.error,

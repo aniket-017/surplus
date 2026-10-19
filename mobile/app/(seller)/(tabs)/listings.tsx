@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -35,6 +35,13 @@ export default function SellerListingsTab() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const { q } = useLocalSearchParams<{ q?: string }>();
+
+  useEffect(() => {
+    if (!q) return;
+    setSearchQuery(q);
+    setSearchOpen(true);
+  }, [q]);
 
   const counts = useMemo(() => getSellerListingCounts(products), [products]);
   const filteredProducts = useMemo(

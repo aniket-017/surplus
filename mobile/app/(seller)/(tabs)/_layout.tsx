@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
+import { SellTabButton } from '@/src/components/seller';
 import { useTabSafeAreaInsets, useTabScreenOptions } from '@/src/constants/tabBar';
 import { useUnreadMessages } from '@/src/context/UnreadMessagesContext';
 
@@ -14,9 +15,9 @@ export default function SellerTabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
+          title: 'Home',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -27,6 +28,13 @@ export default function SellerTabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list-outline" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="sell"
+        options={{
+          title: 'Sell',
+          tabBarButton: (props) => <SellTabButton {...props} />,
         }}
       />
       <Tabs.Screen

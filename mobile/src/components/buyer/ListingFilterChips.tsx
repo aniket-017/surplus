@@ -1,33 +1,45 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-import { colors, spacing } from '@/src/constants/theme';
+import { colors, fonts, spacing } from '@/src/constants/theme';
 import type { BrowseSort } from '@/src/types/product';
 
 type FilterOption = {
   id: string;
   label: string;
-  sort?: BrowseSort;
-  disabled?: boolean;
+  sort: BrowseSort;
+  icon: keyof typeof Ionicons.glyphMap;
 };
 
 const FILTERS: FilterOption[] = [
-  { id: 'all', label: 'All', sort: 'recent' },
-  { id: 'near', label: 'Near Me', sort: 'recent' },
-  { id: 'price', label: 'Best Price', sort: 'price_asc' },
-  { id: 'recent', label: 'Recently Added', sort: 'recent' },
+  { id: 'near', label: 'Nearby', sort: 'recent', icon: 'location-outline' },
+  { id: 'recent', label: 'Latest', sort: 'recent', icon: 'time-outline' },
+  { id: 'price', label: 'Best Price', sort: 'price_asc', icon: 'cash-outline' },
 ];
 
 type ListingFilterChipsProps = {
   activeFilter: string;
   onChangeFilter: (filterId: string, sort: BrowseSort) => void;
+  onSeeAll?: () => void;
 };
 
-export function ListingFilterChips({ activeFilter, onChangeFilter }: ListingFilterChipsProps) {
+export function ListingFilterChips({
+  activeFilter,
+  onChangeFilter,
+  onSeeAll,
+}: ListingFilterChipsProps) {
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <Text style={styles.title}>Popular Listings</Text>
-        <Text style={styles.sortHint}>Sort</Text>
+        <View style={styles.titleRow}>
+          <Ionicons name="compass-outline" size={18} color={colors.textStrong} />
+          <Text style={styles.title}>Listings Near You</Text>
+        </View>
+        {onSeeAll ? (
+          <Pressable onPress={onSeeAll} hitSlop={8} accessibilityRole="button">
+            <Text style={styles.seeAll}>See all ›</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
@@ -37,23 +49,15 @@ export function ListingFilterChips({ activeFilter, onChangeFilter }: ListingFilt
           return (
             <Pressable
               key={filter.id}
-              style={[
-                styles.chip,
-                active && styles.chipActive,
-                filter.disabled && styles.chipDisabled,
-              ]}
-              disabled={filter.disabled}
-              onPress={() => onChangeFilter(filter.id, filter.sort || 'recent')}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => onChangeFilter(filter.id, filter.sort)}
             >
-              <Text
-                style={[
-                  styles.chipText,
-                  active && styles.chipTextActive,
-                  filter.disabled && styles.chipTextDisabled,
-                ]}
-              >
-                {filter.label}
-              </Text>
+              <Ionicons
+                name={filter.icon}
+                size={14}
+                color={active ? colors.white : colors.muted}
+              />
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{filter.label}</Text>
             </Pressable>
           );
         })}
@@ -71,21 +75,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   title: {
     color: colors.textStrong,
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontFamily: fonts.extrabold,
+    letterSpacing: -0.3,
   },
-  sortHint: {
-    color: colors.muted,
+  seeAll: {
+    color: colors.accent,
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonts.semibold,
   },
   row: {
     gap: spacing.xs,
     paddingRight: spacing.sm,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderRadius: 999,
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -97,19 +110,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navy,
     borderColor: colors.navy,
   },
-  chipDisabled: {
-    opacity: 0.45,
-  },
   chipText: {
     color: colors.textStrong,
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonts.semibold,
   },
   chipTextActive: {
     color: colors.white,
-    fontWeight: '700',
-  },
-  chipTextDisabled: {
-    color: colors.muted,
+    fontFamily: fonts.bold,
   },
 });

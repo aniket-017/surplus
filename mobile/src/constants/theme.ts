@@ -15,6 +15,15 @@ export const colors = {
   white: '#FFFFFF',
 } as const;
 
+/** Plus Jakarta Sans weights; set fontFamily instead of fontWeight so Android picks the right face. */
+export const fonts = {
+  regular: 'PlusJakartaSans_400Regular',
+  medium: 'PlusJakartaSans_500Medium',
+  semibold: 'PlusJakartaSans_600SemiBold',
+  bold: 'PlusJakartaSans_700Bold',
+  extrabold: 'PlusJakartaSans_800ExtraBold',
+} as const;
+
 export const spacing = {
   xs: 8,
   sm: 12,

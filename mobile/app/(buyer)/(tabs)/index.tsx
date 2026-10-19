@@ -8,10 +8,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { BuyerHomeHeader } from '@/src/components/buyer/BuyerHomeHeader';
+import { BuyerHomeHero } from '@/src/components/buyer/BuyerHomeHero';
+import { BuyerMachinesBanner } from '@/src/components/buyer/BuyerMachinesBanner';
 import { BuyerSearchBar } from '@/src/components/buyer/BuyerSearchBar';
 import { CategoryCarousel } from '@/src/components/buyer/CategoryCarousel';
 import {
@@ -23,19 +24,17 @@ import {
 import { HomeListingsSkeleton } from '@/src/components/buyer/HomeListingsSkeleton';
 import { ListingFilterChips } from '@/src/components/buyer/ListingFilterChips';
 import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
-import { SellSurplusCta } from '@/src/components/buyer/SellSurplusCta';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { useBuyerLocation } from '@/src/context/LocationContext';
-import { useRoleSwitch } from '@/src/context/RoleSwitchContext';
 import { productCardWidth } from '@/src/constants/layout';
-import { colors, spacing } from '@/src/constants/theme';
+import { colors, fonts, spacing } from '@/src/constants/theme';
 import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 import { getSavedListings, toggleSavedListing } from '@/src/lib/conversationsApi';
 import { browseProducts, getProductCategories } from '@/src/lib/productsApi';
 import type { BrowseSort, ProductCategory, ProductListing } from '@/src/types/product';
 
-const HORIZONTAL_PADDING = spacing.lg;
+const HORIZONTAL_PADDING = 20;
 const GRID_GAP = spacing.sm;
 
 function parseOptionalPrice(value: string): number | undefined {
@@ -48,13 +47,12 @@ function parseOptionalPrice(value: string): number | undefined {
 function chipIdFromFilters(filters: BrowseFilters): string {
   if (filters.nearMe) return 'near';
   if (filters.sort === 'price_asc') return 'price';
-  if (filters.sort === 'recent') return 'all';
   return 'recent';
 }
 
 export default function BuyerHomeTab() {
+  const insets = useSafeAreaInsets();
   const { token, user } = useAuth();
-  const { switchRole, switching: roleSwitching } = useRoleSwitch();
   const { location } = useBuyerLocation();
   const { width, columns } = useBreakpoint();
   const cardWidth = productCardWidth(width, columns, HORIZONTAL_PADDING, GRID_GAP);
@@ -70,7 +68,6 @@ export default function BuyerHomeTab() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [switchingToSell, setSwitchingToSell] = useState(false);
 
   const activeFilter = chipIdFromFilters(filters);
   const activeFilterCount = countActiveFilters(filters);
@@ -121,7 +118,7 @@ export default function BuyerHomeTab() {
         setSavedIds(new Set(savedData.products.map((item) => item.id)));
 
         if (filters.nearMe && !nearMeCity) {
-          setError('Tap the location at the top to choose where "Near Me" should look.');
+          setError('Tap the location at the top to choose where "Nearby" should look.');
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load listings');
@@ -140,7 +137,6 @@ export default function BuyerHomeTab() {
     setTogglingId(productId);
     const wasSaved = savedIds.has(productId);
 
-    // Optimistic UI so the bookmark fills immediately.
     setSavedIds((current) => {
       const next = new Set(current);
       if (wasSaved) {
@@ -208,52 +204,51 @@ export default function BuyerHomeTab() {
     setFilters(next);
   }
 
-  async function handleSellSurplus() {
-    if (switchingToSell || roleSwitching) return;
-
-    setSwitchingToSell(true);
-    try {
-      await switchRole('seller');
-    } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to switch to seller');
-      setSwitchingToSell(false);
-    }
+  function openExplore() {
+    router.push('/(buyer)/(tabs)/categories');
   }
 
   const listHeader = useMemo(
     () => (
-      <View style={styles.headerContent}>
-        <BuyerHomeHeader />
-        <BuyerSearchBar
-          value={search}
-          onChangeText={setSearch}
-          onFilterPress={() => setFiltersVisible(true)}
-          activeFilterCount={activeFilterCount}
-        />
-        <SellSurplusCta onPress={() => void handleSellSurplus()} loading={switchingToSell || roleSwitching} />
-        <CategoryCarousel
-          categories={categories}
-          onSelectCategory={handleCategorySelect}
-          loading={loading}
-        />
-        <ListingFilterChips activeFilter={activeFilter} onChangeFilter={handleFilterChange} />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+      <View>
+        <BuyerHomeHero topInset={insets.top} horizontalPadding={HORIZONTAL_PADDING} />
+        <View style={styles.headerBody}>
+          <BuyerSearchBar
+            value={search}
+            onChangeText={setSearch}
+            onFilterPress={() => setFiltersVisible(true)}
+            activeFilterCount={activeFilterCount}
+          />
+          <CategoryCarousel
+            categories={categories}
+            onSelectCategory={handleCategorySelect}
+            loading={loading}
+            selectedCategory={filters.category || undefined}
+          />
+          <BuyerMachinesBanner onPress={openExplore} />
+          <ListingFilterChips
+            activeFilter={activeFilter}
+            onChangeFilter={handleFilterChange}
+            onSeeAll={openExplore}
+          />
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </View>
       </View>
     ),
     [
+      insets.top,
       search,
       categories,
       activeFilter,
       activeFilterCount,
       error,
-      switchingToSell,
-      roleSwitching,
       loading,
+      filters.category,
     ],
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={styles.screen}>
       <ScreenContent style={styles.screenContent}>
         <FlatList
           key={columns}
@@ -263,31 +258,41 @@ export default function BuyerHomeTab() {
           columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={listHeader}
-          renderItem={({ item }) => (
-            <ProductListingCard
-              product={item}
-              width={cardWidth}
-              saved={savedIds.has(item.id)}
-              onToggleSave={() => void handleToggleSave(item.id)}
-              onPress={() =>
-                router.push({
-                  pathname: '/products/[id]',
-                  params: { id: item.id },
-                })
-              }
-            />
-          )}
+          renderItem={({ item }) => {
+            const card = (
+              <ProductListingCard
+                product={item}
+                width={cardWidth}
+                saved={savedIds.has(item.id)}
+                onToggleSave={() => void handleToggleSave(item.id)}
+                onPress={() =>
+                  router.push({
+                    pathname: '/products/[id]',
+                    params: { id: item.id },
+                  })
+                }
+              />
+            );
+
+            if (columns === 1) {
+              return <View style={styles.singleColumnItem}>{card}</View>;
+            }
+
+            return card;
+          }}
           ListEmptyComponent={
-            loading ? (
-              <HomeListingsSkeleton columns={columns} cardWidth={cardWidth} />
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>No listings found</Text>
-                <Text style={styles.emptyText}>
-                  Try adjusting your search or filters to discover more surplus materials.
-                </Text>
-              </View>
-            )
+            <View style={styles.emptyWrap}>
+              {loading ? (
+                <HomeListingsSkeleton columns={columns} cardWidth={cardWidth} />
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyTitle}>No listings found</Text>
+                  <Text style={styles.emptyText}>
+                    Try adjusting your search or filters to discover more surplus materials.
+                  </Text>
+                </View>
+              )}
+            </View>
           }
           refreshControl={
             <RefreshControl
@@ -295,6 +300,7 @@ export default function BuyerHomeTab() {
               onRefresh={() => loadFeed(true)}
               tintColor={colors.accent}
               colors={[colors.accent]}
+              progressViewOffset={insets.top}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -309,12 +315,12 @@ export default function BuyerHomeTab() {
         nearMeCity={nearMeCity}
         onApply={handleApplyFilters}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
     backgroundColor: colors.bgSubtle,
   },
@@ -322,17 +328,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingHorizontal: HORIZONTAL_PADDING,
     paddingBottom: spacing.xl,
   },
-  headerContent: {
+  headerBody: {
+    paddingHorizontal: HORIZONTAL_PADDING,
     gap: spacing.md,
-    paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
   columnWrapper: {
     justifyContent: 'space-between',
     gap: GRID_GAP,
+    paddingHorizontal: HORIZONTAL_PADDING,
+  },
+  singleColumnItem: {
+    paddingHorizontal: HORIZONTAL_PADDING,
+  },
+  emptyWrap: {
+    paddingHorizontal: HORIZONTAL_PADDING,
   },
   emptyState: {
     alignItems: 'center',
@@ -343,12 +355,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: colors.textStrong,
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: fonts.extrabold,
   },
   emptyText: {
     color: colors.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: fonts.medium,
     textAlign: 'center',
     maxWidth: 280,
   },
@@ -356,5 +369,6 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: 13,
     lineHeight: 18,
+    fontFamily: fonts.medium,
   },
 });

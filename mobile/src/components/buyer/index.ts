@@ -1,7 +1,10 @@
 export { BuyerCategoryCard } from './BuyerCategoryCard';
 export { BuyerHomeHeader } from './BuyerHomeHeader';
+export { BuyerHomeHero } from './BuyerHomeHero';
+export { BuyerMachinesBanner } from './BuyerMachinesBanner';
 export { BuyerPlaceholderTab } from './BuyerPlaceholderTab';
 export { BuyerSearchBar } from './BuyerSearchBar';
+export { BuyerSellTabButton } from './BuyerSellTabButton';
 export { CategoriesGridSkeleton } from './CategoriesGridSkeleton';
 export { CategoryCarousel } from './CategoryCarousel';
 export { HomeListingsSkeleton } from './HomeListingsSkeleton';

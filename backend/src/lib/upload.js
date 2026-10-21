@@ -53,6 +53,15 @@ export const uploadProductImages = multer({
   },
 }).array("images", MAX_PRODUCT_IMAGES);
 
+export const uploadNotificationImage = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: productFileFilter,
+  limits: {
+    files: 1,
+    fileSize: 8 * 1024 * 1024,
+  },
+}).single("image");
+
 export const uploadMessageAttachment = multer({
   storage: multer.memoryStorage(),
   fileFilter: messageAttachmentFilter,

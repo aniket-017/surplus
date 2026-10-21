@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ComponentProps } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -16,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAdminNotifications } from '@/src/context/AdminNotificationsContext';
 import { useAuth } from '@/src/context/AuthContext';
+import { useRoleSwitch } from '@/src/context/RoleSwitchContext';
 import { colors, radius, spacing } from '@/src/constants/theme';
 import {
   getNotifications,
@@ -23,6 +25,17 @@ import {
   markNotificationRead,
   type InboxNotification,
 } from '@/src/lib/notificationsApi';
+import { openNotificationAction, type NotificationKind } from '@/src/lib/notifications';
+
+const KIND_META: Record<
+  NotificationKind,
+  { label: string; icon: ComponentProps<typeof Ionicons>['name']; color: string; background: string }
+> = {
+  GENERAL: { label: 'General', icon: 'megaphone-outline', color: '#334155', background: '#E8EEF6' },
+  PROMOTION: { label: 'Promotion', icon: 'pricetag-outline', color: '#15803D', background: '#E7F6EA' },
+  UPDATE: { label: 'Update', icon: 'sparkles-outline', color: '#1D4ED8', background: '#E6F0FE' },
+  ALERT: { label: 'Alert', icon: 'alert-circle-outline', color: '#B91C1C', background: '#FDECEC' },
+};
 
 function formatRelativeTime(value: string) {
   const date = new Date(value);
@@ -46,6 +59,7 @@ type NotificationsInboxScreenProps = {
 export function NotificationsInboxScreen({ role }: NotificationsInboxScreenProps) {
   const { token } = useAuth();
   const { refreshUnreadCount, setUnreadCount } = useAdminNotifications();
+  const { switchRole } = useRoleSwitch();
   const [items, setItems] = useState<InboxNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -86,24 +100,28 @@ export function NotificationsInboxScreen({ role }: NotificationsInboxScreenProps
     }, [loadNotifications]),
   );
 
-  async function handleOpen(item: InboxNotification) {
-    if (!token) return;
+  async function markRead(item: InboxNotification) {
+    if (!token || item.readAt) return;
 
-    if (!item.readAt) {
-      setItems((current) =>
-        current.map((entry) =>
-          entry.id === item.id ? { ...entry, readAt: new Date().toISOString() } : entry,
-        ),
-      );
-      setUnreadCount(Math.max(0, items.filter((entry) => !entry.readAt && entry.id !== item.id).length));
+    setItems((current) =>
+      current.map((entry) =>
+        entry.id === item.id ? { ...entry, readAt: new Date().toISOString() } : entry,
+      ),
+    );
+    setUnreadCount(Math.max(0, items.filter((entry) => !entry.readAt && entry.id !== item.id).length));
 
-      try {
-        await markNotificationRead(token, item.id);
-        await refreshUnreadCount();
-      } catch {
-        await loadNotifications(true);
-      }
+    try {
+      await markNotificationRead(token, item.id);
+      await refreshUnreadCount();
+    } catch {
+      await loadNotifications(true);
     }
+  }
+
+  function handleOpen(item: InboxNotification) {
+    console.log('[notif-debug] inbox tap', JSON.stringify({ actionType: item.actionType, actionValue: item.actionValue, role }));
+    void markRead(item);
+    void openNotificationAction(item, role, { fallbackToInbox: false, switchRole });
   }
 
   async function handleMarkAllRead() {
@@ -182,23 +200,48 @@ export function NotificationsInboxScreen({ role }: NotificationsInboxScreenProps
             }
             renderItem={({ item }) => {
               const unread = !item.readAt;
+              const kind = KIND_META[item.kind] ?? KIND_META.GENERAL;
+              const hasAction = item.actionType && item.actionType !== 'NONE';
               return (
                 <Pressable
                   style={[styles.card, unread && styles.cardUnread]}
-                  onPress={() => void handleOpen(item)}
+                  onPress={() => handleOpen(item)}
                 >
                   <View style={styles.cardHeader}>
                     <View style={styles.titleRow}>
                       {unread ? <View style={styles.unreadDot} /> : null}
-                      <Text style={[styles.cardTitle, unread && styles.cardTitleUnread]} numberOfLines={2}>
-                        {item.title}
-                      </Text>
+                      <View style={styles.titleColumn}>
+                        <View style={[styles.kindTag, { backgroundColor: kind.background }]}>
+                          <Ionicons name={kind.icon} size={12} color={kind.color} />
+                          <Text style={[styles.kindText, { color: kind.color }]}>{kind.label}</Text>
+                        </View>
+                        <Text
+                          style={[styles.cardTitle, unread && styles.cardTitleUnread]}
+                          numberOfLines={2}
+                        >
+                          {item.title}
+                        </Text>
+                      </View>
                     </View>
                     <Text style={styles.timeText}>{formatRelativeTime(item.createdAt)}</Text>
                   </View>
                   <Text style={styles.cardBody} numberOfLines={3}>
                     {item.body}
                   </Text>
+                  {item.imageUrl ? (
+                    <Image
+                      source={{ uri: item.imageUrl }}
+                      style={styles.cardImage}
+                      contentFit="cover"
+                      transition={150}
+                    />
+                  ) : null}
+                  {hasAction && item.ctaLabel ? (
+                    <Pressable style={styles.ctaButton} onPress={() => handleOpen(item)} hitSlop={4}>
+                      <Text style={styles.ctaText}>{item.ctaLabel}</Text>
+                      <Ionicons name="arrow-forward" size={14} color={colors.surface} />
+                    </Pressable>
+                  ) : null}
                 </Pressable>
               );
             }}
@@ -345,5 +388,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     paddingLeft: 16,
+  },
+  titleColumn: {
+    flex: 1,
+    gap: 6,
+  },
+  kindTag: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  kindText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  cardImage: {
+    marginTop: spacing.xs,
+    marginLeft: 16,
+    aspectRatio: 16 / 9,
+    borderRadius: radius.sm,
+    backgroundColor: colors.bgSubtle,
+  },
+  ctaButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.xs,
+    marginLeft: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: colors.accent,
+  },
+  ctaText: {
+    color: colors.surface,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

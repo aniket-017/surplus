@@ -9,7 +9,6 @@ import {
   SellerBuyBanner,
   SellerHomeHero,
   SellerMyListingsRail,
-  SellerSearchBar,
   SellerSellBanner,
 } from '@/src/components/seller';
 import { useAdminNotificationUnreadCount } from '@/src/context/AdminNotificationsContext';
@@ -92,8 +91,6 @@ export default function SellerDashboardTab() {
           />
 
           <View style={styles.body}>
-            <SellerSearchBar />
-
             <SellerSellBanner onPress={openAddProduct} />
 
             <SellerBuyBanner

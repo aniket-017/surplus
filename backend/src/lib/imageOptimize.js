@@ -67,6 +67,40 @@ async function compressToTarget(buffer) {
   return { buffer: best, dimension, quality: bestQuality };
 }
 
+const NOTIFICATION_MAX_WIDTH = 1200;
+const NOTIFICATION_JPEG_QUALITY = 80;
+
+/** iOS notification attachments only accept JPEG/PNG/GIF, so notification images are JPEG. */
+export async function optimizeNotificationImage(file) {
+  if (!file?.buffer) {
+    throw new Error("Uploaded image buffer is missing");
+  }
+
+  try {
+    const buffer = await sharp(file.buffer)
+      .rotate()
+      .resize(NOTIFICATION_MAX_WIDTH, NOTIFICATION_MAX_WIDTH, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: NOTIFICATION_JPEG_QUALITY, mozjpeg: true })
+      .toBuffer();
+
+    const base = path.basename(file.originalname || "image", path.extname(file.originalname || ""));
+    return {
+      ...file,
+      buffer,
+      size: buffer.length,
+      mimetype: "image/jpeg",
+      originalname: `${base || "image"}.jpg`,
+    };
+  } catch (error) {
+    log.error("Notification image optimization failed", error, describeUploadFile(file, 0));
+    throw new Error("Uploaded image could not be processed");
+  }
+}
+
 export async function optimizeProductImage(file, index = 0) {
   if (!file?.buffer) {
     log.error("Missing buffer on uploaded file", new Error("Uploaded image buffer is missing"));

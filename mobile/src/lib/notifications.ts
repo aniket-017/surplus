@@ -1,12 +1,32 @@
 import Constants from 'expo-constants';
+import { router, type Href } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
-export type MessageNotificationData = {
+export type NotificationKind = 'GENERAL' | 'PROMOTION' | 'UPDATE' | 'ALERT';
+export type NotificationActionType =
+  | 'NONE'
+  | 'PRODUCT'
+  | 'CATEGORY'
+  | 'EXPLORE'
+  | 'URL'
+  | 'SCREEN';
+
+type AppRole = 'buyer' | 'seller';
+
+export type NotificationAction = {
+  actionType?: NotificationActionType | string | null;
+  actionValue?: string | null;
+};
+
+export type MessageNotificationData = NotificationAction & {
   type?: string;
   conversationId?: string;
   notificationId?: string;
   recipientRole?: 'buyer' | 'seller' | string;
   unreadCount?: number;
+  kind?: NotificationKind | string;
+  imageUrl?: string;
 };
 
 type NotificationModule = typeof import('expo-notifications');
@@ -179,6 +199,103 @@ export function getNotificationsInboxRoute(role: 'buyer' | 'seller' | null | und
   return '/(buyer)/notifications' as const;
 }
 
+/** iOS reports notification dates in seconds, Android in milliseconds. */
+export function isRecentNotificationResponse(date: number | undefined, maxAgeMs = 60_000) {
+  if (typeof date !== 'number') return true;
+  const dateMs = date < 1e12 ? date * 1000 : date;
+  return Date.now() - dateMs <= maxAgeMs;
+}
+
 export function isAdminNotification(data: MessageNotificationData) {
   return data.type === 'admin_notification';
+}
+
+type ActionTarget = { role: AppRole; href: Href };
+
+function resolveScreenTarget(screen: string, role: AppRole): ActionTarget | null {
+  switch (screen) {
+    case 'ADD_PRODUCT':
+      return { role: 'seller', href: '/(seller)/add-product' };
+    case 'MY_LISTINGS':
+      return { role: 'seller', href: '/(seller)/(tabs)/listings' };
+    case 'SAVED':
+      return { role: 'buyer', href: '/(buyer)/saved' };
+    case 'HOME':
+      return { role, href: role === 'seller' ? '/(seller)/(tabs)' : '/(buyer)/(tabs)' };
+    case 'MESSAGES':
+      return {
+        role,
+        href: role === 'seller' ? '/(seller)/(tabs)/messages' : '/(buyer)/(tabs)/messages',
+      };
+    case 'PROFILE':
+      return {
+        role,
+        href: role === 'seller' ? '/(seller)/(tabs)/profile' : '/(buyer)/(tabs)/profile',
+      };
+    default:
+      return null;
+  }
+}
+
+function resolveActionTarget(action: NotificationAction, role: AppRole): ActionTarget | null {
+  const actionValue = action.actionValue?.trim() || '';
+
+  switch (action.actionType) {
+    case 'PRODUCT':
+      return actionValue
+        ? { role: 'buyer', href: { pathname: '/products/[id]', params: { id: actionValue } } }
+        : null;
+    case 'CATEGORY':
+      return actionValue
+        ? { role: 'buyer', href: { pathname: '/category/[name]', params: { name: actionValue } } }
+        : null;
+    case 'EXPLORE':
+      return { role: 'buyer', href: '/(buyer)/(tabs)/categories' };
+    case 'SCREEN':
+      return resolveScreenTarget(actionValue.toUpperCase(), role);
+    default:
+      return null;
+  }
+}
+
+/**
+ * Screens belong to either buyer or seller mode. When the target is in the other mode the
+ * app switches first (same as the Sell button); without `switchRole` it falls back to the inbox.
+ */
+export async function openNotificationAction(
+  action: NotificationAction,
+  role: 'buyer' | 'seller' | null | undefined,
+  {
+    fallbackToInbox = true,
+    switchRole,
+  }: { fallbackToInbox?: boolean; switchRole?: (role: AppRole) => Promise<void> } = {},
+) {
+  const currentRole: AppRole = role === 'seller' ? 'seller' : 'buyer';
+  const actionValue = action.actionValue?.trim() || '';
+
+  if (action.actionType === 'URL' && /^https:\/\//i.test(actionValue)) {
+    await WebBrowser.openBrowserAsync(actionValue);
+    return;
+  }
+
+  const target = resolveActionTarget(action, currentRole);
+  console.log('[notif-debug] openNotificationAction', JSON.stringify({ action, currentRole, target, hasSwitch: !!switchRole }));
+
+  if (target && target.role !== currentRole && switchRole) {
+    try {
+      await switchRole(target.role);
+    } catch {
+      if (fallbackToInbox) router.push(getNotificationsInboxRoute(currentRole) as never);
+      return;
+    }
+  }
+
+  if (target && (target.role === currentRole || switchRole)) {
+    router.push(target.href);
+    return;
+  }
+
+  if (fallbackToInbox) {
+    router.push(getNotificationsInboxRoute(currentRole) as never);
+  }
 }

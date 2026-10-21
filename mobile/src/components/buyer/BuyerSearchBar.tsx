@@ -39,9 +39,9 @@ export function BuyerSearchBar({
         accessibilityLabel={
           activeFilterCount > 0 ? `Filters, ${activeFilterCount} active` : 'Open filters'
         }
-        style={styles.scanButton}
+        style={styles.filterButton}
       >
-        <Ionicons name="scan-outline" size={22} color={colors.accent} />
+        <Ionicons name="options-outline" size={22} color={colors.accent} />
         {activeFilterCount > 0 ? (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{activeFilterCount}</Text>
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     height: 24,
     backgroundColor: colors.border,
   },
-  scanButton: {
+  filterButton: {
     position: 'relative',
     width: 28,
     height: 28,

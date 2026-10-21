@@ -12,7 +12,8 @@
     "db:backfill-user-deletion-status": "node scripts/backfillUserDeletionStatus.js",
     "db:migrate-scrap": "node scripts/migrateScrapToSurplus.js",
     "db:backfill-product-coords": "node scripts/backfillProductCoords.js",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "sim:push": "node scripts/simulatorPushBridge.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1063.0",

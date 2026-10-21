@@ -54,6 +54,22 @@ enum NotificationAudience {
   SPECIFIC
 }
 
+enum NotificationKind {
+  GENERAL
+  PROMOTION
+  UPDATE
+  ALERT
+}
+
+enum NotificationAction {
+  NONE
+  PRODUCT
+  CATEGORY
+  EXPLORE
+  URL
+  SCREEN
+}
+
 type ProductAttribute {
   key   String
   value String
@@ -282,6 +298,11 @@ model Notification {
   title          String
   body           String
   audience       NotificationAudience
+  kind           NotificationKind?    @default(GENERAL)
+  imageUrl       String?              @map("image_url")
+  actionType     NotificationAction?  @default(NONE) @map("action_type")
+  actionValue    String?              @map("action_value")
+  ctaLabel       String?              @map("cta_label")
   targetUserIds  String[]             @default([]) @map("target_user_ids") @db.ObjectId
   createdById    String               @map("created_by_id") @db.ObjectId
   createdBy      User                 @relation("NotificationsCreated", fields: [createdById], references: [id])

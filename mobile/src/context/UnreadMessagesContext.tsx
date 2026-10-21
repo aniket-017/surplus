@@ -27,6 +27,7 @@ import {
   getNotificationData,
   isAdminNotification,
   isExpoGo,
+  isRecentNotificationResponse,
   registerForPushNotificationsAsync,
   setAppBadgeCount,
 } from '@/src/lib/notifications';
@@ -203,10 +204,7 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
 
       // Only open chats from taps that happened in the last 60 seconds
       // to avoid replaying an old notification on every app launch.
-      const respondedAt = response.notification.date;
-      if (typeof respondedAt === 'number' && Date.now() - respondedAt > 60_000) {
-        return;
-      }
+      if (!isRecentNotificationResponse(response.notification.date)) return;
 
       const role =
         data.recipientRole === 'seller' || data.recipientRole === 'buyer'

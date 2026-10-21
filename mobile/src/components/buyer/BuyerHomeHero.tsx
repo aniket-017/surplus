@@ -78,12 +78,10 @@ export function BuyerHomeHero({ topInset, horizontalPadding }: BuyerHomeHeroProp
         <View style={styles.headlineRow}>
           <View style={styles.headlineBlock}>
             <Text style={styles.headline}>
-              Find Industrial Surplus{'\n'}
-              <Text style={styles.headlineAccent}>Near You</Text>
+              Industrial Surplus,{'\n'}
+              <Text style={styles.headlineAccent}>Right Next Door</Text>
             </Text>
-            <Text style={styles.subcopy}>
-              Machines, Components, Scrap & More from Pune MIDC and beyond.
-            </Text>
+            <Text style={styles.subcopy}>Verified sellers across Pune MIDC.</Text>
           </View>
 
           <Pressable

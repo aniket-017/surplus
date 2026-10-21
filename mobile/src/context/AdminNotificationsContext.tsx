@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import {
   createContext,
   useCallback,
@@ -12,6 +11,7 @@ import {
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { useAuth } from '@/src/context/AuthContext';
+import { useRoleSwitch } from '@/src/context/RoleSwitchContext';
 import { setAdminUnreadForBadge } from '@/src/lib/badgeCounts';
 import { getNotificationUnreadCount } from '@/src/lib/notificationsApi';
 import {
@@ -19,9 +19,10 @@ import {
   addNotificationResponseReceivedListener,
   getLastNotificationResponseAsync,
   getNotificationData,
-  getNotificationsInboxRoute,
   isAdminNotification,
   isExpoGo,
+  isRecentNotificationResponse,
+  openNotificationAction,
   setAppBadgeCount,
 } from '@/src/lib/notifications';
 
@@ -40,10 +41,16 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
   const [unreadCount, setUnreadCountState] = useState(0);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const roleRef = useRef(user?.role);
+  const { switchRole } = useRoleSwitch();
+  const switchRoleRef = useRef(switchRole);
 
   useEffect(() => {
     roleRef.current = user?.role;
   }, [user?.role]);
+
+  useEffect(() => {
+    switchRoleRef.current = switchRole;
+  }, [switchRole]);
 
   const applyUnreadCount = useCallback(async (count: number) => {
     setUnreadCountState(count);
@@ -121,13 +128,14 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
 
       responseSub = await addNotificationResponseReceivedListener((response) => {
         const data = getNotificationData(response.notification);
+        console.log('[notif-debug] tap response', JSON.stringify({ data, role: roleRef.current }));
         if (!isAdminNotification(data)) return;
 
         const role =
           roleRef.current === 'seller' || roleRef.current === 'buyer'
             ? roleRef.current
             : 'buyer';
-        router.push(getNotificationsInboxRoute(role) as never);
+        void openNotificationAction(data, role, { switchRole: switchRoleRef.current });
         refreshUnreadCount();
       });
     }
@@ -153,16 +161,13 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
       const data = getNotificationData(response.notification);
       if (!isAdminNotification(data)) return;
 
-      const respondedAt = response.notification.date;
-      if (typeof respondedAt === 'number' && Date.now() - respondedAt > 60_000) {
-        return;
-      }
+      if (!isRecentNotificationResponse(response.notification.date)) return;
 
       const role =
         roleRef.current === 'seller' || roleRef.current === 'buyer'
           ? roleRef.current
           : 'buyer';
-      router.push(getNotificationsInboxRoute(role) as never);
+      void openNotificationAction(data, role, { switchRole: switchRoleRef.current });
     });
   }, [token]);
 

@@ -171,11 +171,42 @@ export function getSuperadminNotifications({ page = 1, limit = 20 } = {}) {
   return apiFetch(`/api/superadmin/notifications?${params}`)
 }
 
-export function sendSuperadminNotification({ title, body, audience, targetUserIds = [] }) {
+export function sendSuperadminNotification({
+  title,
+  body,
+  audience,
+  targetUserIds = [],
+  kind = 'GENERAL',
+  imageUrl = null,
+  actionType = 'NONE',
+  actionValue = null,
+  ctaLabel = null,
+}) {
   return apiFetch('/api/superadmin/notifications', {
     method: 'POST',
-    body: JSON.stringify({ title, body, audience, targetUserIds }),
+    body: JSON.stringify({
+      title,
+      body,
+      audience,
+      targetUserIds,
+      kind,
+      imageUrl,
+      actionType,
+      actionValue,
+      ctaLabel,
+    }),
   })
+}
+
+export async function uploadSuperadminNotificationImage(file) {
+  const formData = new FormData()
+  formData.append('image', file)
+  const res = await fetch(`${API_BASE}/api/superadmin/notifications/image`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+  return parseResponse(res)
 }
 
 export function getSuperadmins() {

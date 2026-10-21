@@ -1,11 +1,22 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
+import { getReadableImageUrl } from "../lib/s3.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 
 const PAGE_SIZE_DEFAULT = 20;
 const PAGE_SIZE_MAX = 50;
+
+const NOTIFICATION_SELECT = {
+  title: true,
+  body: true,
+  kind: true,
+  imageUrl: true,
+  actionType: true,
+  actionValue: true,
+  ctaLabel: true,
+};
 
 function parsePagination(query) {
   const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
@@ -16,12 +27,18 @@ function parsePagination(query) {
   return { page, limit, skip: (page - 1) * limit };
 }
 
-function formatUserNotification(receipt) {
+async function formatUserNotification(receipt) {
+  const notification = receipt.notification;
   return {
     id: receipt.id,
     notificationId: receipt.notificationId,
-    title: receipt.notification?.title || "",
-    body: receipt.notification?.body || "",
+    title: notification?.title || "",
+    body: notification?.body || "",
+    kind: notification?.kind || "GENERAL",
+    imageUrl: notification?.imageUrl ? await getReadableImageUrl(notification.imageUrl) : null,
+    actionType: notification?.actionType || "NONE",
+    actionValue: notification?.actionValue || null,
+    ctaLabel: notification?.ctaLabel || null,
     readAt: receipt.readAt,
     createdAt: receipt.createdAt,
   };
@@ -40,10 +57,7 @@ router.get("/", async (req, res) => {
         where,
         include: {
           notification: {
-            select: {
-              title: true,
-              body: true,
-            },
+            select: NOTIFICATION_SELECT,
           },
         },
         orderBy: { createdAt: "desc" },
@@ -53,7 +67,7 @@ router.get("/", async (req, res) => {
     ]);
 
     res.json({
-      notifications: receipts.map(formatUserNotification),
+      notifications: await Promise.all(receipts.map(formatUserNotification)),
       total,
       page,
       limit,
@@ -107,10 +121,7 @@ router.post("/:id/read", async (req, res) => {
       },
       include: {
         notification: {
-          select: {
-            title: true,
-            body: true,
-          },
+          select: NOTIFICATION_SELECT,
         },
       },
     });
@@ -127,15 +138,12 @@ router.post("/:id/read", async (req, res) => {
             data: { readAt: new Date() },
             include: {
               notification: {
-                select: {
-                  title: true,
-                  body: true,
-                },
+                select: NOTIFICATION_SELECT,
               },
             },
           });
 
-    res.json({ notification: formatUserNotification(updated) });
+    res.json({ notification: await formatUserNotification(updated) });
   } catch (error) {
     console.error("Mark notification read failed:", error);
     res.status(500).json({ error: "Failed to mark notification as read" });

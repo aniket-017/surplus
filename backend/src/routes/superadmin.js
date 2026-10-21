@@ -5,9 +5,18 @@ import { setAuthCookie, formatUser, userSelect } from "../lib/auth.js";
 import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
 import { getFirebaseAuth, getFirebaseErrorCode, isFirebaseAuthConfigured } from "../lib/firebaseAdmin.js";
-import { deleteProductImages as deleteProductImagesFromS3 } from "../lib/s3.js";
+import {
+  deleteProductImages as deleteProductImagesFromS3,
+  getReadableImageUrl,
+  isNotificationImageUrl,
+  uploadNotificationImage as uploadNotificationImageToS3,
+} from "../lib/s3.js";
 import { formatMessage } from "../lib/conversations.js";
+import { parseCategory } from "../lib/category.js";
+import { optimizeNotificationImage } from "../lib/imageOptimize.js";
+import { isActiveListing } from "../lib/product.js";
 import { notifyAdminAnnouncement } from "../lib/pushNotifications.js";
+import { uploadNotificationImage } from "../lib/upload.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireSuperAdmin } from "../middleware/requireSuperAdmin.js";
 
@@ -18,6 +27,18 @@ const PAGE_SIZE_MAX = 100;
 const NOTIFICATION_TITLE_MAX = 80;
 const NOTIFICATION_BODY_MAX = 500;
 const NOTIFICATION_AUDIENCES = new Set(["ALL", "BUYERS", "SELLERS", "SPECIFIC"]);
+const NOTIFICATION_KINDS = new Set(["GENERAL", "PROMOTION", "UPDATE", "ALERT"]);
+const NOTIFICATION_ACTIONS = new Set(["NONE", "PRODUCT", "CATEGORY", "EXPLORE", "URL", "SCREEN"]);
+const NOTIFICATION_SCREENS = new Set([
+  "ADD_PRODUCT",
+  "MY_LISTINGS",
+  "SAVED",
+  "HOME",
+  "MESSAGES",
+  "PROFILE",
+]);
+const NOTIFICATION_CTA_MAX = 24;
+const NOTIFICATION_URL_MAX = 500;
 const MONGO_OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
 function parsePagination(query) {
@@ -770,6 +791,7 @@ router.get("/products", async (req, res) => {
           quantity: true,
           quantityUnit: true,
           viewCount: true,
+          listingStatus: true,
           createdAt: true,
           seller: {
             select: { id: true, email: true, name: true },
@@ -1220,12 +1242,17 @@ router.get("/referral-codes/:id/users", async (req, res) => {
   }
 });
 
-function formatAdminNotification(notification, readCount = null) {
+async function formatAdminNotification(notification, readCount = null) {
   return {
     id: notification.id,
     title: notification.title,
     body: notification.body,
     audience: notification.audience,
+    kind: notification.kind || "GENERAL",
+    imageUrl: notification.imageUrl ? await getReadableImageUrl(notification.imageUrl) : null,
+    actionType: notification.actionType || "NONE",
+    actionValue: notification.actionValue || null,
+    ctaLabel: notification.ctaLabel || null,
     targetUserIds: notification.targetUserIds || [],
     recipientCount: notification.recipientCount,
     readCount,
@@ -1312,7 +1339,7 @@ router.get("/notifications", async (req, res) => {
     ]);
 
     res.json({
-      notifications: notifications.map((item) => formatAdminNotification(item)),
+      notifications: await Promise.all(notifications.map((item) => formatAdminNotification(item))),
       total,
       page,
       limit,
@@ -1345,10 +1372,103 @@ router.get("/notifications/:id", async (req, res) => {
       },
     });
 
-    res.json({ notification: formatAdminNotification(notification, readCount) });
+    res.json({ notification: await formatAdminNotification(notification, readCount) });
   } catch (error) {
     console.error("Superadmin notification detail failed:", error);
     res.status(500).json({ error: "Failed to load notification" });
+  }
+});
+
+async function parseNotificationExtras(input) {
+  const kind = String(input.kind || "GENERAL").trim().toUpperCase();
+  if (!NOTIFICATION_KINDS.has(kind)) {
+    return { error: "Invalid notification type" };
+  }
+
+  const imageUrl = String(input.imageUrl || "").trim() || null;
+  if (imageUrl && !isNotificationImageUrl(imageUrl)) {
+    return { error: "Image must be uploaded through the notification image uploader" };
+  }
+
+  const actionType = String(input.actionType || "NONE").trim().toUpperCase();
+  if (!NOTIFICATION_ACTIONS.has(actionType)) {
+    return { error: "Invalid tap action" };
+  }
+
+  const rawValue = String(input.actionValue || "").trim();
+  let actionValue = null;
+
+  if (actionType === "PRODUCT") {
+    if (!MONGO_OBJECT_ID_RE.test(rawValue)) {
+      return { error: "Select a product for the tap action" };
+    }
+    const product = await prisma.product.findUnique({
+      where: { id: rawValue },
+      select: { id: true, listingStatus: true },
+    });
+    if (!product || !isActiveListing(product)) {
+      return { error: "Selected product is not an active listing" };
+    }
+    actionValue = product.id;
+  } else if (actionType === "CATEGORY") {
+    actionValue = parseCategory(rawValue);
+    if (!actionValue) {
+      return { error: "Select a valid category for the tap action" };
+    }
+  } else if (actionType === "SCREEN") {
+    actionValue = rawValue.toUpperCase();
+    if (!NOTIFICATION_SCREENS.has(actionValue)) {
+      return { error: "Select an app screen for the tap action" };
+    }
+  } else if (actionType === "URL") {
+    let parsed;
+    try {
+      parsed = new URL(rawValue);
+    } catch {
+      parsed = null;
+    }
+    if (!parsed || parsed.protocol !== "https:" || rawValue.length > NOTIFICATION_URL_MAX) {
+      return { error: "Web link must be a valid https:// URL" };
+    }
+    actionValue = parsed.toString();
+  }
+
+  const ctaLabel = String(input.ctaLabel || "").trim() || null;
+  if (ctaLabel && actionType === "NONE") {
+    return { error: "Button label needs a tap action" };
+  }
+  if (ctaLabel && ctaLabel.length > NOTIFICATION_CTA_MAX) {
+    return { error: `Button label must be ${NOTIFICATION_CTA_MAX} characters or fewer` };
+  }
+
+  return { kind, imageUrl, actionType, actionValue, ctaLabel };
+}
+
+function handleNotificationImageUpload(req, res, next) {
+  uploadNotificationImage(req, res, (error) => {
+    if (error) {
+      return res.status(400).json({ error: error.message || "Invalid image upload" });
+    }
+    next();
+  });
+}
+
+router.post("/notifications/image", handleNotificationImageUpload, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "Image file is required" });
+    }
+
+    const optimized = await optimizeNotificationImage(req.file);
+    const storedUrl = await uploadNotificationImageToS3(optimized);
+
+    res.status(201).json({
+      imageUrl: storedUrl,
+      previewUrl: await getReadableImageUrl(storedUrl),
+    });
+  } catch (error) {
+    console.error("Superadmin notification image upload failed:", error);
+    res.status(500).json({ error: error.message || "Failed to upload image" });
   }
 });
 
@@ -1384,6 +1504,11 @@ router.post("/notifications", async (req, res) => {
       return res.status(400).json({ error: "Select at least one user" });
     }
 
+    const extras = await parseNotificationExtras(req.body);
+    if (extras.error) {
+      return res.status(400).json({ error: extras.error });
+    }
+
     const recipientIds = await resolveNotificationRecipients(audience, targetUserIds);
     if (recipientIds.length === 0) {
       return res.status(400).json({ error: "No matching recipients found" });
@@ -1394,6 +1519,11 @@ router.post("/notifications", async (req, res) => {
         title,
         body,
         audience,
+        kind: extras.kind,
+        imageUrl: extras.imageUrl,
+        actionType: extras.actionType,
+        actionValue: extras.actionValue,
+        ctaLabel: extras.ctaLabel,
         targetUserIds: audience === "SPECIFIC" ? recipientIds : [],
         createdById: req.user.id,
         recipientCount: recipientIds.length,
@@ -1419,17 +1549,23 @@ router.post("/notifications", async (req, res) => {
       });
     }
 
+    const pushImageUrl = extras.imageUrl ? await getReadableImageUrl(extras.imageUrl) : null;
+
     notifyAdminAnnouncement({
       userIds: recipientIds,
       title,
       body,
       notificationId: notification.id,
+      kind: extras.kind,
+      imageUrl: pushImageUrl,
+      actionType: extras.actionType,
+      actionValue: extras.actionValue,
     }).catch((error) => {
       console.error("Admin announcement push failed:", error?.message || error);
     });
 
     res.status(201).json({
-      notification: formatAdminNotification(notification, 0),
+      notification: await formatAdminNotification(notification, 0),
     });
   } catch (error) {
     console.error("Superadmin send notification failed:", error);

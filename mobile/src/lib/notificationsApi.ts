@@ -1,4 +1,5 @@
 import { API_BASE } from '@/src/lib/apiBase';
+import type { NotificationActionType, NotificationKind } from '@/src/lib/notifications';
 
 type ApiError = { error?: string };
 
@@ -7,6 +8,11 @@ export type InboxNotification = {
   notificationId: string;
   title: string;
   body: string;
+  kind: NotificationKind;
+  imageUrl: string | null;
+  actionType: NotificationActionType;
+  actionValue: string | null;
+  ctaLabel: string | null;
   readAt: string | null;
   createdAt: string;
 };

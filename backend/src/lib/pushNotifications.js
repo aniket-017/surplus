@@ -7,7 +7,7 @@ function isExpoPushToken(token) {
   return typeof token === "string" && /^ExponentPushToken\[.+\]$/.test(token);
 }
 
-function formatNotificationBody(message) {
+export function formatNotificationBody(message) {
   const body = message.body?.trim();
   if (body) return body.slice(0, 140);
   if (message.imageUrl) return "Sent a photo";
@@ -78,7 +78,7 @@ async function sendExpoMessages(messages) {
   }
 }
 
-function buildPushMessage(token, { title, body, data, channelId = "messages" }) {
+function buildPushMessage(token, { title, body, data, channelId = "messages", imageUrl }) {
   return {
     to: token,
     sound: "default",
@@ -89,10 +89,11 @@ function buildPushMessage(token, { title, body, data, channelId = "messages" }) 
     channelId,
     priority: "high",
     ttl: 86400,
+    ...(imageUrl ? { richContent: { image: imageUrl }, mutableContent: true } : {}),
   };
 }
 
-export async function sendPushToUser(userId, { title, body, data, channelId = "messages" }) {
+export async function sendPushToUser(userId, { title, body, data, channelId = "messages", imageUrl }) {
   try {
     const records = await prisma.pushToken.findMany({
       where: { userId },
@@ -103,7 +104,7 @@ export async function sendPushToUser(userId, { title, body, data, channelId = "m
     if (tokens.length === 0) return;
 
     const messages = tokens.map((token) =>
-      buildPushMessage(token, { title, body, data, channelId }),
+      buildPushMessage(token, { title, body, data, channelId, imageUrl }),
     );
     await sendExpoMessages(messages);
   } catch (error) {
@@ -111,7 +112,10 @@ export async function sendPushToUser(userId, { title, body, data, channelId = "m
   }
 }
 
-export async function sendPushToUsers(userIds, { title, body, data, channelId = "messages" }) {
+export async function sendPushToUsers(
+  userIds,
+  { title, body, data, channelId = "messages", imageUrl },
+) {
   try {
     const uniqueIds = [...new Set((userIds || []).filter(Boolean))];
     if (uniqueIds.length === 0) return;
@@ -125,7 +129,7 @@ export async function sendPushToUsers(userIds, { title, body, data, channelId = 
     if (tokens.length === 0) return;
 
     const messages = tokens.map((token) =>
-      buildPushMessage(token, { title, body, data, channelId }),
+      buildPushMessage(token, { title, body, data, channelId, imageUrl }),
     );
     await sendExpoMessages(messages);
   } catch (error) {
@@ -160,14 +164,38 @@ export async function notifyNewMessage({
   });
 }
 
-export async function notifyAdminAnnouncement({ userIds, title, body, notificationId }) {
+export function buildAdminNotificationData({
+  notificationId,
+  kind = "GENERAL",
+  imageUrl = null,
+  actionType = "NONE",
+  actionValue = null,
+}) {
+  return {
+    type: "admin_notification",
+    notificationId,
+    kind,
+    actionType,
+    ...(actionValue ? { actionValue } : {}),
+    ...(imageUrl ? { imageUrl } : {}),
+  };
+}
+
+export async function notifyAdminAnnouncement({
+  userIds,
+  title,
+  body,
+  notificationId,
+  kind,
+  imageUrl,
+  actionType,
+  actionValue,
+}) {
   await sendPushToUsers(userIds, {
     title,
     body: String(body || "").slice(0, 140),
-    data: {
-      type: "admin_notification",
-      notificationId,
-    },
+    data: buildAdminNotificationData({ notificationId, kind, imageUrl, actionType, actionValue }),
     channelId: "announcements",
+    imageUrl,
   });
 }

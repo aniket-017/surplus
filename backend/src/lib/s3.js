@@ -228,6 +228,35 @@ export async function uploadMessageImage(conversationId, file) {
   return getPublicUrl(key);
 }
 
+function getNotificationImagePrefix() {
+  const { prefix } = getConfig();
+  return `${prefix}/notifications/`;
+}
+
+export async function uploadNotificationImage(file) {
+  const client = getS3Client();
+  const { bucket } = getConfig();
+  const ext = extensionFromFile(file, 0).toLowerCase().replace(/[^a-z0-9.]/g, "") || ".jpg";
+  const key = `${getNotificationImagePrefix()}${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
+
+  return getPublicUrl(key);
+}
+
+export function isNotificationImageUrl(url) {
+  if (typeof url !== "string" || !url) return false;
+  return url.startsWith(getPublicUrl(getNotificationImagePrefix()));
+}
+
 export async function uploadProductImages(category, subCategory, productId, files) {
   const client = getS3Client();
   const { bucket } = getConfig();

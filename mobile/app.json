@@ -2,7 +2,7 @@
   "expo": {
     "name": "Surplus",
     "slug": "surplus",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "com.surplus.surplus",
-      "versionCode": 7,
+      "versionCode": 8,
       "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
       "edgeToEdgeEnabled": true,

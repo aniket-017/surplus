@@ -11,6 +11,8 @@ local.properties
 *.iml
 *.hprof
 .cxx/
+.cxx_stale/
+.kotlin/
 
 # Bundle artifacts
 *.jsbundle

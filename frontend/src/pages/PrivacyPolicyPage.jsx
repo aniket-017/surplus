@@ -62,7 +62,7 @@ export default function PrivacyPolicyPage() {
               coordinates if you set a pin).
             </p>
             <p>
-              We use phone number sign-in through Firebase Authentication (Google). If
+              We use phone number sign-in with one-time codes sent by SMS through MSG91. If
               you sign in with Google on the website, we receive your Google account
               identifier, name, and email.
             </p>
@@ -124,7 +124,7 @@ export default function PrivacyPolicyPage() {
             <h3>Service providers</h3>
             <p>We use trusted providers to operate the service:</p>
             <ul className="support-list">
-              <li>Google Firebase, for phone authentication</li>
+              <li>MSG91, to send phone verification codes by SMS</li>
               <li>Google, for optional website sign-in, Maps, and listing-photo analysis</li>
               <li>Amazon Web Services, to store listing files</li>
               <li>Expo, to deliver push notifications on mobile</li>

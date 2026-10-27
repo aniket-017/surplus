@@ -1,6 +1,7 @@
 import { resolveUploadUri, type ChatAttachment } from '@/src/lib/chatAttachments';
 import { API_BASE } from '@/src/lib/apiBase';
-import type { LocalImage, PriceType, ProductListing } from '@/src/types/product';
+import type { ListingType, LocalImage, PriceType, ProductListing } from '@/src/types/product';
+import type { ServiceListing } from '@/src/types/service';
 import * as FileSystem from 'expo-file-system/legacy';
 
 type ApiError = { error?: string };
@@ -14,6 +15,7 @@ export type ConversationSummary = {
     images: string[];
     price: number;
     priceType: string;
+    listingType?: ListingType;
   } | null;
   otherParty: {
     id: string;
@@ -138,6 +140,7 @@ export type ConversationMessagesResult = {
       id: string;
       title: string;
       images: string[];
+      listingType?: ListingType;
     } | null;
   };
   messages: ChatMessage[];
@@ -319,7 +322,7 @@ export async function getSavedListings(token: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  return parseResponse<{ products: ProductListing[] }>(res);
+  return parseResponse<{ products: ProductListing[]; services?: ServiceListing[] }>(res);
 }
 
 export async function toggleSavedListing(token: string, productId: string) {

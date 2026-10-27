@@ -49,8 +49,11 @@ export type ProductAnalysis = {
   attributes: ProductAttribute[];
 };
 
+export type ListingType = 'product' | 'service';
+
 export type Product = {
   id: string;
+  listingType?: ListingType;
   sellerId: string;
   title: string;
   category: string;

@@ -14,9 +14,9 @@ import { prepareImageForUpload } from '@/src/lib/prepareImageForUpload';
 type ApiError = { error?: string };
 
 const MULTIPART_TIMEOUT_MS = 120_000;
-const ANALYZE_TIMEOUT_MS = 180_000;
+export const ANALYZE_TIMEOUT_MS = 180_000;
 
-async function parseResponse<T>(res: Response): Promise<T> {
+export async function parseResponse<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as T & ApiError;
   if (!res.ok) {
     throw new Error(data.error || 'Something went wrong');
@@ -24,7 +24,7 @@ async function parseResponse<T>(res: Response): Promise<T> {
   return data;
 }
 
-async function appendImages(formData: FormData, images: LocalImage[]) {
+export async function appendImages(formData: FormData, images: LocalImage[]) {
   for (const image of images) {
     const prepared = await prepareImageForUpload(image);
     formData.append('images', {
@@ -50,7 +50,7 @@ function appendProductFields(formData: FormData, values: ProductFormValues) {
 }
 
 /** Android-friendly multipart request (fetch FormData uploads often hang on content:// URIs). */
-function sendFormData<T>(
+export function sendFormData<T>(
   method: 'POST' | 'PATCH',
   path: string,
   token: string,
@@ -263,6 +263,6 @@ export async function getProductSubCategories(token: string, category: string) {
 
 export function getImageUrl(path: string) {
   if (!path) return '';
-  if (/^https?:\/\//i.test(path)) return path;
+  if (/^(https?|file|content|ph|data):/i.test(path)) return path;
   return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
 }

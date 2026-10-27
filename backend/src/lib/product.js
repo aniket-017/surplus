@@ -5,9 +5,30 @@ import { parseCategory } from "./category.js";
 const PRICE_TYPES = ["FIXED", "NEGOTIABLE", "PER_KG", "PER_UNIT", "PER_LOT"];
 const CONDITIONS = ["NEW", "USED", "SURPLUS", "REFURBISHED"];
 const LISTING_STATUSES = ["ACTIVE", "SOLD", "DELETED"];
+const PRODUCT_LISTING_WHERE = {
+  listingType: "PRODUCT",
+};
 const ACTIVE_LISTING_WHERE = {
+  ...PRODUCT_LISTING_WHERE,
   listingStatus: "ACTIVE",
 };
+
+export async function backfillMissingListingType() {
+  const result = await prisma.$runCommandRaw({
+    update: "products",
+    updates: [
+      {
+        q: {
+          $or: [{ listing_type: { $exists: false } }, { listing_type: null }],
+        },
+        u: { $set: { listing_type: "PRODUCT" } },
+        multi: true,
+      },
+    ],
+  });
+
+  return Number(result?.nModified ?? 0);
+}
 
 export function parsePriceType(value) {
   const normalized = String(value || "")
@@ -195,21 +216,21 @@ export function parseProductPayload(body) {
 export async function formatProduct(product) {
   const images = await resolveProductImageUrls(product.images);
 
+  const condition = product.condition ? String(product.condition).toUpperCase() : null;
+
   return {
     id: product.id,
+    listingType: String(product.listingType || "PRODUCT").toLowerCase(),
     sellerId: product.sellerId,
     title: product.title,
     category: product.category,
     subCategory: product.subCategory,
     description: product.description,
-    quantity: product.quantity,
-    quantityUnit: product.quantityUnit,
+    quantity: product.quantity ?? 0,
+    quantityUnit: product.quantityUnit ?? "",
     price: product.price,
     priceType: product.priceType.toLowerCase(),
-    condition:
-      String(product.condition).toUpperCase() === "SCRAP"
-        ? "surplus"
-        : product.condition.toLowerCase(),
+    condition: condition === "SCRAP" ? "surplus" : condition?.toLowerCase() ?? null,
     listingStatus: getListingStatus(product).toLowerCase(),
     images,
     attributes: product.attributes,
@@ -229,7 +250,7 @@ export async function formatSellerProducts(products, inquiryCountByProductId = n
   );
 }
 
-function formatSellerSummary(seller) {
+export function formatSellerSummary(seller) {
   if (!seller) {
     return null;
   }
@@ -337,4 +358,10 @@ export function buildBrowseWhere({
   return where;
 }
 
-export { PRICE_TYPES, CONDITIONS, LISTING_STATUSES, ACTIVE_LISTING_WHERE };
+export {
+  PRICE_TYPES,
+  CONDITIONS,
+  LISTING_STATUSES,
+  ACTIVE_LISTING_WHERE,
+  PRODUCT_LISTING_WHERE,
+};

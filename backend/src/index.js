@@ -8,10 +8,10 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import passport, { configurePassport } from "./config/passport.js";
 import { isGoogleAuthEnabled, isOtpAuthEnabled, isPhoneAuthEnabled } from "./config/auth.js";
-import { isFirebaseAuthConfigured } from "./lib/firebaseAdmin.js";
 import { verifySmtpConnection } from "./lib/mail.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
+import serviceRoutes from "./routes/services.js";
 import conversationRoutes from "./routes/conversations.js";
 import pushTokenRoutes from "./routes/pushTokens.js";
 import savedRoutes from "./routes/saved.js";
@@ -22,6 +22,7 @@ import { backfillCategoryMeta } from "./lib/category.js";
 import { CATEGORY_ASSETS_DIR, getCategoryImageManifest } from "./lib/categoryAssets.js";
 import { bootstrapSuperAdmin } from "./lib/bootstrapSuperAdmin.js";
 import { prisma } from "./lib/prisma.js";
+import { backfillMissingListingType } from "./lib/product.js";
 import { assertS3Config } from "./lib/s3.js";
 
 function getLanIPv4() {
@@ -94,7 +95,7 @@ for (const key of requiredEnv) {
 if (!isGoogleAuthEnabled() && !isOtpAuthEnabled() && !isPhoneAuthEnabled()) {
   console.error(
     "Configure at least one auth method: Google OAuth, SMTP email OTP, " +
-      "or Firebase phone auth (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY)",
+      "or MSG91 phone OTP (MSG91_AUTH_KEY, MSG91_OTP_TEMPLATE_ID)",
   );
   process.exit(1);
 }
@@ -193,6 +194,7 @@ app.use(
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/services", serviceRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/push-tokens", pushTokenRoutes);
 app.use("/api/saved", savedRoutes);
@@ -235,7 +237,7 @@ app.listen(PORT, "0.0.0.0", () => {
   }
   console.log(`Auth methods: ${methods.join(", ")}`);
   console.log(
-    `[startup] Firebase Admin: ${isFirebaseAuthConfigured() ? "configured" : "MISSING FIREBASE_* env"}`,
+    `[startup] MSG91 phone OTP: ${isPhoneAuthEnabled() ? "configured" : "MISSING MSG91_AUTH_KEY / MSG91_OTP_TEMPLATE_ID"}`,
   );
   console.log(`[startup] Gemini: ${process.env.GEMINI_API_KEY ? "configured" : "MISSING GEMINI_API_KEY"}`);
   if (FRONTEND_DIST_EXISTS) {
@@ -245,6 +247,14 @@ app.listen(PORT, "0.0.0.0", () => {
   bootstrapSuperAdmin().catch((error) => {
     console.error("Superadmin bootstrap failed:", error.message);
   });
+
+  backfillMissingListingType()
+    .then((modified) => {
+      if (modified) console.log(`Backfilled listing_type on ${modified} products`);
+    })
+    .catch((error) => {
+      console.error("Listing type backfill failed:", error.message);
+    });
 
   backfillCategoryMeta().catch((error) => {
     console.error("Category meta backfill failed:", error.message);

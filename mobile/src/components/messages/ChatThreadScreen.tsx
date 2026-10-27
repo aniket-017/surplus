@@ -44,8 +44,14 @@ import {
 import { buildMessageListItems, type MessageListItem } from '@/src/lib/messageFormat';
 import type { ChatAttachment } from '@/src/lib/chatAttachments';
 import { getImageUrl } from '@/src/lib/productsApi';
+import type { ListingType } from '@/src/types/product';
 
-type ThreadProduct = { id: string; title: string; images: string[] } | null;
+type ThreadProduct = {
+  id: string;
+  title: string;
+  images: string[];
+  listingType?: ListingType;
+} | null;
 type ThreadOtherParty = { id: string; name: string; avatarUrl: string | null } | null;
 
 const PAGE_SIZE = 30;
@@ -414,8 +420,14 @@ export function ChatThreadScreen() {
   function handleProductPress() {
     if (!product?.id) return;
 
+    const isService = product.listingType === 'service';
+
     if (user?.role === 'seller') {
-      router.push(`/(seller)/products/${product.id}` as never);
+      router.push(
+        (isService ? `/(seller)/services/${product.id}` : `/(seller)/products/${product.id}`) as never,
+      );
+    } else if (isService) {
+      router.push({ pathname: '/(buyer)/services/[id]', params: { id: product.id } });
     } else {
       router.push({ pathname: '/products/[id]', params: { id: product.id } });
     }

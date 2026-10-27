@@ -1,17 +1,27 @@
 import { Router } from "express";
 import passport from "../config/passport.js";
-import { isGoogleAuthEnabled, isOtpAuthEnabled, getAuthMethods, getFirebaseWebConfig } from "../config/auth.js";
+import { isGoogleAuthEnabled, isOtpAuthEnabled, isPhoneAuthEnabled, getAuthMethods } from "../config/auth.js";
 import { prisma } from "../lib/prisma.js";
 import { withPrismaRetry } from "../lib/prismaRetry.js";
 import { setAuthCookie, clearAuthCookie, formatUser, parseUserAddress, userSelect } from "../lib/auth.js";
 import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
-import { getFirebaseErrorCode, isFirebaseAuthConfigured, verifyFirebaseIdToken } from "../lib/firebaseAdmin.js";
+import {
+  maskPhone,
+  Msg91Error,
+  PHONE_OTP_LENGTH,
+  resendPhoneOtp,
+  sendPhoneOtp,
+  verifyPhoneOtp,
+} from "../lib/msg91.js";
+import { toE164Phone } from "../lib/phone.js";
 import { createLogger } from "../lib/logger.js";
 import { requireAuth } from "../middleware/auth.js";
+import { otpSendRateLimit, otpVerifyRateLimit } from "../middleware/otpRateLimit.js";
 
 const router = Router();
 const authLogger = createLogger("auth");
+const phoneAuthLogger = createLogger("phone-auth");
 
 // Test account for Play Store app review: no email is sent, a fixed OTP is accepted.
 const TEST_ACCOUNT_EMAIL = "aniketkhillare17@gmail.com";
@@ -19,6 +29,24 @@ const TEST_ACCOUNT_OTP = "123456";
 
 function isTestAccount(email) {
   return email === TEST_ACCOUNT_EMAIL;
+}
+
+function isTestPhone(phone) {
+  const testPhone = toE164Phone(process.env.MSG91_TEST_PHONE?.trim() || "");
+  return Boolean(testPhone && process.env.MSG91_TEST_OTP?.trim() && phone === testPhone);
+}
+
+function sendPhoneAuthError(res, error, fallback, logContext) {
+  if (error instanceof Msg91Error) {
+    phoneAuthLogger.warn(`${logContext.action} failed`, { ...logContext, status: error.status, error: error.message });
+    return res.status(error.status).json({ error: error.message });
+  }
+  phoneAuthLogger.error(`${logContext.action} crashed (${maskPhone(logContext.phone)})`, error);
+  return res.status(500).json({ error: fallback });
+}
+
+function phoneLogContext(req, action, phone) {
+  return { action, phone: maskPhone(phone), ip: req.ip, testPhone: isTestPhone(phone) };
 }
 
 function parseRole(role) {
@@ -32,33 +60,15 @@ function parseAuthIntent(raw) {
   return raw === "signup" ? "signup" : "signin";
 }
 
-async function findUserByPhoneOrFirebaseUid(phone, firebaseUid) {
+async function findUserByPhone(phone) {
   return prisma.user.findFirst({
-    where: {
-      AND: [
-        {
-          OR: [{ phone }, { firebaseUid }],
-        },
-        { isDeleted: false },
-      ],
-    },
+    where: { phone, isDeleted: false },
     select: userSelect,
   });
 }
 
 router.get("/methods", (_req, res) => {
   res.json(getAuthMethods());
-});
-
-router.get("/firebase-config", (_req, res) => {
-  const config = getFirebaseWebConfig();
-  if (!config) {
-    return res.status(503).json({
-      error:
-        "Firebase web config is missing. Set FIREBASE_WEB_API_KEY, FIREBASE_WEB_AUTH_DOMAIN, FIREBASE_WEB_APP_ID (and FIREBASE_PROJECT_ID) in backend/.env.",
-    });
-  }
-  res.json(config);
 });
 
 if (isGoogleAuthEnabled()) {
@@ -80,60 +90,109 @@ if (isGoogleAuthEnabled()) {
   );
 }
 
-router.post("/firebase/phone", async (req, res) => {
-  if (!isFirebaseAuthConfigured()) {
+function requirePhoneAuth(_req, res, next) {
+  if (!isPhoneAuthEnabled()) {
     return res.status(503).json({
       error: "Phone authentication is not configured on the server.",
     });
   }
+  next();
+}
 
-  const idToken = typeof req.body.idToken === "string" ? req.body.idToken.trim() : "";
-
-  if (!idToken) {
-    return res.status(400).json({ error: "Firebase ID token is required" });
+function parsePhoneBody(req, res) {
+  const phone = toE164Phone(req.body?.phone);
+  if (!phone) {
+    res.status(400).json({ error: "Enter a valid 10-digit Indian mobile number." });
+    return null;
   }
+  return phone;
+}
+
+router.post("/phone/send", requirePhoneAuth, otpSendRateLimit, async (req, res) => {
+  const phone = parsePhoneBody(req, res);
+  if (!phone) return;
+  const logContext = phoneLogContext(req, "send", phone);
 
   try {
-    const decoded = await verifyFirebaseIdToken(idToken);
-    const firebaseUid = decoded.uid;
-    const phone = decoded.phone_number;
+    if (isTestPhone(phone)) {
+      phoneAuthLogger.info("send skipped for test phone (no SMS)", logContext);
+    } else {
+      const result = await sendPhoneOtp(phone);
+      phoneAuthLogger.info("send accepted by MSG91", { ...logContext, requestId: result?.request_id });
+    }
+    res.json({ message: "OTP sent to your phone" });
+  } catch (error) {
+    sendPhoneAuthError(res, error, "Failed to send OTP. Please try again.", logContext);
+  }
+});
 
-    if (!firebaseUid || !phone) {
-      return res.status(400).json({
-        error: "Firebase token is missing a verified phone number.",
-      });
+router.post("/phone/resend", requirePhoneAuth, otpSendRateLimit, async (req, res) => {
+  const phone = parsePhoneBody(req, res);
+  if (!phone) return;
+  const logContext = phoneLogContext(req, "resend", phone);
+
+  try {
+    if (isTestPhone(phone)) {
+      phoneAuthLogger.info("resend skipped for test phone (no SMS)", logContext);
+    } else {
+      try {
+        await resendPhoneOtp(phone, req.body?.channel === "voice" ? "voice" : "text");
+        phoneAuthLogger.info("resend accepted by MSG91", logContext);
+      } catch (error) {
+        // Retry only works while the original OTP is active; otherwise issue a new one.
+        if (!(error instanceof Msg91Error) || error.status === 429 || error.status === 503) {
+          throw error;
+        }
+        phoneAuthLogger.info("retry rejected, sending a fresh OTP", { ...logContext, reason: error.message });
+        const result = await sendPhoneOtp(phone);
+        phoneAuthLogger.info("fresh send accepted by MSG91", { ...logContext, requestId: result?.request_id });
+      }
+    }
+    res.json({ message: "OTP resent to your phone" });
+  } catch (error) {
+    sendPhoneAuthError(res, error, "Failed to resend OTP. Please try again.", logContext);
+  }
+});
+
+router.post("/phone/verify", requirePhoneAuth, otpVerifyRateLimit, async (req, res) => {
+  const phone = parsePhoneBody(req, res);
+  if (!phone) return;
+
+  const code = typeof req.body.otp === "string" ? req.body.otp.trim() : "";
+  if (code.length !== PHONE_OTP_LENGTH || !/^\d+$/.test(code)) {
+    return res.status(400).json({ error: `Enter the ${PHONE_OTP_LENGTH}-digit verification code.` });
+  }
+
+  const logContext = phoneLogContext(req, "verify", phone);
+
+  try {
+    if (isTestPhone(phone)) {
+      if (code !== process.env.MSG91_TEST_OTP.trim()) {
+        phoneAuthLogger.warn("verify failed: wrong test OTP", logContext);
+        return res.status(400).json({ error: "Invalid OTP. Please check the code and try again." });
+      }
+    } else {
+      await verifyPhoneOtp(phone, code);
     }
 
-    const existingUser = await findUserByPhoneOrFirebaseUid(phone, firebaseUid);
-
-    if (existingUser?.isDeleted) {
-      return res.status(410).json({ error: "This account has been permanently deleted" });
-    }
+    const existingUser = await findUserByPhone(phone);
 
     if (existingUser?.isBanned) {
+      phoneAuthLogger.warn("verify blocked: banned user", { ...logContext, userId: existingUser.id });
       return res.status(403).json({ error: "This account has been banned" });
     }
 
-    let user = existingUser;
+    const user =
+      existingUser ??
+      (await prisma.user.create({
+        data: { phone },
+        select: userSelect,
+      }));
 
-    if (!existingUser) {
-      user = await prisma.user.create({
-        data: {
-          phone,
-          firebaseUid,
-        },
-        select: userSelect,
-      });
-    } else if (existingUser.phone !== phone || existingUser.firebaseUid !== firebaseUid) {
-      user = await prisma.user.update({
-        where: { id: existingUser.id },
-        data: {
-          phone,
-          firebaseUid,
-        },
-        select: userSelect,
-      });
-    }
+    phoneAuthLogger.info(existingUser ? "verified, signed in existing user" : "verified, created new user", {
+      ...logContext,
+      userId: user.id,
+    });
 
     const token = setAuthCookie(res, user);
 
@@ -143,40 +202,13 @@ router.post("/firebase/phone", async (req, res) => {
       user: formatUser(user),
     });
   } catch (error) {
-    console.error("Firebase phone auth failed:", error);
-
     if (error.code === "P2002") {
       return res.status(409).json({
         error: "An account with this phone number already exists.",
       });
     }
 
-    const firebaseCode = getFirebaseErrorCode(error);
-
-    if (
-      firebaseCode === "auth/id-token-expired" ||
-      firebaseCode === "auth/argument-error" ||
-      firebaseCode === "auth/invalid-id-token" ||
-      firebaseCode === "auth/invalid-token"
-    ) {
-      return res.status(401).json({ error: "Invalid or expired Firebase token" });
-    }
-
-    if (
-      String(error.message || "").includes("Failed to parse private key") ||
-      String(error.message || "").includes("error:1E08010C") ||
-      firebaseCode === "app/invalid-credential"
-    ) {
-      return res.status(503).json({
-        error: "Phone authentication is misconfigured on the server. Check FIREBASE_PRIVATE_KEY in backend/.env.",
-      });
-    }
-
-    res.status(500).json({
-      error: error.message
-        ? `Failed to sign in with phone number: ${error.message}`
-        : "Failed to sign in with phone number",
-    });
+    sendPhoneAuthError(res, error, "Failed to sign in with phone number", logContext);
   }
 });
 
@@ -514,7 +546,6 @@ router.post("/delete-account", requireAuth, async (req, res) => {
         deletedAt: new Date(),
         deletedReason,
         phone: null,
-        firebaseUid: null,
       },
       select: userSelect,
     });

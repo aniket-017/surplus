@@ -234,6 +234,7 @@ export async function listCategoriesWithCounts() {
   const grouped = await prisma.product.groupBy({
     by: ["category"],
     where: {
+      listingType: "PRODUCT",
       listingStatus: "ACTIVE",
     },
     _count: { category: true },
@@ -265,6 +266,7 @@ export async function listSubCategoriesForCategory(category) {
   const grouped = await prisma.product.groupBy({
     by: ["subCategory"],
     where: {
+      listingType: "PRODUCT",
       listingStatus: "ACTIVE",
       category: normalized,
     },
@@ -294,6 +296,7 @@ export async function backfillCategoryMeta() {
   }
 
   const distinctCategories = await prisma.product.findMany({
+    where: { listingType: "PRODUCT" },
     distinct: ["category"],
     select: { category: true },
   });

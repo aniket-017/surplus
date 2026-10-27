@@ -21,12 +21,6 @@ const INDEXES = [
     unique: true,
     partialFilterExpression: { phone: { $type: "string" } },
   },
-  {
-    key: { firebase_uid: 1 },
-    name: "users_firebase_uid_sparse_key",
-    unique: true,
-    partialFilterExpression: { firebase_uid: { $type: "string" } },
-  },
 ];
 
 const INDEX_NAMES_TO_RECREATE = new Set(INDEXES.map((index) => index.name));
@@ -35,6 +29,7 @@ const LEGACY_INDEX_NAMES = new Set([
   "users_email_key",
   "users_phone_key",
   "users_firebase_uid_key",
+  "users_firebase_uid_sparse_key",
 ]);
 
 function indexMatchesDesired(existing, desired) {

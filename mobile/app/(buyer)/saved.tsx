@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
+import { ServiceListingCard } from '@/src/components/buyer/ServiceListingCard';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { productCardWidth } from '@/src/constants/layout';
@@ -22,15 +23,20 @@ import { colors, spacing } from '@/src/constants/theme';
 import { useBreakpoint } from '@/src/hooks/useBreakpoint';
 import { getSavedListings, toggleSavedListing } from '@/src/lib/conversationsApi';
 import type { ProductListing } from '@/src/types/product';
+import type { ServiceListing } from '@/src/types/service';
 
 const HORIZONTAL_PADDING = spacing.lg;
 const GRID_GAP = spacing.sm;
+
+type SavedItem =
+  | { kind: 'product'; id: string; listing: ProductListing }
+  | { kind: 'service'; id: string; listing: ServiceListing };
 
 export default function SavedListingsScreen() {
   const { token } = useAuth();
   const { width, columns } = useBreakpoint();
   const cardWidth = productCardWidth(width, columns, HORIZONTAL_PADDING, GRID_GAP);
-  const [products, setProducts] = useState<ProductListing[]>([]);
+  const [items, setItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -52,7 +58,18 @@ export default function SavedListingsScreen() {
 
       try {
         const data = await getSavedListings(token);
-        setProducts(data.products);
+        setItems([
+          ...data.products.map((listing): SavedItem => ({
+            kind: 'product',
+            id: listing.id,
+            listing,
+          })),
+          ...(data.services ?? []).map((listing): SavedItem => ({
+            kind: 'service',
+            id: listing.id,
+            listing,
+          })),
+        ]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load saved listings');
       } finally {
@@ -76,7 +93,7 @@ export default function SavedListingsScreen() {
     try {
       const result = await toggleSavedListing(token, productId);
       if (!result.saved) {
-        setProducts((current) => current.filter((item) => item.id !== productId));
+        setItems((current) => current.filter((item) => item.id !== productId));
       }
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update saved listing');
@@ -105,25 +122,40 @@ export default function SavedListingsScreen() {
 
         <FlatList
           key={columns}
-          data={products}
+          data={items}
           keyExtractor={(item) => item.id}
           numColumns={columns}
           columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <ProductListingCard
-              product={item}
-              width={cardWidth}
-              saved
-              onToggleSave={() => void handleToggleSave(item.id)}
-              onPress={() =>
-                router.push({
-                  pathname: '/products/[id]',
-                  params: { id: item.id },
-                })
-              }
-            />
-          )}
+          renderItem={({ item }) =>
+            item.kind === 'service' ? (
+              <ServiceListingCard
+                service={item.listing}
+                width={cardWidth}
+                saved
+                onToggleSave={() => void handleToggleSave(item.id)}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(buyer)/services/[id]',
+                    params: { id: item.id },
+                  })
+                }
+              />
+            ) : (
+              <ProductListingCard
+                product={item.listing}
+                width={cardWidth}
+                saved
+                onToggleSave={() => void handleToggleSave(item.id)}
+                onPress={() =>
+                  router.push({
+                    pathname: '/products/[id]',
+                    params: { id: item.id },
+                  })
+                }
+              />
+            )
+          }
           ListEmptyComponent={
             loading ? (
               <View style={styles.emptyState}>
@@ -136,7 +168,7 @@ export default function SavedListingsScreen() {
                 </View>
                 <Text style={styles.emptyTitle}>No saved listings yet</Text>
                 <Text style={styles.emptyText}>
-                  Tap the bookmark on any product to save it here for later.
+                  Tap the bookmark on any product or service to save it here for later.
                 </Text>
               </View>
             )

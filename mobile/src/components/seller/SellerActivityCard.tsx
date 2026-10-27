@@ -96,12 +96,7 @@ export function SellerActivityCard({
                 >
                   {stat.value}
                 </Text>
-                <Text
-                  style={styles.label}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.85}
-                >
+                <Text style={styles.label} numberOfLines={2}>
                   {stat.label}
                 </Text>
               </View>
@@ -146,7 +141,7 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   divider: {
     width: 1,
@@ -183,11 +178,14 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     fontFamily: fonts.extrabold,
     letterSpacing: -0.4,
+    textAlign: 'center',
   },
   label: {
     color: colors.muted,
-    fontSize: 11,
-    lineHeight: 14,
-    fontFamily: fonts.medium,
+    fontSize: 12.5,
+    lineHeight: 16,
+    fontFamily: fonts.semibold,
+    textAlign: 'center',
+    marginTop: 2,
   },
 });

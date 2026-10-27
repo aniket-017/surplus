@@ -11,7 +11,6 @@ async function main() {
       id: true,
       email: true,
       phone: true,
-      firebaseUid: true,
       googleId: true,
       isSuperAdmin: true,
       name: true,
@@ -29,7 +28,6 @@ async function main() {
         id: u.id,
         email: u.email,
         phone: u.phone,
-        firebaseUid: u.firebaseUid ? "yes" : null,
         googleId: u.googleId ? "yes" : null,
         isSuperAdmin: u.isSuperAdmin,
         name: u.name,
@@ -39,17 +37,17 @@ async function main() {
   }
 
   const withEmail = users.filter((u) => u.email);
-  const withPhone = users.filter((u) => u.phone || u.firebaseUid);
+  const withPhone = users.filter((u) => u.phone);
   const emailOnly = users.filter(
-    (u) => u.email && !u.phone && !u.firebaseUid && !u.isSuperAdmin,
+    (u) => u.email && !u.phone && !u.isSuperAdmin,
   );
   const emailAnyNonAdmin = users.filter((u) => u.email && !u.isSuperAdmin);
   const superAdmins = users.filter((u) => u.isSuperAdmin);
 
   console.log("\n--- counts ---");
   console.log("with email:", withEmail.length);
-  console.log("with phone/firebase:", withPhone.length);
-  console.log("email-only non-admin (no phone/firebase):", emailOnly.length);
+  console.log("with phone:", withPhone.length);
+  console.log("email-only non-admin (no phone):", emailOnly.length);
   console.log("any email non-admin:", emailAnyNonAdmin.length);
   console.log("superadmins:", superAdmins.length);
 }

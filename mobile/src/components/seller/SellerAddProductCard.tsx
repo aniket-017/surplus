@@ -5,9 +5,15 @@ import { colors, spacing } from '@/src/constants/theme';
 
 type SellerAddProductCardProps = {
   onPress: () => void;
+  title?: string;
+  subtitle?: string;
 };
 
-export function SellerAddProductCard({ onPress }: SellerAddProductCardProps) {
+export function SellerAddProductCard({
+  onPress,
+  title = 'Add New Product',
+  subtitle = 'List items and reach more buyers',
+}: SellerAddProductCardProps) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.iconWrap}>
@@ -15,8 +21,8 @@ export function SellerAddProductCard({ onPress }: SellerAddProductCardProps) {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>Add New Product</Text>
-        <Text style={styles.subtitle}>List items and reach more buyers</Text>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
       <Ionicons name="chevron-forward" size={20} color={colors.muted} />

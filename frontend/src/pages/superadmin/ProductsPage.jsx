@@ -12,6 +12,7 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1)
   const [q, setQ] = useState('')
   const [search, setSearch] = useState('')
+  const [listingType, setListingType] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
@@ -20,7 +21,7 @@ export default function ProductsPage() {
     setLoading(true)
     setError('')
     try {
-      const data = await getSuperadminProducts({ page, q: search })
+      const data = await getSuperadminProducts({ page, q: search, listingType })
       setProducts(data.products)
       setTotal(data.total)
     } catch (err) {
@@ -28,7 +29,7 @@ export default function ProductsPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, search])
+  }, [page, search, listingType])
 
   useEffect(() => {
     loadProducts()
@@ -57,7 +58,7 @@ export default function ProductsPage() {
     <div className="sa-page">
       <div className="dash-hero">
         <span className="dash-role-badge">SUPERADMIN</span>
-        <h1>Products</h1>
+        <h1>Products & Services</h1>
         <p>Browse all listings and remove anything that should not stay on the platform.</p>
       </div>
 
@@ -76,6 +77,18 @@ export default function ProductsPage() {
           value={q}
           onChange={(event) => setQ(event.target.value)}
         />
+        <select
+          className="auth-input"
+          value={listingType}
+          onChange={(event) => {
+            setPage(1)
+            setListingType(event.target.value)
+          }}
+        >
+          <option value="">All types</option>
+          <option value="PRODUCT">Products</option>
+          <option value="SERVICE">Services</option>
+        </select>
         <button type="submit" className="btn btn-primary">
           Search
         </button>
@@ -94,6 +107,7 @@ export default function ProductsPage() {
               <thead>
                 <tr>
                   <th>Title</th>
+                  <th>Type</th>
                   <th>Category</th>
                   <th>Seller</th>
                   <th>Price</th>
@@ -107,8 +121,17 @@ export default function ProductsPage() {
                   <tr key={product.id}>
                     <td>{product.title}</td>
                     <td>
+                      {product.listingType === 'SERVICE' ? (
+                        <span className="sa-badge sa-badge-ok">Service</span>
+                      ) : (
+                        <span className="sa-badge">Product</span>
+                      )}
+                    </td>
+                    <td>
                       {product.category}
-                      {product.subCategory ? ` / ${product.subCategory}` : ''}
+                      {product.subCategory && product.subCategory !== product.category
+                        ? ` / ${product.subCategory}`
+                        : ''}
                     </td>
                     <td>{product.seller?.email || '—'}</td>
                     <td>
@@ -142,7 +165,7 @@ export default function ProductsPage() {
               Previous
             </button>
             <span>
-              Page {page} of {totalPages} · {total} products
+              Page {page} of {totalPages} · {total} listings
             </span>
             <button
               type="button"

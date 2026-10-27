@@ -9,12 +9,15 @@ import {
   SellerBuyBanner,
   SellerHomeHero,
   SellerMyListingsRail,
+  SellerMyServicesRail,
   SellerSellBanner,
+  SellerServiceBanner,
 } from '@/src/components/seller';
 import { useAdminNotificationUnreadCount } from '@/src/context/AdminNotificationsContext';
 import { useAuth } from '@/src/context/AuthContext';
 import { useRoleSwitch } from '@/src/context/RoleSwitchContext';
 import { useMyProducts } from '@/src/hooks/useMyProducts';
+import { useMyServices } from '@/src/hooks/useMyServices';
 import { colors, spacing } from '@/src/constants/theme';
 import { getSellerEstimatedValue } from '@/src/lib/productFormat';
 
@@ -25,6 +28,11 @@ export default function SellerDashboardTab() {
   const { user } = useAuth();
   const { switchRole, switching: roleSwitching } = useRoleSwitch();
   const { products, stats, loading, reload } = useMyProducts();
+  const {
+    services,
+    loading: servicesLoading,
+    reload: reloadServices,
+  } = useMyServices();
   const unreadCount = useAdminNotificationUnreadCount();
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState('');
@@ -35,7 +43,7 @@ export default function SellerDashboardTab() {
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      await reload();
+      await Promise.all([reload(), reloadServices()]);
     } finally {
       setRefreshing(false);
     }
@@ -62,6 +70,14 @@ export default function SellerDashboardTab() {
 
   function openAddProduct() {
     router.push('/(seller)/add-product');
+  }
+
+  function openAddService() {
+    router.push('/(seller)/add-service');
+  }
+
+  function openServicesList() {
+    router.push({ pathname: '/(seller)/(tabs)/listings', params: { tab: 'services' } });
   }
 
   return (
@@ -93,6 +109,8 @@ export default function SellerDashboardTab() {
           <View style={styles.body}>
             <SellerSellBanner onPress={openAddProduct} />
 
+            <SellerServiceBanner onPress={openAddService} />
+
             <SellerBuyBanner
               onPress={() => void handleSwitchToBuyer()}
               loading={switching || roleSwitching}
@@ -114,6 +132,16 @@ export default function SellerDashboardTab() {
               onAddProduct={openAddProduct}
               onOpenProduct={(id) =>
                 router.push({ pathname: '/(seller)/products/[id]', params: { id } })
+              }
+            />
+
+            <SellerMyServicesRail
+              services={services}
+              loading={servicesLoading}
+              onSeeAll={openServicesList}
+              onAddService={openAddService}
+              onOpenService={(id) =>
+                router.push({ pathname: '/(seller)/services/[id]', params: { id } })
               }
             />
           </View>

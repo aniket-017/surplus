@@ -93,7 +93,7 @@ router.post("/", requireAuth, async (req, res) => {
     });
 
     if (!product || !isActiveListing(product)) {
-      return res.status(404).json({ error: "Product not found" });
+      return res.status(404).json({ error: "Listing not found" });
     }
 
     if (product.sellerId === req.user.id) {
@@ -186,7 +186,16 @@ router.get("/", requireAuth, async (req, res) => {
       include: {
         buyer: { select: { id: true, name: true, email: true, avatarUrl: true } },
         seller: { select: { id: true, name: true, email: true, avatarUrl: true } },
-        product: { select: { id: true, title: true, images: true, price: true, priceType: true } },
+        product: {
+          select: {
+            id: true,
+            title: true,
+            images: true,
+            price: true,
+            priceType: true,
+            listingType: true,
+          },
+        },
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1,
@@ -292,6 +301,7 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
               id: conversation.product.id,
               title: conversation.product.title,
               images: conversation.product.images,
+              listingType: String(conversation.product.listingType || "PRODUCT").toLowerCase(),
             }
           : null,
       },

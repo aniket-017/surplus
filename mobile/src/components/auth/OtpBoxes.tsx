@@ -13,12 +13,11 @@ import Animated, {
 
 import { colors, radius } from '@/src/constants/theme';
 
-const LENGTH = 6;
-
 type OtpBoxesProps = {
   value: string;
   onChangeText: (value: string) => void;
   onFocus?: TextInputProps['onFocus'];
+  length?: number;
 };
 
 function OtpCell({ char, active }: { char: string; active: boolean }) {
@@ -71,13 +70,13 @@ function OtpCell({ char, active }: { char: string; active: boolean }) {
   );
 }
 
-export function OtpBoxes({ value, onChangeText, onFocus }: OtpBoxesProps) {
+export function OtpBoxes({ value, onChangeText, onFocus, length = 6 }: OtpBoxesProps) {
   const [focused, setFocused] = useState(false);
-  const activeIndex = Math.min(value.length, LENGTH - 1);
+  const activeIndex = Math.min(value.length, length - 1);
 
   return (
     <View style={styles.row}>
-      {Array.from({ length: LENGTH }).map((_, i) => (
+      {Array.from({ length }).map((_, i) => (
         <OtpCell key={i} char={value[i] ?? ''} active={focused && i === activeIndex} />
       ))}
       <TextInput
@@ -90,7 +89,7 @@ export function OtpBoxes({ value, onChangeText, onFocus }: OtpBoxesProps) {
         }}
         onBlur={() => setFocused(false)}
         keyboardType="number-pad"
-        maxLength={LENGTH}
+        maxLength={length}
         autoComplete="sms-otp"
         textContentType="oneTimeCode"
         importantForAutofill="yes"
@@ -105,11 +104,12 @@ export function OtpBoxes({ value, onChangeText, onFocus }: OtpBoxesProps) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     gap: 8,
   },
   cell: {
     flex: 1,
+    maxWidth: 64,
     aspectRatio: 0.86,
     borderWidth: 1.5,
     borderRadius: radius.md,

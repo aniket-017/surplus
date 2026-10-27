@@ -6,6 +6,8 @@ export default function BuyerLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="category/[name]" />
       <Stack.Screen name="products/[id]" />
+      <Stack.Screen name="services/index" />
+      <Stack.Screen name="services/[id]" />
       <Stack.Screen name="messages/[id]" />
       <Stack.Screen name="saved" />
       <Stack.Screen name="notifications" />

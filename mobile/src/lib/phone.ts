@@ -1,5 +1,5 @@
 /**
- * India-focused phone helpers for Firebase Phone Auth (E.164).
+ * India-focused phone helpers for MSG91 phone OTP (E.164).
  */
 
 const DIGITS_ONLY = /^\d+$/;

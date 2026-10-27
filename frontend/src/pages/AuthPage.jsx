@@ -2,15 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import surplusLogo from '../assets/logo/surplus.png'
 import { useAuth } from '../context/AuthContext'
-import { getAuthMethods, verifyFirebasePhone } from '../lib/api'
+import { getAuthMethods, resendPhoneOtp, sendPhoneOtp, verifyPhoneOtp } from '../lib/api'
 import { getPostAuthPath } from '../lib/authRedirect'
-import {
-  confirmFirebasePhoneOtp,
-  mapFirebaseAuthError,
-  preparePhoneAuth,
-  sendFirebasePhoneOtp,
-} from '../lib/firebaseAuth'
 import { formatPhoneForDisplay, toE164Phone } from '../lib/phone'
+
+const RESEND_COOLDOWN_SECONDS = 30
+const OTP_LENGTH = 4
 
 export default function AuthPage() {
   const location = useLocation()
@@ -22,14 +19,12 @@ export default function AuthPage() {
   const [e164Phone, setE164Phone] = useState('')
   const [otp, setOtp] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resendIn, setResendIn] = useState(0)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
-  const [phoneConfigured, setPhoneConfigured] = useState(false)
-  const [phoneReady, setPhoneReady] = useState(false)
-  const confirmationRef = useRef(null)
+  const [phoneEnabled, setPhoneEnabled] = useState(false)
   const completingRef = useRef(false)
-
-  const phoneEnabled = phoneConfigured && phoneReady
 
   useEffect(() => {
     if (location.state?.error) {
@@ -53,18 +48,11 @@ export default function AuthPage() {
         if (cancelled) return
 
         const phone = Boolean(next.phone)
-        setPhoneConfigured(phone)
+        setPhoneEnabled(phone)
 
         if (!phone) {
-          setError(
-            'Phone authentication is not available. Set FIREBASE_* Admin and FIREBASE_WEB_* in backend/.env.',
-          )
-          return
+          setError('Phone sign-in is not available right now. Please try again later.')
         }
-
-        await preparePhoneAuth()
-        if (cancelled) return
-        setPhoneReady(true)
       } catch (err) {
         if (!cancelled) {
           setError(err.message || 'Unable to load sign-in options')
@@ -77,27 +65,11 @@ export default function AuthPage() {
     }
   }, [])
 
-  async function completeWithIdToken(idToken) {
-    if (completingRef.current) {
-      return
-    }
-
-    completingRef.current = true
-    setLoading(true)
-    setError('')
-    setInfo('Verified. Signing you in…')
-
-    try {
-      const data = await verifyFirebasePhone(idToken)
-      setUser(data.user)
-      navigate(getPostAuthPath(data.user), { replace: true })
-    } catch (err) {
-      setError(err.message)
-      completingRef.current = false
-    } finally {
-      setLoading(false)
-    }
-  }
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const timer = setTimeout(() => setResendIn((seconds) => seconds - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [resendIn])
 
   async function handleSendPhoneOtp(event) {
     event.preventDefault()
@@ -106,9 +78,7 @@ export default function AuthPage() {
     completingRef.current = false
 
     if (!phoneEnabled) {
-      setError(
-        'Phone sign-in is not configured. Add FIREBASE_WEB_* values to backend/.env.',
-      )
+      setError('Phone sign-in is not available right now. Please try again later.')
       return
     }
 
@@ -121,15 +91,35 @@ export default function AuthPage() {
     setLoading(true)
 
     try {
-      confirmationRef.current = await sendFirebasePhoneOtp(normalized)
+      await sendPhoneOtp(normalized)
       setE164Phone(normalized)
       setStep('otp')
       setOtp('')
-      setInfo('We sent a 6-digit code to your phone.')
+      setResendIn(RESEND_COOLDOWN_SECONDS)
+      setInfo(`We sent a ${OTP_LENGTH}-digit code to your phone.`)
     } catch (err) {
-      setError(mapFirebaseAuthError(err))
+      setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleResendOtp() {
+    if (resendIn > 0 || resending || loading || !e164Phone) return
+
+    setError('')
+    setInfo('')
+    setResending(true)
+
+    try {
+      await resendPhoneOtp(e164Phone)
+      setOtp('')
+      setResendIn(RESEND_COOLDOWN_SECONDS)
+      setInfo('We sent a new code to your phone.')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setResending(false)
     }
   }
 
@@ -139,24 +129,25 @@ export default function AuthPage() {
     setInfo('')
 
     const code = otp.trim()
-    if (!/^\d{6}$/.test(code)) {
-      setError('Enter the 6-digit verification code.')
+    if (code.length !== OTP_LENGTH || !/^\d+$/.test(code)) {
+      setError(`Enter the ${OTP_LENGTH}-digit verification code.`)
       return
     }
 
-    if (!confirmationRef.current) {
-      setError('Request a new OTP and try again.')
-      setStep('phone')
-      return
-    }
+    if (completingRef.current) return
 
+    completingRef.current = true
     setLoading(true)
 
     try {
-      const idToken = await confirmFirebasePhoneOtp(confirmationRef.current, code)
-      await completeWithIdToken(idToken)
+      const data = await verifyPhoneOtp(e164Phone, code)
+      setInfo('Verified. Signing you in…')
+      setUser(data.user)
+      navigate(getPostAuthPath(data.user), { replace: true })
     } catch (err) {
-      setError(mapFirebaseAuthError(err))
+      setError(err.message)
+      completingRef.current = false
+    } finally {
       setLoading(false)
     }
   }
@@ -166,7 +157,7 @@ export default function AuthPage() {
     setOtp('')
     setError('')
     setInfo('')
-    confirmationRef.current = null
+    setResendIn(0)
     completingRef.current = false
   }
 
@@ -233,12 +224,14 @@ export default function AuthPage() {
                 id="phone-otp"
                 type="text"
                 inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
+                pattern={`\\d{${OTP_LENGTH}}`}
+                maxLength={OTP_LENGTH}
                 className="auth-input auth-otp-input"
-                placeholder="000000"
+                placeholder={'0'.repeat(OTP_LENGTH)}
                 value={otp}
-                onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))}
+                onChange={(event) =>
+                  setOtp(event.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH))
+                }
                 required
                 autoComplete="one-time-code"
               />
@@ -250,6 +243,19 @@ export default function AuthPage() {
                 {loading ? 'Verifying...' : 'Continue'}
               </button>
 
+              <button
+                type="button"
+                className="auth-link-btn"
+                onClick={handleResendOtp}
+                disabled={resendIn > 0 || resending || loading}
+              >
+                {resending
+                  ? 'Resending...'
+                  : resendIn > 0
+                    ? `Resend code in ${resendIn}s`
+                    : 'Resend code'}
+              </button>
+
               <button type="button" className="auth-link-btn" onClick={resetToPhoneStep}>
                 Use a different number
               </button>
@@ -257,8 +263,6 @@ export default function AuthPage() {
           )}
         </div>
       </div>
-
-      <div id="recaptcha-container" />
     </div>
   )
 }

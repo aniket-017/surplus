@@ -38,9 +38,12 @@ const CAPTIONS = [
   },
 ] as const;
 
+export type AnalyzeCaption = { title: string; subtitle: string };
+
 type AnalyzeAiOverlayProps = {
   visible: boolean;
   images: LocalImage[];
+  captions?: readonly AnalyzeCaption[];
 };
 
 function SoftOrb({ style }: { style?: StyleProp<ViewStyle> }) {
@@ -187,7 +190,7 @@ function StageEnter({ active, children }: { active: boolean; children: ReactNode
   return <Animated.View style={style}>{children}</Animated.View>;
 }
 
-export function AnalyzeAiOverlay({ visible, images }: AnalyzeAiOverlayProps) {
+export function AnalyzeAiOverlay({ visible, images, captions = CAPTIONS }: AnalyzeAiOverlayProps) {
   const [captionIndex, setCaptionIndex] = useState(0);
   const hero = images[0];
   const extras = images.slice(1, 4);
@@ -199,13 +202,13 @@ export function AnalyzeAiOverlay({ visible, images }: AnalyzeAiOverlayProps) {
     }
 
     const timer = setInterval(() => {
-      setCaptionIndex((current) => (current + 1) % CAPTIONS.length);
+      setCaptionIndex((current) => (current + 1) % captions.length);
     }, CAPTION_INTERVAL_MS);
 
     return () => clearInterval(timer);
-  }, [visible]);
+  }, [visible, captions.length]);
 
-  const caption = CAPTIONS[captionIndex];
+  const caption = captions[captionIndex % captions.length];
 
   return (
     <Modal
@@ -265,7 +268,7 @@ export function AnalyzeAiOverlay({ visible, images }: AnalyzeAiOverlayProps) {
           />
 
           <View style={styles.dots}>
-            {CAPTIONS.map((_, index) => (
+            {captions.map((_, index) => (
               <View
                 key={index}
                 style={[styles.dot, index === captionIndex && styles.dotActive]}

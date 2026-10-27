@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -32,6 +32,7 @@ import { Logo } from '@/src/components/Logo';
 import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
+import { resendPhoneOtp, sendPhoneOtp } from '@/src/lib/api';
 import { formatPhoneForDisplay, toE164Phone, toIndianLocalDigits } from '@/src/lib/phone';
 import { requestPhoneNumberHintLocal } from '@/src/lib/phoneHint';
 import { isExpoGo } from '@/src/lib/notifications';
@@ -43,17 +44,8 @@ const MOSAIC_HEIGHT = Math.min(520, Math.max(400, SCREEN_HEIGHT * 0.5));
 
 type Step = 'phone' | 'otp';
 
-/** Avoid static RNFirebase imports — they crash Expo Go at module load. */
-type PhoneConfirmation = {
-  confirm: (code: string) => Promise<unknown>;
-};
-
-const EXPO_GO_PHONE_AUTH_MSG =
-  'Phone OTP needs a native build (EAS preview/dev). Expo Go cannot load React Native Firebase.';
-
-async function loadFirebaseAuth() {
-  return import('@/src/lib/firebaseAuth');
-}
+const RESEND_COOLDOWN_SECONDS = 30;
+const OTP_LENGTH = 4;
 
 function navigateAfterAuth(user: {
   name?: string | null;
@@ -67,36 +59,8 @@ function navigateAfterAuth(user: {
   router.replace(user.role === 'buyer' ? '/(buyer)/(tabs)' : '/(seller)/(tabs)');
 }
 
-function mapFirebaseError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error ?? '');
-  if (
-    message.includes('NativeRNFBTurboApp') ||
-    message.includes('Native module') ||
-    message.includes('not registered')
-  ) {
-    return EXPO_GO_PHONE_AUTH_MSG;
-  }
-
-  const code =
-    typeof error === 'object' && error && 'code' in error
-      ? String((error as { code?: string }).code || '')
-      : '';
-
-  switch (code) {
-    case 'auth/invalid-phone-number':
-      return 'Enter a valid mobile number.';
-    case 'auth/too-many-requests':
-      return 'Too many attempts. Please try again later.';
-    case 'auth/invalid-verification-code':
-      return 'Invalid OTP. Please check the code and try again.';
-    case 'auth/session-expired':
-      return 'OTP expired. Request a new code.';
-    case 'auth/missing-client-identifier':
-    case 'auth/app-not-authorized':
-      return 'Phone auth is not configured for this app build. Add SHA keys in Firebase and rebuild.';
-    default:
-      return message || 'Something went wrong';
-  }
+function errorMessage(error: unknown): string {
+  return error instanceof Error && error.message ? error.message : 'Something went wrong';
 }
 
 export default function SignInScreen() {
@@ -110,7 +74,8 @@ export default function SignInScreen() {
   const [hintAvailable, setHintAvailable] = useState(Platform.OS === 'android');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
-  const confirmationRef = useRef<PhoneConfirmation | null>(null);
+  const [resendIn, setResendIn] = useState(0);
+  const [resending, setResending] = useState(false);
   const hintAttemptedRef = useRef(false);
   const completingRef = useRef(false);
   const introDoneRef = useRef(false);
@@ -123,10 +88,17 @@ export default function SignInScreen() {
 
   useEffect(() => {
     if (isExpoGo()) {
-      setError(EXPO_GO_PHONE_AUTH_MSG);
       setHintAvailable(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (resendIn <= 0) {
+      return;
+    }
+    const timer = setTimeout(() => setResendIn((seconds) => seconds - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendIn]);
 
   useEffect(() => {
     if (Platform.OS !== 'android' || isExpoGo() || hintAttemptedRef.current) {
@@ -156,75 +128,6 @@ export default function SignInScreen() {
     };
   }, []);
 
-  const completeWithIdToken = useCallback(
-    async (idToken: string) => {
-      if (completingRef.current) {
-        return;
-      }
-
-      completingRef.current = true;
-      setLoading(true);
-      setError('');
-      setInfo('Verified. Signing you in…');
-
-      try {
-        const signedInUser = await signInWithPhone(idToken);
-        navigateAfterAuth(signedInUser);
-      } catch (err) {
-        setInfo('');
-        setError(mapFirebaseError(err));
-        completingRef.current = false;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [signInWithPhone],
-  );
-
-  // Android can auto-retrieve the SMS and sign in without typing the OTP.
-  useEffect(() => {
-    if (step !== 'otp' || isExpoGo()) {
-      return;
-    }
-
-    let unsubscribe: (() => void) | undefined;
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const { subscribeFirebaseAuth, getCurrentFirebaseIdToken } = await loadFirebaseAuth();
-        if (cancelled) {
-          return;
-        }
-
-        unsubscribe = subscribeFirebaseAuth(async (signedIn) => {
-          if (!signedIn || completingRef.current) {
-            return;
-          }
-
-          try {
-            const idToken = await getCurrentFirebaseIdToken();
-            if (idToken) {
-              setInfo('Code verified automatically. Signing you in…');
-              await completeWithIdToken(idToken);
-            }
-          } catch (err) {
-            setError(mapFirebaseError(err));
-          }
-        });
-      } catch (err) {
-        if (!cancelled) {
-          setError(mapFirebaseError(err));
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      unsubscribe?.();
-    };
-  }, [step, completeWithIdToken]);
-
   async function handleUseMyNumber() {
     setError('');
     setHintLoading(true);
@@ -248,11 +151,6 @@ export default function SignInScreen() {
     setInfo('');
     completingRef.current = false;
 
-    if (isExpoGo()) {
-      setError(EXPO_GO_PHONE_AUTH_MSG);
-      return;
-    }
-
     const normalized = toE164Phone(phoneInput);
     if (!normalized) {
       setError('Enter a valid 10-digit Indian mobile number.');
@@ -262,21 +160,37 @@ export default function SignInScreen() {
     setLoading(true);
 
     try {
-      const { sendFirebasePhoneOtp, getCurrentFirebaseIdToken } = await loadFirebaseAuth();
-      confirmationRef.current = await sendFirebasePhoneOtp(normalized);
+      await sendPhoneOtp(normalized);
       setE164Phone(normalized);
+      setOtp('');
       setStep('otp');
-      setInfo('We sent a 6-digit code to your phone.');
-
-      const existingToken = await getCurrentFirebaseIdToken();
-      if (existingToken) {
-        setInfo('Code verified automatically. Signing you in…');
-        await completeWithIdToken(existingToken);
-      }
+      setResendIn(RESEND_COOLDOWN_SECONDS);
+      setInfo(`We sent a ${OTP_LENGTH}-digit code to your phone.`);
     } catch (err) {
-      setError(mapFirebaseError(err));
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    if (resendIn > 0 || resending || loading || !e164Phone) {
+      return;
+    }
+
+    setError('');
+    setInfo('');
+    setResending(true);
+
+    try {
+      await resendPhoneOtp(e164Phone);
+      setOtp('');
+      setResendIn(RESEND_COOLDOWN_SECONDS);
+      setInfo('We sent a new code to your phone.');
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setResending(false);
     }
   }
 
@@ -285,55 +199,29 @@ export default function SignInScreen() {
     setError('');
     setInfo('');
 
-    if (isExpoGo()) {
-      setError(EXPO_GO_PHONE_AUTH_MSG);
+    if (code.length !== OTP_LENGTH || !/^\d+$/.test(code)) {
+      setError(`Enter the ${OTP_LENGTH}-digit verification code.`);
       return;
     }
 
+    if (completingRef.current) {
+      return;
+    }
+
+    completingRef.current = true;
+    setLoading(true);
+    setInfo('Verifying…');
+
     try {
-      const {
-        confirmFirebasePhoneOtp,
-        getCurrentFirebaseIdToken,
-      } = await loadFirebaseAuth();
-
-      if (!confirmationRef.current) {
-        const existingToken = await getCurrentFirebaseIdToken();
-        if (existingToken) {
-          await completeWithIdToken(existingToken);
-          return;
-        }
-
-        setError('Request a new OTP and try again.');
-        setStep('phone');
-        return;
-      }
-
-      if (!/^\d{6}$/.test(code)) {
-        setError('Enter the 6-digit verification code.');
-        return;
-      }
-
-      setLoading(true);
-
-      try {
-        const idToken = await confirmFirebasePhoneOtp(confirmationRef.current, code);
-        await completeWithIdToken(idToken);
-      } catch (err) {
-        try {
-          const existingToken = await getCurrentFirebaseIdToken();
-          if (existingToken) {
-            await completeWithIdToken(existingToken);
-            return;
-          }
-        } catch {
-          // Fall through to original error.
-        }
-        setError(mapFirebaseError(err));
-      } finally {
-        setLoading(false);
-      }
+      const signedInUser = await signInWithPhone(e164Phone, code);
+      setInfo('Verified. Signing you in…');
+      navigateAfterAuth(signedInUser);
     } catch (err) {
-      setError(mapFirebaseError(err));
+      setInfo('');
+      setError(errorMessage(err));
+      completingRef.current = false;
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -342,7 +230,7 @@ export default function SignInScreen() {
     setOtp('');
     setError('');
     setInfo('');
-    confirmationRef.current = null;
+    setResendIn(0);
     completingRef.current = false;
   }
 
@@ -458,10 +346,11 @@ export default function SignInScreen() {
                   <ScrollIntoView>
                     <OtpBoxes
                       value={otp}
+                      length={OTP_LENGTH}
                       onChangeText={(value) => {
-                        const digits = value.replace(/\D/g, '').slice(0, 6);
+                        const digits = value.replace(/\D/g, '').slice(0, OTP_LENGTH);
                         setOtp(digits);
-                        if (digits.length === 6 && !loading && !completingRef.current) {
+                        if (digits.length === OTP_LENGTH && !loading && !completingRef.current) {
                           void handleVerifyOtp(digits);
                         }
                       }}
@@ -473,9 +362,23 @@ export default function SignInScreen() {
                   <PrimaryButton
                     label="Verify & continue"
                     onPress={() => void handleVerifyOtp()}
-                    disabled={otp.length !== 6}
+                    disabled={otp.length !== OTP_LENGTH}
                     loading={loading}
                   />
+
+                  <Pressable
+                    onPress={() => void handleResendOtp()}
+                    disabled={resendIn > 0 || resending || loading}
+                    style={styles.secondaryLinkWrap}
+                  >
+                    {resending ? (
+                      <ActivityIndicator color={colors.accent} size="small" />
+                    ) : (
+                      <Text style={resendIn > 0 ? styles.secondaryLink : styles.link}>
+                        {resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
+                      </Text>
+                    )}
+                  </Pressable>
 
                   <Pressable onPress={resetToPhoneStep} style={styles.secondaryLinkWrap}>
                     <Text style={styles.secondaryLink}>← Use a different number</Text>

@@ -42,6 +42,7 @@ type PublishOverlayProps = {
   visible: boolean;
   images: LocalImage[];
   succeeded?: boolean;
+  successSubtitle?: string;
 };
 
 function SoftOrb({ style }: { style?: StyleProp<ViewStyle> }) {
@@ -178,7 +179,12 @@ function SuccessMark({ active }: { active: boolean }) {
   );
 }
 
-export function PublishOverlay({ visible, images, succeeded = false }: PublishOverlayProps) {
+export function PublishOverlay({
+  visible,
+  images,
+  succeeded = false,
+  successSubtitle = 'Your surplus is now live',
+}: PublishOverlayProps) {
   const [captionIndex, setCaptionIndex] = useState(0);
   const hero = images[0];
   const extras = images.slice(1, 4);
@@ -252,7 +258,7 @@ export function PublishOverlay({ visible, images, succeeded = false }: PublishOv
           {succeeded ? (
             <CaptionBlock
               title="Listing published"
-              subtitle="Your surplus is now live"
+              subtitle={successSubtitle}
               badgeLabel="Done"
               badgeIcon="checkmark-circle"
               stageKey="success"

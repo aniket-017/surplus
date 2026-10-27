@@ -1,29 +1,35 @@
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
-import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { SellChooserSheet } from '@/src/components/seller/SellChooserSheet';
 import { colors } from '@/src/constants/theme';
 
 const BUTTON_SIZE = 56;
 
 export function SellTabButton({ style }: BottomTabBarButtonProps) {
+  const [chooserOpen, setChooserOpen] = useState(false);
+
   return (
-    <Pressable
-      style={[style, styles.container]}
-      onPress={() => router.push('/(seller)/add-product')}
-      accessibilityRole="button"
-      accessibilityLabel="Sell a new item"
-    >
-      {({ pressed }) => (
-        <>
-          <View style={[styles.circle, pressed && styles.circlePressed]}>
-            <Ionicons name="add" size={30} color={colors.white} />
-          </View>
-          <Text style={styles.label}>Sell</Text>
-        </>
-      )}
-    </Pressable>
+    <>
+      <Pressable
+        style={[style, styles.container]}
+        onPress={() => setChooserOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Sell a product or offer a service"
+      >
+        {({ pressed }) => (
+          <>
+            <View style={[styles.circle, pressed && styles.circlePressed]}>
+              <Ionicons name="add" size={30} color={colors.white} />
+            </View>
+            <Text style={styles.label}>Sell</Text>
+          </>
+        )}
+      </Pressable>
+      <SellChooserSheet visible={chooserOpen} onClose={() => setChooserOpen(false)} />
+    </>
   );
 }
 

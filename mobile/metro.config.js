@@ -12,11 +12,7 @@ config.resolver.extraNodeModules = {
   react: reactRoot,
 };
 
-const nativeOnlyModules = [
-  'react-native-maps',
-  '@react-native-firebase/app',
-  '@react-native-firebase/auth',
-];
+const nativeOnlyModules = ['react-native-maps'];
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   // C:\surplus junction: Expo passes a relative path like

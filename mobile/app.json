@@ -82,16 +82,13 @@
           "defaultChannel": "messages"
         }
       ],
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
       "./plugins/withMapsNonModularHeaders",
       "./plugins/withNotificationServiceExtension",
       [
         "expo-build-properties",
         {
           "ios": {
-            "useFrameworks": "static",
-            "forceStaticLinking": ["RNFBApp", "RNFBAuth"]
+            "useFrameworks": "static"
           }
         }
       ]

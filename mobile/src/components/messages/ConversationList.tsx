@@ -45,6 +45,7 @@ type ConversationRowProps = {
 const ConversationRow = memo(function ConversationRow({ item, role }: ConversationRowProps) {
   const title = getRowTitle(item);
   const productImage = item.product?.images?.[0];
+  const isService = item.product?.listingType === 'service';
   const unread = (item.unreadCount || 0) > 0;
 
   return (
@@ -58,13 +59,24 @@ const ConversationRow = memo(function ConversationRow({ item, role }: Conversati
         }
       }}
     >
-      {productImage ? (
-        <Image source={{ uri: getImageUrl(productImage) }} style={styles.avatar} contentFit="cover" />
-      ) : (
-        <View style={[styles.avatar, styles.avatarFallback]}>
-          <Ionicons name="cube-outline" size={22} color={colors.muted} />
-        </View>
-      )}
+      <View>
+        {productImage ? (
+          <Image source={{ uri: getImageUrl(productImage) }} style={styles.avatar} contentFit="cover" />
+        ) : (
+          <View style={[styles.avatar, styles.avatarFallback]}>
+            <Ionicons
+              name={isService ? 'hammer-outline' : 'cube-outline'}
+              size={22}
+              color={colors.muted}
+            />
+          </View>
+        )}
+        {isService ? (
+          <View style={styles.serviceTag}>
+            <Text style={styles.serviceTagText}>SERVICE</Text>
+          </View>
+        ) : null}
+      </View>
       <View style={styles.content}>
         <View style={styles.topRow}>
           <Text style={[styles.name, unread && styles.nameUnread]} numberOfLines={1}>
@@ -222,6 +234,23 @@ const styles = StyleSheet.create({
   avatarFallback: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  serviceTag: {
+    position: 'absolute',
+    bottom: -4,
+    alignSelf: 'center',
+    backgroundColor: '#EA580C',
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderWidth: 1.5,
+    borderColor: colors.white,
+  },
+  serviceTagText: {
+    color: colors.white,
+    fontSize: 7.5,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   content: {
     flex: 1,

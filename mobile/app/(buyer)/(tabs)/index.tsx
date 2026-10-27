@@ -1,6 +1,7 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   RefreshControl,
@@ -10,8 +11,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { BuyerHomeHero } from '@/src/components/buyer/BuyerHomeHero';
+import { BuyerJobWorkBanner } from '@/src/components/buyer/BuyerJobWorkBanner';
 import { BuyerMachinesBanner } from '@/src/components/buyer/BuyerMachinesBanner';
 import { BuyerSearchBar } from '@/src/components/buyer/BuyerSearchBar';
 import { CategoryCarousel } from '@/src/components/buyer/CategoryCarousel';
@@ -22,18 +25,25 @@ import {
   type BrowseFilters,
 } from '@/src/components/buyer/FilterModal';
 import { HomeListingsSkeleton } from '@/src/components/buyer/HomeListingsSkeleton';
+import { HomeModeSwitch, type HomeMode } from '@/src/components/buyer/HomeModeSwitch';
 import { ListingFilterChips } from '@/src/components/buyer/ListingFilterChips';
 import { ListingsMapView } from '@/src/components/buyer/ListingsMapView';
 import { ProductListingCard } from '@/src/components/buyer/ProductListingCard';
+import { ServiceListingCard } from '@/src/components/buyer/ServiceListingCard';
+import { ServicesFeedHeader } from '@/src/components/buyer/ServicesFeedHeader';
 import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { useBuyerLocation } from '@/src/context/LocationContext';
 import { productCardWidth } from '@/src/constants/layout';
 import { colors, fonts, spacing } from '@/src/constants/theme';
 import { useBreakpoint } from '@/src/hooks/useBreakpoint';
+import { useServicesFeed } from '@/src/hooks/useServicesFeed';
 import { getSavedListings, toggleSavedListing } from '@/src/lib/conversationsApi';
 import { browseProducts, getProductCategories } from '@/src/lib/productsApi';
 import type { BrowseSort, ProductCategory, ProductListing } from '@/src/types/product';
+import type { ServiceListing } from '@/src/types/service';
+
+type HomeListItem = ProductListing | ServiceListing;
 
 const HORIZONTAL_PADDING = 20;
 const GRID_GAP = spacing.sm;
@@ -57,6 +67,17 @@ export default function BuyerHomeTab() {
   const { location } = useBuyerLocation();
   const { width, columns } = useBreakpoint();
   const cardWidth = productCardWidth(width, columns, HORIZONTAL_PADDING, GRID_GAP);
+  const params = useLocalSearchParams<{ mode?: string }>();
+
+  const [mode, setMode] = useState<HomeMode>(params.mode === 'services' ? 'services' : 'products');
+  const isServicesMode = mode === 'services';
+  const servicesFeed = useServicesFeed({ enabled: isServicesMode });
+
+  useEffect(() => {
+    if (params.mode === 'services' || params.mode === 'products') {
+      setMode(params.mode);
+    }
+  }, [params.mode]);
 
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -178,8 +199,8 @@ export default function BuyerHomeTab() {
 
   useFocusEffect(
     useCallback(() => {
-      loadFeed();
-    }, [loadFeed]),
+      if (mode === 'products') loadFeed();
+    }, [loadFeed, mode]),
   );
 
   function handleCategorySelect(category: string) {
@@ -218,17 +239,31 @@ export default function BuyerHomeTab() {
     });
   }
 
+  function openService(serviceId: string) {
+    router.push({
+      pathname: '/(buyer)/services/[id]',
+      params: { id: serviceId },
+    });
+  }
+
   const mapFallbackCenter =
     typeof user?.address?.latitude === 'number' && typeof user?.address?.longitude === 'number'
       ? { latitude: user.address.latitude, longitude: user.address.longitude }
       : null;
   const isMapView = viewMode === 'map';
 
-  const listHeader = useMemo(
+  const modeHeader = (
+    <>
+      <BuyerHomeHero topInset={insets.top} horizontalPadding={HORIZONTAL_PADDING} mode={mode} />
+      <View style={styles.switchWrap}>
+        <HomeModeSwitch mode={mode} onChange={setMode} />
+      </View>
+    </>
+  );
+
+  const productHeader = useMemo(
     () => (
-      <View>
-        <BuyerHomeHero topInset={insets.top} horizontalPadding={HORIZONTAL_PADDING} />
-        <View style={styles.headerBody}>
+      <View style={styles.headerBody}>
           <BuyerSearchBar
             value={search}
             onChangeText={setSearch}
@@ -246,15 +281,13 @@ export default function BuyerHomeTab() {
             activeFilter={activeFilter}
             onChangeFilter={handleFilterChange}
             mapActive={isMapView}
-            onToggleMap={() => setViewMode((mode) => (mode === 'map' ? 'grid' : 'map'))}
+            onToggleMap={() => setViewMode((current) => (current === 'map' ? 'grid' : 'map'))}
             onSeeAll={openExplore}
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
-        </View>
       </View>
     ),
     [
-      insets.top,
       search,
       categories,
       activeFilter,
@@ -266,21 +299,68 @@ export default function BuyerHomeTab() {
     ],
   );
 
+  const servicesHeader = (
+    <View style={styles.headerBody}>
+      <ServicesFeedHeader
+        feed={servicesFeed}
+        horizontalPadding={HORIZONTAL_PADDING}
+        banner={<BuyerJobWorkBanner onPress={() => servicesFeed.setSortChip('nearby')} />}
+      />
+    </View>
+  );
+
+  const servicesEmpty = servicesFeed.loading ? (
+    <View style={styles.emptyState}>
+      <ActivityIndicator color={colors.accent} />
+    </View>
+  ) : (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="construct-outline" size={26} color="#EA580C" />
+      </View>
+      <Text style={styles.emptyTitle}>No services found</Text>
+      <Text style={styles.emptyText}>
+        Try another category or clear your search to find nearby workshops.
+      </Text>
+    </View>
+  );
+
+  // One list for both modes keeps the header (and the switch animation) mounted across switches.
+  const listData: HomeListItem[] = isServicesMode
+    ? servicesFeed.services
+    : isMapView
+      ? []
+      : products;
+
   return (
     <View style={styles.screen}>
       <ScreenContent style={styles.screenContent}>
-        <FlatList
+        <FlatList<HomeListItem>
           key={columns}
-          data={isMapView ? [] : products}
+          data={listData}
           keyExtractor={(item) => item.id}
           numColumns={columns}
-          columnWrapperStyle={styles.columnWrapper}
+          columnWrapperStyle={columns > 1 ? styles.columnWrapper : undefined}
           contentContainerStyle={styles.listContent}
-          ListHeaderComponent={listHeader}
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View>
+              {modeHeader}
+              {isServicesMode ? servicesHeader : productHeader}
+            </View>
+          }
           renderItem={({ item }) => {
-            const card = (
+            const card = isServicesMode ? (
+              <ServiceListingCard
+                service={item as ServiceListing}
+                width={cardWidth}
+                saved={servicesFeed.savedIds.has(item.id)}
+                onToggleSave={() => void servicesFeed.toggleSave(item.id)}
+                onPress={() => openService(item.id)}
+              />
+            ) : (
               <ProductListingCard
-                product={item}
+                product={item as ProductListing}
                 width={cardWidth}
                 saved={savedIds.has(item.id)}
                 onToggleSave={() => void handleToggleSave(item.id)}
@@ -296,7 +376,9 @@ export default function BuyerHomeTab() {
           }}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              {isMapView ? (
+              {isServicesMode ? (
+                servicesEmpty
+              ) : isMapView ? (
                 <ListingsMapView
                   products={products}
                   loading={loading}
@@ -317,8 +399,8 @@ export default function BuyerHomeTab() {
           }
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => loadFeed(true)}
+              refreshing={isServicesMode ? servicesFeed.refreshing : refreshing}
+              onRefresh={() => (isServicesMode ? void servicesFeed.load(true) : loadFeed(true))}
               tintColor={colors.accent}
               colors={[colors.accent]}
               progressViewOffset={insets.top}
@@ -355,6 +437,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: HORIZONTAL_PADDING,
     gap: spacing.md,
     paddingBottom: spacing.sm,
+  },
+  switchWrap: {
+    paddingHorizontal: HORIZONTAL_PADDING,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.md,
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(234, 88, 12, 0.1)',
+    marginBottom: spacing.xs,
   },
   columnWrapper: {
     justifyContent: 'space-between',

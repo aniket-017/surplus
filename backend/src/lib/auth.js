@@ -27,7 +27,6 @@ const userSelect = {
   id: true,
   email: true,
   phone: true,
-  firebaseUid: true,
   name: true,
   avatarUrl: true,
   role: true,

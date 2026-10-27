@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { formatProductListing, isActiveListing } from "../lib/product.js";
+import { formatServiceListing } from "../lib/service.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -27,13 +28,23 @@ router.get("/", requireAuth, async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    const products = await Promise.all(
-      saved
-        .filter((item) => item.product && isActiveListing(item.product))
-        .map((item) => formatProductListing(item.product, item.product.seller)),
-    );
+    const active = saved.filter((item) => item.product && isActiveListing(item.product));
+    const isService = (item) => item.product.listingType === "SERVICE";
 
-    res.json({ products });
+    const [products, services] = await Promise.all([
+      Promise.all(
+        active
+          .filter((item) => !isService(item))
+          .map((item) => formatProductListing(item.product, item.product.seller)),
+      ),
+      Promise.all(
+        active
+          .filter(isService)
+          .map((item) => formatServiceListing(item.product, item.product.seller)),
+      ),
+    ]);
+
+    res.json({ products, services });
   } catch (error) {
     console.error("List saved listings failed:", error);
     res.status(500).json({ error: "Failed to fetch saved listings" });

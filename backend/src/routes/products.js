@@ -7,12 +7,10 @@ import {
   listSubCategoriesForCategory,
 } from "../lib/category.js";
 import { analyzeProductImages } from "../lib/gemini.js";
-import { optimizeProductImage } from "../lib/imageOptimize.js";
 import {
   deleteProductImages as deleteProductImagesFromS3,
   uploadProductImages as uploadProductImagesToS3,
 } from "../lib/s3.js";
-import { uploadProductImages } from "../lib/upload.js";
 import {
   ACTIVE_LISTING_WHERE,
   buildBrowseOrderBy,
@@ -26,47 +24,19 @@ import {
   parseCondition,
   parseListingStatus,
   parseProductPayload,
+  PRODUCT_LISTING_WHERE,
   withSellerCoordinates,
 } from "../lib/product.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireSeller } from "../middleware/requireSeller.js";
-import { createLogger, describeUploadFile } from "../lib/logger.js";
+import {
+  handleListingImageUpload as handleUpload,
+  optimizeListingImages as optimizeUploadedImages,
+} from "../middleware/listingImages.js";
+import { createLogger } from "../lib/logger.js";
 
 const router = Router();
 const analyzeLog = createLogger("product-analyze");
-
-function handleUpload(req, res, next) {
-  uploadProductImages(req, res, (error) => {
-    if (error) {
-      analyzeLog.error("Multer upload failed", error);
-      return res.status(400).json({ error: error.message || "Invalid image upload" });
-    }
-
-    analyzeLog.info("Images received by multer", {
-      count: req.files?.length ?? 0,
-      images: req.files?.map((file, index) => describeUploadFile(file, index)) ?? [],
-    });
-    next();
-  });
-}
-
-async function optimizeUploadedImages(req, res, next) {
-  try {
-    if (req.files?.length) {
-      req.files = await Promise.all(
-        req.files.map((file, index) => optimizeProductImage(file, index)),
-      );
-      analyzeLog.info("Images ready after optimization", {
-        count: req.files.length,
-        images: req.files.map((file, index) => describeUploadFile(file, index)),
-      });
-    }
-    next();
-  } catch (error) {
-    analyzeLog.error("Image optimization middleware failed", error);
-    res.status(400).json({ error: error.message || "Failed to process images" });
-  }
-}
 
 router.post("/analyze", requireSeller, (req, res, next) => {
   analyzeLog.info("Analyze request hitting upload middleware", {
@@ -152,7 +122,7 @@ router.post("/", requireSeller, handleUpload, optimizeUploadedImages, async (req
 router.get("/mine", requireSeller, async (req, res) => {
   try {
     const products = await prisma.product.findMany({
-      where: { sellerId: req.sellerId },
+      where: { sellerId: req.sellerId, ...PRODUCT_LISTING_WHERE },
       orderBy: { createdAt: "desc" },
     });
 
@@ -366,7 +336,7 @@ router.get("/browse/:id", requireAuth, async (req, res) => {
       },
     });
 
-    if (!product || !isActiveListing(product)) {
+    if (!product || !isActiveListing(product) || product.listingType === "SERVICE") {
       return res.status(404).json({ error: "Product not found" });
     }
 
@@ -388,7 +358,7 @@ router.get("/browse/:id", requireAuth, async (req, res) => {
 router.get("/:id", requireSeller, async (req, res) => {
   try {
     const product = await prisma.product.findFirst({
-      where: { id: req.params.id, sellerId: req.sellerId },
+      where: { id: req.params.id, sellerId: req.sellerId, ...PRODUCT_LISTING_WHERE },
     });
 
     if (!product) {
@@ -405,7 +375,7 @@ router.get("/:id", requireSeller, async (req, res) => {
 router.patch("/:id/status", requireSeller, async (req, res) => {
   try {
     const existing = await prisma.product.findFirst({
-      where: { id: req.params.id, sellerId: req.sellerId },
+      where: { id: req.params.id, sellerId: req.sellerId, ...PRODUCT_LISTING_WHERE },
     });
 
     if (!existing) {
@@ -436,7 +406,7 @@ router.patch("/:id/status", requireSeller, async (req, res) => {
 router.patch("/:id", requireSeller, handleUpload, optimizeUploadedImages, async (req, res) => {
   try {
     const existing = await prisma.product.findFirst({
-      where: { id: req.params.id, sellerId: req.sellerId },
+      where: { id: req.params.id, sellerId: req.sellerId, ...PRODUCT_LISTING_WHERE },
     });
 
     if (!existing) {
@@ -491,7 +461,7 @@ router.patch("/:id", requireSeller, handleUpload, optimizeUploadedImages, async 
 router.delete("/:id", requireSeller, async (req, res) => {
   try {
     const existing = await prisma.product.findFirst({
-      where: { id: req.params.id, sellerId: req.sellerId },
+      where: { id: req.params.id, sellerId: req.sellerId, ...PRODUCT_LISTING_WHERE },
     });
 
     if (!existing) {

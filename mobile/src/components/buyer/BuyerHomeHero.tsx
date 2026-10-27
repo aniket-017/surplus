@@ -16,11 +16,27 @@ import { formatBuyerLocation } from '@/src/types/location';
 type BuyerHomeHeroProps = {
   topInset: number;
   horizontalPadding: number;
+  mode?: 'products' | 'services';
 };
 
 const HERO_IMAGE = require('@/assets/images/buyer/hero-shop.jpg');
+const SERVICE_ORANGE = '#EA580C';
 
-export function BuyerHomeHero({ topInset, horizontalPadding }: BuyerHomeHeroProps) {
+const HERO_COPY = {
+  products: {
+    headline: 'Industrial Surplus,',
+    subcopy: 'Verified sellers across Pune MIDC.',
+    accent: colors.accent,
+  },
+  services: {
+    headline: 'Skilled Workshops,',
+    subcopy: 'CNC, welding and fabrication workshops near you.',
+    accent: SERVICE_ORANGE,
+  },
+} as const;
+
+export function BuyerHomeHero({ topInset, horizontalPadding, mode = 'products' }: BuyerHomeHeroProps) {
+  const copy = HERO_COPY[mode];
   const { user } = useAuth();
   const { location } = useBuyerLocation();
   const unreadCount = useAdminNotificationUnreadCount();
@@ -78,10 +94,11 @@ export function BuyerHomeHero({ topInset, horizontalPadding }: BuyerHomeHeroProp
         <View style={styles.headlineRow}>
           <View style={styles.headlineBlock}>
             <Text style={styles.headline}>
-              Industrial Surplus,{'\n'}
-              <Text style={styles.headlineAccent}>Right Next Door</Text>
+              {copy.headline}
+              {'\n'}
+              <Text style={[styles.headlineAccent, { color: copy.accent }]}>Right Next Door</Text>
             </Text>
-            <Text style={styles.subcopy}>Verified sellers across Pune MIDC.</Text>
+            <Text style={styles.subcopy}>{copy.subcopy}</Text>
           </View>
 
           <Pressable

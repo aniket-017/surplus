@@ -18,6 +18,10 @@ enum PriceType {
   PER_KG
   PER_UNIT
   PER_LOT
+  PER_HOUR
+  PER_PIECE
+  PER_JOB
+  QUOTE
 }
 
 enum ProductCondition {
@@ -30,7 +34,19 @@ enum ProductCondition {
 enum ListingStatus {
   ACTIVE
   SOLD
+  PAUSED
   DELETED
+}
+
+enum ListingType {
+  PRODUCT
+  SERVICE
+}
+
+enum ServiceMode {
+  WORKSHOP
+  ONSITE
+  BOTH
 }
 
 enum ReportReason {
@@ -84,6 +100,14 @@ type ProductLocation {
   longitude Float?
 }
 
+type ServiceDetails {
+  capabilities    String[]
+  experienceYears Int?        @map("experience_years")
+  serviceMode     ServiceMode @map("service_mode")
+  turnaround      String?
+  minimumCharge   Float?      @map("minimum_charge")
+}
+
 type UserAddress {
   address String?
   city    String
@@ -98,7 +122,6 @@ model User {
   googleId    String?   @map("google_id")
   email       String?
   phone       String?
-  firebaseUid String?   @map("firebase_uid")
   name        String?
   avatarUrl   String?   @map("avatar_url")
   role        UserRole?
@@ -127,7 +150,6 @@ model User {
 
   @@index([email])
   @@index([phone])
-  @@index([firebaseUid])
   @@index([googleId])
   @@index([isDeleted])
   @@index([isSuperAdmin])
@@ -176,18 +198,22 @@ model Product {
   sellerId     String             @map("seller_id") @db.ObjectId
   seller       User               @relation(fields: [sellerId], references: [id])
 
+  listingType  ListingType        @default(PRODUCT) @map("listing_type")
+
   title        String
   category     String
   subCategory  String             @map("sub_category")
   description  String
 
-  quantity     Float
-  quantityUnit String             @map("quantity_unit")
+  quantity     Float?
+  quantityUnit String?            @map("quantity_unit")
 
   price        Float
   priceType    PriceType          @map("price_type")
-  condition    ProductCondition
+  condition    ProductCondition?
   listingStatus ListingStatus     @default(ACTIVE) @map("listing_status")
+
+  serviceDetails ServiceDetails?  @map("service_details")
 
   images       String[]
 
@@ -206,6 +232,7 @@ model Product {
   @@index([sellerId])
   @@index([category, subCategory])
   @@index([listingStatus])
+  @@index([listingType, listingStatus])
   @@map("products")
 }
 

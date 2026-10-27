@@ -25,14 +25,24 @@ export function getAuthMethods() {
   return apiFetch('/api/auth/methods')
 }
 
-export function getFirebaseWebConfig() {
-  return apiFetch('/api/auth/firebase-config')
+export function sendPhoneOtp(phone) {
+  return apiFetch('/api/auth/phone/send', {
+    method: 'POST',
+    body: JSON.stringify({ phone }),
+  })
 }
 
-export function verifyFirebasePhone(idToken) {
-  return apiFetch('/api/auth/firebase/phone', {
+export function resendPhoneOtp(phone) {
+  return apiFetch('/api/auth/phone/resend', {
     method: 'POST',
-    body: JSON.stringify({ idToken }),
+    body: JSON.stringify({ phone }),
+  })
+}
+
+export function verifyPhoneOtp(phone, otp) {
+  return apiFetch('/api/auth/phone/verify', {
+    method: 'POST',
+    body: JSON.stringify({ phone, otp }),
   })
 }
 
@@ -140,9 +150,10 @@ export function clearSuperadminUserChats(userId) {
   })
 }
 
-export function getSuperadminProducts({ page = 1, limit = 20, q = '' } = {}) {
+export function getSuperadminProducts({ page = 1, limit = 20, q = '', listingType = '' } = {}) {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   if (q) params.set('q', q)
+  if (listingType) params.set('listingType', listingType)
   return apiFetch(`/api/superadmin/products?${params}`)
 }
 

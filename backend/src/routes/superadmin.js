@@ -4,7 +4,6 @@ import { prisma } from "../lib/prisma.js";
 import { setAuthCookie, formatUser, userSelect } from "../lib/auth.js";
 import { sendOtpEmail } from "../lib/mail.js";
 import { generateOtp, hashOtp, getOtpExpiry, isValidEmail } from "../lib/otp.js";
-import { getFirebaseAuth, getFirebaseErrorCode, isFirebaseAuthConfigured } from "../lib/firebaseAdmin.js";
 import {
   deleteProductImages as deleteProductImagesFromS3,
   getReadableImageUrl,
@@ -97,20 +96,6 @@ async function deleteProductWithRelations(productId) {
   return product;
 }
 
-async function deleteFirebaseUserIfPresent(firebaseUid) {
-  if (!firebaseUid || !isFirebaseAuthConfigured()) {
-    return;
-  }
-
-  try {
-    await getFirebaseAuth().deleteUser(firebaseUid);
-  } catch (error) {
-    if (getFirebaseErrorCode(error) !== "auth/user-not-found") {
-      console.error("Failed to delete Firebase user:", error);
-    }
-  }
-}
-
 async function deleteUserCompletely(user) {
   const products = await prisma.product.findMany({
     where: { sellerId: user.id },
@@ -155,7 +140,6 @@ async function deleteUserCompletely(user) {
   }
 
   await prisma.user.delete({ where: { id: user.id } });
-  await deleteFirebaseUserIfPresent(user.firebaseUid);
 }
 
 if (isOtpAuthEnabled()) {
@@ -284,6 +268,7 @@ router.get("/overview", async (_req, res) => {
       deleted,
       superadmins,
       products,
+      services,
       conversations,
       messages,
       openReports,
@@ -296,7 +281,8 @@ router.get("/overview", async (_req, res) => {
       prisma.user.count({ where: { isBanned: true } }),
       prisma.user.count({ where: { isDeleted: true } }),
       prisma.user.count({ where: { isSuperAdmin: true } }),
-      prisma.product.count(),
+      prisma.product.count({ where: { listingType: "PRODUCT" } }),
+      prisma.product.count({ where: { listingType: "SERVICE" } }),
       prisma.conversation.count(),
       prisma.message.count(),
       prisma.listingReport.count({ where: { status: "OPEN" } }),
@@ -324,6 +310,7 @@ router.get("/overview", async (_req, res) => {
           title: true,
           category: true,
           price: true,
+          listingType: true,
           createdAt: true,
           seller: {
             select: { id: true, email: true, name: true },
@@ -341,6 +328,7 @@ router.get("/overview", async (_req, res) => {
         deleted,
         superadmins,
         products,
+        services,
         conversations,
         messages,
         openReports,
@@ -503,7 +491,6 @@ router.delete("/users/:id", async (req, res) => {
       select: {
         id: true,
         email: true,
-        firebaseUid: true,
         isSuperAdmin: true,
       },
     });
@@ -767,12 +754,17 @@ router.get("/products", async (req, res) => {
   try {
     const { page, limit, skip } = parsePagination(req.query);
     const q = String(req.query.q || "").trim();
+    const listingType = String(req.query.listingType || "").trim().toUpperCase();
 
     const where = q
       ? {
           OR: [{ title: { contains: q } }, { category: { contains: q } }, { seller: { email: { contains: q } } }],
         }
       : {};
+
+    if (listingType === "PRODUCT" || listingType === "SERVICE") {
+      where.listingType = listingType;
+    }
 
     const [total, products] = await Promise.all([
       prisma.product.count({ where }),
@@ -792,6 +784,7 @@ router.get("/products", async (req, res) => {
           quantityUnit: true,
           viewCount: true,
           listingStatus: true,
+          listingType: true,
           createdAt: true,
           seller: {
             select: { id: true, email: true, name: true },

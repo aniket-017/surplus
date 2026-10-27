@@ -79,6 +79,10 @@ export default function OverviewPage() {
           <div className="dash-stat-label">Products</div>
         </div>
         <div className="dash-stat">
+          <div className="dash-stat-value">{stats.services ?? 0}</div>
+          <div className="dash-stat-label">Services</div>
+        </div>
+        <div className="dash-stat">
           <div className="dash-stat-value">{stats.conversations ?? 0}</div>
           <div className="dash-stat-label">Conversations</div>
         </div>

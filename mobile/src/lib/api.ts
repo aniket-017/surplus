@@ -39,10 +39,24 @@ export async function apiFetch<T>(
   return parseResponse<T>(res);
 }
 
-export function verifyFirebasePhone(idToken: string) {
-  return apiFetch<{ message: string; token: string; user: User }>('/api/auth/firebase/phone', {
+export function sendPhoneOtp(phone: string) {
+  return apiFetch<{ message: string }>('/api/auth/phone/send', {
     method: 'POST',
-    body: JSON.stringify({ idToken }),
+    body: JSON.stringify({ phone }),
+  });
+}
+
+export function resendPhoneOtp(phone: string) {
+  return apiFetch<{ message: string }>('/api/auth/phone/resend', {
+    method: 'POST',
+    body: JSON.stringify({ phone }),
+  });
+}
+
+export function verifyPhoneOtp(phone: string, otp: string) {
+  return apiFetch<{ message: string; token: string; user: User }>('/api/auth/phone/verify', {
+    method: 'POST',
+    body: JSON.stringify({ phone, otp }),
   });
 }
 

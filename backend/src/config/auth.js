@@ -1,4 +1,4 @@
-import { isFirebaseAuthConfigured } from "../lib/firebaseAdmin.js";
+import { isMsg91Configured } from "../lib/msg91.js";
 
 export function isGoogleAuthEnabled() {
   return !!(
@@ -17,41 +17,13 @@ export function isOtpAuthEnabled() {
 }
 
 export function isPhoneAuthEnabled() {
-  return isFirebaseAuthConfigured();
-}
-
-/** Public Firebase Web client config (safe to expose to the browser). */
-export function getFirebaseWebConfig() {
-  const apiKey = process.env.FIREBASE_WEB_API_KEY?.trim() || "";
-  const authDomain = process.env.FIREBASE_WEB_AUTH_DOMAIN?.trim() || "";
-  const projectId =
-    process.env.FIREBASE_WEB_PROJECT_ID?.trim() ||
-    process.env.FIREBASE_PROJECT_ID?.trim() ||
-    "";
-  const appId = process.env.FIREBASE_WEB_APP_ID?.trim() || "";
-  const messagingSenderId = process.env.FIREBASE_WEB_MESSAGING_SENDER_ID?.trim() || "";
-
-  if (!apiKey || !authDomain || !projectId || !appId) {
-    return null;
-  }
-
-  return {
-    apiKey,
-    authDomain,
-    projectId,
-    appId,
-    ...(messagingSenderId ? { messagingSenderId } : {}),
-  };
-}
-
-export function isFirebaseWebConfigured() {
-  return Boolean(getFirebaseWebConfig());
+  return isMsg91Configured();
 }
 
 export function getAuthMethods() {
   return {
     google: isGoogleAuthEnabled(),
     otp: isOtpAuthEnabled(),
-    phone: isPhoneAuthEnabled() && isFirebaseWebConfigured(),
+    phone: isPhoneAuthEnabled(),
   };
 }

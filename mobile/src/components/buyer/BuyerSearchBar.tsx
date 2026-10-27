@@ -8,6 +8,7 @@ type BuyerSearchBarProps = {
   onChangeText: (value: string) => void;
   onFilterPress?: () => void;
   activeFilterCount?: number;
+  placeholder?: string;
 };
 
 export function BuyerSearchBar({
@@ -15,6 +16,7 @@ export function BuyerSearchBar({
   onChangeText,
   onFilterPress,
   activeFilterCount = 0,
+  placeholder = 'Search machines, scrap, motors...',
 }: BuyerSearchBarProps) {
   return (
     <View style={styles.container}>
@@ -23,7 +25,7 @@ export function BuyerSearchBar({
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
-        placeholder="Search machines, scrap, motors..."
+        placeholder={placeholder}
         placeholderTextColor={colors.muted}
         autoCapitalize="none"
         autoCorrect={false}

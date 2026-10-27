@@ -5,10 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { chatTheme } from '@/src/constants/chatTheme';
 import { colors, spacing } from '@/src/constants/theme';
 import { getImageUrl } from '@/src/lib/productsApi';
+import type { ListingType } from '@/src/types/product';
 
 type ChatHeaderProps = {
   otherParty: { name: string; avatarUrl: string | null } | null;
-  product: { id: string; title: string; images: string[] } | null;
+  product: { id: string; title: string; images: string[]; listingType?: ListingType } | null;
   onBack: () => void;
   onProductPress?: () => void;
 };
@@ -16,6 +17,7 @@ type ChatHeaderProps = {
 export function ChatHeader({ otherParty, product, onBack, onProductPress }: ChatHeaderProps) {
   const title = otherParty?.name || 'User';
   const productImage = product?.images?.[0];
+  const isService = product?.listingType === 'service';
 
   return (
     <View style={styles.header}>
@@ -28,13 +30,22 @@ export function ChatHeader({ otherParty, product, onBack, onProductPress }: Chat
           <Image source={{ uri: getImageUrl(productImage) }} style={styles.avatar} contentFit="cover" />
         ) : (
           <View style={styles.avatarFallback}>
-            <Ionicons name="cube-outline" size={22} color={colors.muted} />
+            <Ionicons
+              name={isService ? 'hammer-outline' : 'cube-outline'}
+              size={22}
+              color={colors.muted}
+            />
           </View>
         )}
         <View style={styles.textBlock}>
           <Text style={styles.name} numberOfLines={1}>
             {title}
           </Text>
+          {product?.title ? (
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {isService ? `Service · ${product.title}` : product.title}
+            </Text>
+          ) : null}
         </View>
       </Pressable>
 
@@ -95,6 +106,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,
+  },
+  subtitle: {
+    color: colors.muted,
+    fontSize: 12,
+    marginTop: 1,
   },
   productButton: {
     width: 36,

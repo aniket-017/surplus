@@ -7,6 +7,9 @@ export default function SellerLayout() {
       <Stack.Screen name="add-product" />
       <Stack.Screen name="edit-product/[id]" />
       <Stack.Screen name="products/[id]" />
+      <Stack.Screen name="add-service" />
+      <Stack.Screen name="edit-service/[id]" />
+      <Stack.Screen name="services/[id]" />
       <Stack.Screen name="messages/[id]" />
       <Stack.Screen name="notifications" />
     </Stack>

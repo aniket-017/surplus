@@ -1,7 +1,7 @@
 /**
  * Purge legacy email-login users (and their listings/messages).
  *
- * Targets users who have an email and no phone/firebaseUid auth,
+ * Targets users who have an email and no phone auth,
  * excluding superadmins. Phone-login users are left alone.
  *
  * Usage:
@@ -43,15 +43,14 @@ async function deleteProductWithRelations(productId) {
 }
 
 async function findEmailLoginUsers() {
-  // Email/Google-era accounts: have email, no Firebase phone identity.
+  // Email/Google-era accounts: have email, no phone identity.
   // Superadmins are always excluded.
-  // Filter in JS: Mongo docs may omit is_super_admin / phone / firebase_uid.
+  // Filter in JS: Mongo docs may omit is_super_admin / phone.
   const candidates = await prisma.user.findMany({
     select: {
       id: true,
       email: true,
       phone: true,
-      firebaseUid: true,
       name: true,
       googleId: true,
       role: true,
@@ -66,8 +65,7 @@ async function findEmailLoginUsers() {
       !u.isSuperAdmin &&
       typeof u.email === "string" &&
       u.email.trim().length > 0 &&
-      !u.phone &&
-      !u.firebaseUid,
+      !u.phone,
   );
 }
 

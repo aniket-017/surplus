@@ -15,7 +15,7 @@ import {
   logoutRequest,
   updateProfile as updateProfileRequest,
   updateRole,
-  verifyFirebasePhone,
+  verifyPhoneOtp,
 } from '@/src/lib/api';
 import { unregisterPushToken } from '@/src/lib/conversationsApi';
 import { clearStoredPushToken, loadStoredPushToken } from '@/src/lib/pushTokenStorage';
@@ -27,7 +27,7 @@ type AuthContextValue = {
   user: User | null;
   token: string | null;
   loading: boolean;
-  signInWithPhone: (idToken: string) => Promise<User>;
+  signInWithPhone: (phone: string, otp: string) => Promise<User>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   setRole: (role: UserRole) => Promise<User>;
@@ -86,8 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
-  const signInWithPhone = useCallback(async (idToken: string) => {
-    const data = await verifyFirebasePhone(idToken);
+  const signInWithPhone = useCallback(async (phone: string, otp: string) => {
+    const data = await verifyPhoneOtp(phone, otp);
 
     if (!data.user) {
       throw new Error('Sign-in failed. Please try again.');
@@ -117,14 +117,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    try {
-      // Lazy-load so Expo Go does not crash on AuthProvider mount.
-      const { signOutFirebaseAuth } = await import('@/src/lib/firebaseAuth');
-      await signOutFirebaseAuth();
-    } catch {
-      // Ignore Firebase sign-out errors (including missing native modules).
-    }
-
     await clearStoredPushToken();
     await clearToken();
     setToken(null);
@@ -149,13 +141,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       // Ignore push unregister failures during account deletion.
-    }
-
-    try {
-      const { signOutFirebaseAuth } = await import('@/src/lib/firebaseAuth');
-      await signOutFirebaseAuth();
-    } catch {
-      // Ignore Firebase sign-out errors (including missing native modules).
     }
 
     await clearStoredPushToken();

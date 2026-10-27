@@ -212,6 +212,7 @@ export async function formatConversationSummary(conversation, currentUserId) {
           images: conversation.product.images,
           price: conversation.product.price,
           priceType: conversation.product.priceType.toLowerCase(),
+          listingType: String(conversation.product.listingType || "PRODUCT").toLowerCase(),
         }
       : null,
     otherParty: otherParty

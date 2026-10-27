@@ -5,7 +5,7 @@ import { PRODUCT_ANALYSIS_PROMPT } from "./productPrompt.js";
 
 const log = createLogger("gemini-analyze");
 
-function getModel() {
+export function getModel({ json = false } = {}) {
   if (!process.env.GEMINI_API_KEY) {
     log.error("GEMINI_API_KEY is not configured", new Error("GEMINI_API_KEY is not configured"));
     throw new Error("GEMINI_API_KEY is not configured");
@@ -15,10 +15,13 @@ function getModel() {
   log.info("Using Gemini model", { model: modelName });
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  return genAI.getGenerativeModel({ model: modelName });
+  return genAI.getGenerativeModel({
+    model: modelName,
+    ...(json ? { generationConfig: { responseMimeType: "application/json" } } : {}),
+  });
 }
 
-function fileToPart(file) {
+export function fileToPart(file) {
   if (!file.buffer) {
     throw new Error("Uploaded image buffer is missing");
   }
@@ -31,7 +34,7 @@ function fileToPart(file) {
   };
 }
 
-function parseJsonResponse(text) {
+export function parseJsonResponse(text) {
   const cleaned = text
     .trim()
     .replace(/^```json\s*/i, "")
@@ -45,6 +48,49 @@ function parseJsonResponse(text) {
     log.info("Raw Gemini response text", { text: cleaned.slice(0, 2000) });
     throw new Error("AI returned invalid JSON");
   }
+}
+
+const RETRY_DELAY_MS = 1200;
+
+function isOverloaded(error) {
+  return error?.status === 503 || error?.status === 429 || /\b(503|429)\b/.test(error?.message || "");
+}
+
+export async function generateJson(parts, { json = false } = {}) {
+  const model = getModel({ json });
+
+  let result;
+  for (let attempt = 0; !result; attempt += 1) {
+    try {
+      result = await model.generateContent(parts);
+    } catch (error) {
+      if (isOverloaded(error) && attempt === 0) {
+        log.warn("Gemini overloaded, retrying once", { status: error.status });
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+        continue;
+      }
+      log.error("Gemini generateContent failed", error);
+      if (isOverloaded(error)) {
+        throw new Error("AI is busy right now. Please try again in a moment");
+      }
+      throw new Error(error.message || "Gemini API request failed");
+    }
+  }
+
+  let text;
+  try {
+    text = result.response.text();
+  } catch (error) {
+    log.error("Gemini response.text() failed", error);
+    log.info("Gemini response metadata", {
+      candidates: result.response.candidates?.length ?? 0,
+      promptFeedback: result.response.promptFeedback ?? null,
+    });
+    throw new Error(error.message || "Gemini returned an empty response");
+  }
+
+  log.info("Gemini response received", { textLength: text.length });
+  return parseJsonResponse(text);
 }
 
 function normalizeAnalysis(raw) {
@@ -77,36 +123,11 @@ export async function analyzeProductImages(files) {
     images: files.map((file, index) => describeUploadFile(file, index)),
   });
 
-  const model = getModel();
-  const imageParts = files.map(fileToPart);
-
-  let result;
-  try {
-    result = await model.generateContent([
-      PRODUCT_ANALYSIS_PROMPT,
-      ...imageParts,
-      "Respond with JSON only.",
-    ]);
-  } catch (error) {
-    log.error("Gemini generateContent failed", error);
-    throw new Error(error.message || "Gemini API request failed");
-  }
-
-  let text;
-  try {
-    text = result.response.text();
-  } catch (error) {
-    log.error("Gemini response.text() failed", error);
-    log.info("Gemini response metadata", {
-      candidates: result.response.candidates?.length ?? 0,
-      promptFeedback: result.response.promptFeedback ?? null,
-    });
-    throw new Error(error.message || "Gemini returned an empty response");
-  }
-
-  log.info("Gemini response received", { textLength: text.length });
-
-  const parsed = parseJsonResponse(text);
+  const parsed = await generateJson([
+    PRODUCT_ANALYSIS_PROMPT,
+    ...files.map(fileToPart),
+    "Respond with JSON only.",
+  ]);
   const analysis = normalizeAnalysis(parsed);
 
   if (!analysis.title || !analysis.category) {

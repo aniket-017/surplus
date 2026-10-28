@@ -9,6 +9,7 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { LogBox } from 'react-native';
 import 'react-native-reanimated';
 
 import { AppUpdateModal } from '@/src/components/AppUpdateModal';
@@ -20,6 +21,9 @@ import { UnreadMessagesProvider } from '@/src/context/UnreadMessagesContext';
 import { useInAppUpdates } from '@/src/hooks/useInAppUpdates';
 
 SplashScreen.preventAutoHideAsync();
+
+// Simulator-only notice; push tokens are still requested so the simulator push bridge keeps working.
+LogBox.ignoreLogs(['expo-notifications: obtaining a push token may not work on iOS simulators']);
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

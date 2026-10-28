@@ -10,6 +10,7 @@ const NAV = [
   { to: '/superadmin/notifications', label: 'Notifications' },
   { to: '/superadmin/referral-codes', label: 'Referral codes' },
   { to: '/superadmin/admins', label: 'Admins' },
+  { to: '/superadmin/settings', label: 'App settings' },
 ]
 
 export default function SuperAdminLayout() {

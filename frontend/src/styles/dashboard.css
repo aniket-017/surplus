@@ -3543,6 +3543,92 @@
   font-family: inherit;
 }
 
+.sa-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sa-settings-head h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+}
+
+.sa-settings-head p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sa-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.sa-settings-textarea {
+  min-height: 14rem;
+  line-height: 1.5;
+}
+
+.sa-settings-count {
+  align-self: flex-end;
+}
+
+.sa-share-preview {
+  min-height: 14rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: #e7f6df;
+  border: 1px solid rgba(92, 179, 53, 0.25);
+  color: var(--text-strong, #0f1b2d);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sa-settings-format {
+  margin-top: 0.5rem !important;
+}
+
+.sa-settings-format code {
+  padding: 0.05rem 0.35rem;
+  border-radius: 6px;
+  background: rgba(15, 27, 45, 0.06);
+  font-size: 0.8rem;
+}
+
+.sa-legal-preview {
+  max-height: 34rem;
+  overflow-y: auto;
+  white-space: normal;
+  background: #fff;
+}
+
+.sa-legal-preview p {
+  margin: 0 0 0.5rem;
+}
+
+.sa-legal-preview h3 {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.sa-legal-bullet {
+  margin: 0 0 0.35rem 1.1rem;
+}
+
+.sa-legal-bullet::marker {
+  color: #5cb335;
+}
+
+.sa-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 .sa-audience-options {
   display: flex;
   flex-wrap: wrap;

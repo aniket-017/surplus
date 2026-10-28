@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
   DetailHeader,
@@ -42,6 +43,10 @@ function buildQuoteMessage(service: ServiceListing) {
   ].join('\n');
 }
 
+function buildChatMessage(service: ServiceListing) {
+  return `Hi, I'm interested in your service "${service.title}". Is it available?`;
+}
+
 function buildShareMessage(service: ServiceListing) {
   return [
     'Found this service on Surplus!',
@@ -65,6 +70,7 @@ export default function BuyerServiceDetailScreen() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [inquiryVisible, setInquiryVisible] = useState(false);
+  const [inquiryTitle, setInquiryTitle] = useState('Request a Quote');
   const [inquiryMessage, setInquiryMessage] = useState('');
   const [reportVisible, setReportVisible] = useState(false);
   const [reportReason, setReportReason] = useState<ReportReasonValue | null>(null);
@@ -245,40 +251,70 @@ export default function BuyerServiceDetailScreen() {
         </ScreenContent>
       </ScrollView>
 
-      {!isOwnService ? (
-        <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
-          <ScreenContent style={styles.barInner}>
-            <View style={styles.barSummary}>
-              <Text style={styles.barPrice}>{formatServicePrice(service)}</Text>
-              <Text style={styles.barMeta} numberOfLines={1}>
-                {service.minimumCharge != null
+      <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
+        <ScreenContent style={styles.barInner}>
+          <View style={styles.barSummary}>
+            <Text style={styles.barPrice}>{formatServicePrice(service)}</Text>
+            <Text style={styles.barMeta} numberOfLines={1}>
+              {isOwnService
+                ? 'This is your service'
+                : service.minimumCharge != null
                   ? `Min. charge ₹${service.minimumCharge.toLocaleString('en-IN')}`
                   : SERVICE_MODE_LABELS[service.serviceMode]}
-              </Text>
-            </View>
+            </Text>
+          </View>
+          {isOwnService ? (
             <Pressable
-              onPress={() => {
-                setInquiryMessage(buildQuoteMessage(service));
-                setInquiryVisible(true);
-              }}
-              disabled={submitting}
-              style={[styles.primaryButton, submitting && styles.primaryDisabled]}
+              onPress={() =>
+                router.push({ pathname: '/(seller)/services/[id]', params: { id: service.id } })
+              }
+              style={styles.primaryButton}
               accessibilityRole="button"
-              accessibilityLabel="Request quote"
+              accessibilityLabel="Manage service"
             >
-              {submitting ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <Text style={styles.primaryText}>Request Quote</Text>
-              )}
+              <Text style={styles.primaryText}>Manage Service</Text>
             </Pressable>
-          </ScreenContent>
-        </View>
-      ) : null}
+          ) : (
+            <>
+              <Pressable
+                onPress={() => {
+                  setInquiryTitle('Message Provider');
+                  setInquiryMessage(buildChatMessage(service));
+                  setInquiryVisible(true);
+                }}
+                disabled={submitting}
+                style={[styles.chatButton, submitting && styles.primaryDisabled]}
+                accessibilityRole="button"
+                accessibilityLabel="Chat with provider"
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.accent} />
+                <Text style={styles.chatText}>Chat</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setInquiryTitle('Request a Quote');
+                  setInquiryMessage(buildQuoteMessage(service));
+                  setInquiryVisible(true);
+                }}
+                disabled={submitting}
+                style={[styles.primaryButton, submitting && styles.primaryDisabled]}
+                accessibilityRole="button"
+                accessibilityLabel="Request quote"
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text style={styles.primaryText}>Request Quote</Text>
+                )}
+              </Pressable>
+            </>
+          )}
+        </ScreenContent>
+      </View>
 
       <InquiryModal
         visible={inquiryVisible}
-        title="Request a Quote"
+        title={inquiryTitle}
         submitting={submitting}
         message={inquiryMessage}
         onChangeMessage={setInquiryMessage}
@@ -383,12 +419,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  chatText: {
+    color: colors.accent,
+    fontSize: 14,
+    fontWeight: '800',
+  },
   primaryButton: {
     backgroundColor: colors.accent,
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 12,
-    minWidth: 140,
+    minWidth: 128,
     alignItems: 'center',
   },
   primaryDisabled: {

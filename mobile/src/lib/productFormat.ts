@@ -59,6 +59,25 @@ const PLAY_STORE_URL =
   process.env.EXPO_PUBLIC_PLAY_STORE_URL ||
   'https://play.google.com/store/apps/details?id=com.surplus.surplus';
 
+const APP_STORE_URL =
+  process.env.EXPO_PUBLIC_APP_STORE_URL ||
+  'https://apps.apple.com/in/app/surplus-to-value/id6804191126';
+
+export function buildAppShareMessage() {
+  return [
+    'Buy and sell industrial surplus — machines, materials and services — on Surplus!',
+    '',
+    'Android:',
+    PLAY_STORE_URL,
+    '',
+    'iPhone:',
+    APP_STORE_URL,
+    '',
+    'Or visit:',
+    WEB_BASE,
+  ].join('\n');
+}
+
 /** Website + Play Store links for sharing a product listing. */
 export function getProductShareLinks(productId: string) {
   return {

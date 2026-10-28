@@ -259,3 +259,14 @@ export function getSuperadminReferralCodeUsers(id, { page = 1, limit = 20 } = {}
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   return apiFetch(`/api/superadmin/referral-codes/${id}/users?${params}`)
 }
+
+export function getSuperadminAppSettings() {
+  return apiFetch('/api/superadmin/app-settings')
+}
+
+export function updateSuperadminAppSettings(payload) {
+  return apiFetch('/api/superadmin/app-settings', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}

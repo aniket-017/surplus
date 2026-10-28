@@ -1,10 +1,10 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
   interpolate,
-  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -16,6 +16,8 @@ import Animated, {
 import { colors, radius } from '@/src/constants/theme';
 
 const SHINE_WIDTH = 70;
+const DISABLED_BG = '#BFE0AE';
+const GRADIENT = ['#6AD45E', colors.accent, '#23963F'] as const;
 
 type PrimaryButtonProps = {
   label: string;
@@ -60,9 +62,12 @@ export function PrimaryButton({ label, onPress, disabled, loading }: PrimaryButt
   }, [active, nudge, shine]);
 
   const containerStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(enabled.value, [0, 1], ['#BFE0AE', colors.accent]),
     shadowOpacity: interpolate(enabled.value, [0, 1], [0, 0.35]),
     transform: [{ scale: 1 - pressed.value * 0.035 }],
+  }));
+
+  const gradientStyle = useAnimatedStyle(() => ({
+    opacity: enabled.value,
   }));
 
   const shineStyle = useAnimatedStyle(() => ({
@@ -95,7 +100,15 @@ export function PrimaryButton({ label, onPress, disabled, loading }: PrimaryButt
           width.value = event.nativeEvent.layout.width;
         }}
       >
-        <Animated.View pointerEvents="none" style={styles.shineClip}>
+        <Animated.View pointerEvents="none" style={[styles.clip, gradientStyle]}>
+          <LinearGradient
+            colors={GRADIENT}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+        <Animated.View pointerEvents="none" style={styles.clip}>
           <Animated.View style={[styles.shine, shineStyle]} />
         </Animated.View>
         {loading ? (
@@ -119,6 +132,7 @@ const styles = StyleSheet.create({
     gap: 8,
     minHeight: 56,
     borderRadius: radius.md + 2,
+    backgroundColor: DISABLED_BG,
     ...Platform.select({
       ios: {
         shadowColor: colors.accent,
@@ -128,7 +142,7 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-  shineClip: {
+  clip: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: radius.md + 2,
     overflow: 'hidden',

@@ -1,5 +1,10 @@
 import { Router } from "express";
 import { isOtpAuthEnabled } from "../config/auth.js";
+import {
+  getAdminAppSettings,
+  parseSettingsUpdate,
+  updateAppSettings,
+} from "../lib/appSettings.js";
 import { prisma } from "../lib/prisma.js";
 import { setAuthCookie, formatUser, userSelect } from "../lib/auth.js";
 import { sendOtpEmail } from "../lib/mail.js";
@@ -1563,6 +1568,29 @@ router.post("/notifications", async (req, res) => {
   } catch (error) {
     console.error("Superadmin send notification failed:", error);
     res.status(500).json({ error: "Failed to send notification" });
+  }
+});
+
+router.get("/app-settings", async (_req, res) => {
+  try {
+    res.json(await getAdminAppSettings());
+  } catch (error) {
+    console.error("Superadmin read app settings failed:", error);
+    res.status(500).json({ error: "Failed to load app settings" });
+  }
+});
+
+router.patch("/app-settings", async (req, res) => {
+  const { error: validationError, updates } = parseSettingsUpdate(req.body);
+  if (validationError) {
+    return res.status(400).json({ error: validationError });
+  }
+
+  try {
+    res.json(await updateAppSettings(updates, req.superAdmin.id));
+  } catch (error) {
+    console.error("Superadmin update app settings failed:", error);
+    res.status(500).json({ error: "Failed to update app settings" });
   }
 });
 

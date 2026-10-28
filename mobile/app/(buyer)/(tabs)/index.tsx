@@ -15,7 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { BuyerHomeHero } from '@/src/components/buyer/BuyerHomeHero';
 import { BuyerJobWorkBanner } from '@/src/components/buyer/BuyerJobWorkBanner';
-import { BuyerMachinesBanner } from '@/src/components/buyer/BuyerMachinesBanner';
 import { BuyerSearchBar } from '@/src/components/buyer/BuyerSearchBar';
 import { CategoryCarousel } from '@/src/components/buyer/CategoryCarousel';
 import {
@@ -276,7 +275,6 @@ export default function BuyerHomeTab() {
             loading={loading}
             selectedCategory={filters.category || undefined}
           />
-          <BuyerMachinesBanner onPress={openExplore} />
           <ListingFilterChips
             activeFilter={activeFilter}
             onChangeFilter={handleFilterChange}

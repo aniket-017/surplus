@@ -32,6 +32,7 @@ import ReportsPage from './pages/superadmin/ReportsPage'
 import NotificationsPage from './pages/superadmin/NotificationsPage'
 import AdminsPage from './pages/superadmin/AdminsPage'
 import ReferralCodesPage from './pages/superadmin/ReferralCodesPage'
+import SettingsPage from './pages/superadmin/SettingsPage'
 
 // test
 function BuyerProfilePage() {
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="referral-codes" element={<ReferralCodesPage />} />
             <Route path="admins" element={<AdminsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
           <Route

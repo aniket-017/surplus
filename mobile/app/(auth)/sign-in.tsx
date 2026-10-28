@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
+  Keyboard,
   Platform,
   Pressable,
   StyleSheet,
@@ -22,12 +23,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LegalSheet } from '@/src/components/auth/LegalSheet';
 import { OtpBoxes } from '@/src/components/auth/OtpBoxes';
 import { PhoneField } from '@/src/components/auth/PhoneField';
 import { PrimaryButton } from '@/src/components/auth/PrimaryButton';
 import { PulseDot } from '@/src/components/auth/PulseDot';
 import { Shake } from '@/src/components/auth/Shake';
-import { IndustrialMosaic } from '@/src/components/IndustrialMosaic';
+import { SignInHero } from '@/src/components/auth/SignInHero';
 import { Logo } from '@/src/components/Logo';
 import { KeyboardAwareScrollView, ScrollIntoView } from '@/src/components/KeyboardAwareScrollView';
 import { ScreenContent } from '@/src/components/ScreenContent';
@@ -36,11 +38,13 @@ import { resendPhoneOtp, sendPhoneOtp } from '@/src/lib/api';
 import { formatPhoneForDisplay, toE164Phone, toIndianLocalDigits } from '@/src/lib/phone';
 import { requestPhoneNumberHintLocal } from '@/src/lib/phoneHint';
 import { isExpoGo } from '@/src/lib/notifications';
+import type { LegalKind } from '@/src/constants/legal';
+import { refreshLegalDocs, useLegalDoc } from '@/src/lib/legalDocs';
 import { colors, radius, spacing } from '@/src/constants/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 /** Leaves room below for the logo, headline and form without scrolling. */
-const MOSAIC_HEIGHT = Math.min(520, Math.max(400, SCREEN_HEIGHT * 0.5));
+const HERO_HEIGHT = Math.min(520, Math.max(400, SCREEN_HEIGHT * 0.5));
 
 type Step = 'phone' | 'otp';
 
@@ -76,6 +80,8 @@ export default function SignInScreen() {
   const [info, setInfo] = useState('');
   const [resendIn, setResendIn] = useState(0);
   const [resending, setResending] = useState(false);
+  const [legalKind, setLegalKind] = useState<LegalKind | null>(null);
+  const legalDoc = useLegalDoc(legalKind);
   const hintAttemptedRef = useRef(false);
   const completingRef = useRef(false);
   const introDoneRef = useRef(false);
@@ -90,6 +96,10 @@ export default function SignInScreen() {
     if (isExpoGo()) {
       setHintAvailable(false);
     }
+  }, []);
+
+  useEffect(() => {
+    void refreshLegalDocs();
   }, []);
 
   useEffect(() => {
@@ -234,6 +244,11 @@ export default function SignInScreen() {
     completingRef.current = false;
   }
 
+  function openLegal(kind: LegalKind) {
+    Keyboard.dismiss();
+    setLegalKind(kind);
+  }
+
   const phoneReady = Boolean(toE164Phone(phoneInput));
   if (step === 'otp') {
     introDoneRef.current = true;
@@ -265,7 +280,7 @@ export default function SignInScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <IndustrialMosaic height={MOSAIC_HEIGHT} width={SCREEN_WIDTH} />
+        <SignInHero height={HERO_HEIGHT} width={SCREEN_WIDTH} />
 
         <View style={styles.sheet}>
           <ScreenContent style={styles.screenContent}>
@@ -387,14 +402,32 @@ export default function SignInScreen() {
               </Animated.View>
             )}
 
-            <Animated.Text entering={FadeIn.delay(800).duration(500)} style={styles.legal}>
-              By continuing, you agree to our{' '}
-              <Text style={styles.legalStrong}>Terms of Service</Text> &{' '}
-              <Text style={styles.legalStrong}>Privacy Policy</Text>
-            </Animated.Text>
+            <Animated.View entering={FadeIn.delay(800).duration(500)} style={styles.legalWrap}>
+              <Text style={styles.legal}>By continuing, you agree to our</Text>
+              <View style={styles.legalLinks}>
+                <Pressable
+                  onPress={() => openLegal('terms')}
+                  hitSlop={10}
+                  accessibilityRole="link"
+                  style={({ pressed }) => pressed && styles.legalPressed}
+                >
+                  <Text style={styles.legalStrong}>Terms of Service</Text>
+                </Pressable>
+                <Text style={styles.legal}>&</Text>
+                <Pressable
+                  onPress={() => openLegal('privacy')}
+                  hitSlop={10}
+                  accessibilityRole="link"
+                  style={({ pressed }) => pressed && styles.legalPressed}
+                >
+                  <Text style={styles.legalStrong}>Privacy Policy</Text>
+                </Pressable>
+              </View>
+            </Animated.View>
           </ScreenContent>
         </View>
       </KeyboardAwareScrollView>
+      <LegalSheet doc={legalDoc} onClose={() => setLegalKind(null)} />
     </SafeAreaView>
   );
 }
@@ -442,7 +475,7 @@ const styles = StyleSheet.create({
   },
   sheet: {
     flex: 1,
-    // Transparent so the mosaic fade shows through — no hard white cut line.
+    // Transparent so the hero fade shows through — no hard white cut line.
     backgroundColor: 'transparent',
     marginTop: -100,
     paddingTop: spacing.sm,
@@ -485,10 +518,10 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textStrong,
-    fontSize: 21,
-    lineHeight: 27,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '800',
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
     textAlign: 'center',
   },
   titleAccent: {
@@ -563,17 +596,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
+  legalWrap: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  legalLinks: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+  },
   legal: {
     color: colors.muted,
     fontSize: 12,
     lineHeight: 18,
     textAlign: 'center',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
   },
   legalStrong: {
-    color: colors.textStrong,
+    color: colors.accentHover,
+    fontSize: 12,
+    lineHeight: 18,
     fontWeight: '700',
+    textDecorationLine: 'underline',
+    textDecorationColor: 'rgba(74, 155, 42, 0.45)',
+  },
+  legalPressed: {
+    opacity: 0.55,
   },
 });

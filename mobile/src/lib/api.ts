@@ -60,6 +60,19 @@ export function verifyPhoneOtp(phone: string, otp: string) {
   });
 }
 
+export type AppConfig = { shareAppMessage: string; updatedAt: string | null };
+
+export function getAppConfig(signal?: AbortSignal) {
+  return apiFetch<AppConfig>('/api/app-config', { signal });
+}
+
+type LegalContent = { content: string; updatedAt: string | null };
+export type LegalConfig = { termsOfService: LegalContent; privacyPolicy: LegalContent };
+
+export function getLegalConfig(signal?: AbortSignal) {
+  return apiFetch<LegalConfig>('/api/app-config/legal', { signal });
+}
+
 export function getCurrentUser(token: string) {
   return apiFetch<{ user: User }>('/api/auth/me', { token });
 }

@@ -309,6 +309,18 @@ model ListingReport {
   @@map("listing_reports")
 }
 
+/// Admin-editable app configuration, one row per setting key.
+model AppSetting {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique
+  value     String
+  updatedBy String?  @map("updated_by") @db.ObjectId
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
 model CategoryMeta {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String   @unique

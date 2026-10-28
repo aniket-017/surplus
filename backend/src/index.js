@@ -18,6 +18,7 @@ import savedRoutes from "./routes/saved.js";
 import reportsRoutes from "./routes/reports.js";
 import notificationRoutes from "./routes/notifications.js";
 import superadminRoutes from "./routes/superadmin.js";
+import appConfigRoutes from "./routes/appConfig.js";
 import { backfillCategoryMeta } from "./lib/category.js";
 import { CATEGORY_ASSETS_DIR, getCategoryImageManifest } from "./lib/categoryAssets.js";
 import { bootstrapSuperAdmin } from "./lib/bootstrapSuperAdmin.js";
@@ -201,6 +202,7 @@ app.use("/api/saved", savedRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/superadmin", superadminRoutes);
+app.use("/api/app-config", appConfigRoutes);
 
 if (FRONTEND_DIST_EXISTS) {
   app.use(express.static(FRONTEND_DIST));

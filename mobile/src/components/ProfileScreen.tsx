@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -18,9 +19,12 @@ import { ScreenContent } from '@/src/components/ScreenContent';
 import { useAuth } from '@/src/context/AuthContext';
 import { useRoleSwitch } from '@/src/context/RoleSwitchContext';
 import { colors, spacing } from '@/src/constants/theme';
+import { getAppConfig } from '@/src/lib/api';
 import { formatPhoneForDisplay } from '@/src/lib/phone';
+import { buildAppShareMessage } from '@/src/lib/productFormat';
 import type { User, UserAddress, UserRole } from '@/src/types/auth';
 
+const SHARE_CONFIG_TIMEOUT_MS = 3000;
 const DARK_GREEN = '#1F5C38';
 const LIGHT_GREEN = '#E8F5E9';
 
@@ -71,6 +75,7 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
   const [saving, setSaving] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [mapPickerVisible, setMapPickerVisible] = useState(false);
   const [message, setMessage] = useState('');
@@ -197,6 +202,31 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
       setError(err instanceof Error ? err.message : 'Failed to switch role');
     } finally {
       setSwitching(false);
+    }
+  }
+
+  async function handleShareApp() {
+    if (sharing) return;
+    setSharing(true);
+
+    let shareMessage = buildAppShareMessage();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), SHARE_CONFIG_TIMEOUT_MS);
+    try {
+      const config = await getAppConfig(controller.signal);
+      if (config.shareAppMessage?.trim()) shareMessage = config.shareAppMessage;
+    } catch {
+      // offline or slow: fall back to the built-in message
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    try {
+      await Share.share({ title: 'Surplus', message: shareMessage });
+    } catch {
+      // user dismissed
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -450,6 +480,17 @@ export function ProfileScreen({ role }: ProfileScreenProps) {
           subtitle={switchSubtitle}
           onPress={handleSwitchRole}
           loading={switching || roleSwitching}
+        />
+
+        <View style={styles.actionDivider} />
+
+        <ActionRow
+          icon="share-social-outline"
+          iconTone="accent"
+          title="Share App"
+          subtitle="Invite others to Surplus"
+          onPress={handleShareApp}
+          loading={sharing}
         />
 
         <View style={styles.actionDivider} />

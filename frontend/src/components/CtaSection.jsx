@@ -1,10 +1,10 @@
 import Reveal from './Reveal'
 import { Link } from 'react-router-dom'
-import { PLAY_STORE_URL } from '../constants/links'
+import StoreBadges from './StoreBadges'
 
 export default function CtaSection() {
   return (
-    <section className="cta-section">
+    <section className="cta-section" id="download">
       <Reveal>
         <div className="cta-inner">
           <div>
@@ -34,18 +34,7 @@ export default function CtaSection() {
             >
               List for Free →
             </Link>
-            <a
-              href={PLAY_STORE_URL}
-              className="store-badge"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span className="store-badge-icon">🤖</span>
-              <div>
-                <div className="store-badge-text">Get it on</div>
-                <div className="store-badge-name">Google Play</div>
-              </div>
-            </a>
+            <StoreBadges column className="cta-store-badges" />
           </div>
         </div>
       </Reveal>

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { heroListings, chartBars } from '../data/landingData'
-import { PLAY_STORE_URL } from '../constants/links'
+import StoreBadges from './StoreBadges'
 import { useAuth } from '../context/AuthContext'
 import { getPostAuthPath } from '../lib/authRedirect'
 
@@ -26,23 +26,12 @@ export default function Hero() {
             chemicals, metals, and more. Stop losing money on idle inventory.
           </p>
           <div className="hero-actions">
-            {user ? (
+            {user && (
               <Link to={getPostAuthPath(user)} className="btn btn-primary">
                 Go to Dashboard
               </Link>
-            ) : (
-              <Link to="/signin" className="btn btn-primary">
-                Sign in
-              </Link>
             )}
-            <a
-              href={PLAY_STORE_URL}
-              className="btn btn-ghost"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Download App →
-            </a>
+            <StoreBadges className="hero-store-badges" />
           </div>
         </div>
 

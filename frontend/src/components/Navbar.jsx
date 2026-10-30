@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import surplusLogo from '../assets/logo/surplus.png'
 import { useAuth } from '../context/AuthContext'
 import { getPostAuthPath } from '../lib/authRedirect'
-import { PLAY_STORE_URL } from '../constants/links'
+import StoreBadges from './StoreBadges'
 
 const NAV_LINKS = [
   { href: '/#problem', label: 'Problem' },
@@ -74,13 +74,8 @@ export default function Navbar() {
               Sign in
             </Link>
           )}
-          <a
-            href={PLAY_STORE_URL}
-            className="btn btn-outline nav-app-btn"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Get the App ↗
+          <a href="/#download" className="btn btn-outline nav-app-btn">
+            Get the App ↓
           </a>
         </div>
         <button
@@ -139,15 +134,7 @@ export default function Navbar() {
                 Sign in
               </Link>
             )}
-            <a
-              href={PLAY_STORE_URL}
-              className="btn btn-outline btn-block"
-              onClick={closeMenu}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Get the App ↗
-            </a>
+            <StoreBadges size="sm" className="mobile-menu-store-badges" onClick={closeMenu} />
           </div>
         </div>
       </div>

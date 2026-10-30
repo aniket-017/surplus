@@ -1,3 +1,12 @@
+import machineryImg from '../assets/categories/machinery.webp'
+import metalsImg from '../assets/categories/metals.webp'
+import chemicalsImg from '../assets/categories/chemicals.webp'
+import packagingImg from '../assets/categories/packaging.webp'
+import constructionImg from '../assets/categories/construction.webp'
+import electronicsImg from '../assets/categories/electronics.webp'
+import textilesImg from '../assets/categories/textiles.webp'
+import energyImg from '../assets/categories/energy.webp'
+
 export const heroListings = [
   {
     icon: '⚙️',
@@ -93,14 +102,14 @@ export const appListings = [
 ]
 
 export const categories = [
-  { emoji: '⚙️', name: 'Auto Parts', count: '3,200+ listings' },
-  { emoji: '🔩', name: 'Metals & Alloys', count: '2,800+ listings' },
-  { emoji: '🧪', name: 'Chemicals', count: '1,900+ listings' },
-  { emoji: '📦', name: 'Packaging', count: '2,100+ listings' },
-  { emoji: '🏗️', name: 'Construction', count: '980+ listings' },
-  { emoji: '🔌', name: 'Electrical', count: '1,400+ listings' },
-  { emoji: '🧵', name: 'Textiles', count: '760+ listings' },
-  { emoji: '🛢️', name: 'Petroleum', count: '540+ listings' },
+  { image: machineryImg, name: 'Machinery', count: '3,200+ listings' },
+  { image: metalsImg, name: 'Metals', count: '2,800+ listings' },
+  { image: chemicalsImg, name: 'Chemicals', count: '1,900+ listings' },
+  { image: packagingImg, name: 'Packaging', count: '2,100+ listings' },
+  { image: constructionImg, name: 'Construction', count: '980+ listings' },
+  { image: electronicsImg, name: 'Electronics', count: '1,400+ listings' },
+  { image: textilesImg, name: 'Textiles', count: '760+ listings' },
+  { image: energyImg, name: 'Energy', count: '540+ listings' },
 ]
 
 export const features = [

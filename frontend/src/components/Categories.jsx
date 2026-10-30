@@ -17,9 +17,13 @@ export default function Categories() {
           <div className="cat-grid">
             {categories.map((cat) => (
               <a key={cat.name} href="#" className="cat-card">
-                <span className="cat-emoji">{cat.emoji}</span>
-                <div className="cat-name">{cat.name}</div>
-                <div className="cat-count">{cat.count}</div>
+                <div className="cat-media">
+                  <img src={cat.image} alt={cat.name} loading="lazy" />
+                </div>
+                <div className="cat-body">
+                  <div className="cat-name">{cat.name}</div>
+                  <div className="cat-count">{cat.count}</div>
+                </div>
                 <span className="cat-arrow">↗</span>
               </a>
             ))}
